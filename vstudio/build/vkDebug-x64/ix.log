@@ -1,0 +1,3 @@
+﻿  ixVulkan.cpp
+C:\alec\dev\ix\ixVulkan.cpp(2275,25): warning C4244: 'initializing': conversion from 'VkDeviceSize' to 'uint32_t', possible loss of data
+  ix.vcxproj -> C:\alec\dev\ix\lib\ix.vk.win64.dbg.lib

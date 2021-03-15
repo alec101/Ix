@@ -1,0 +1,288 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="GFX">
+      <UniqueIdentifier>{369d4161-ba5c-4544-a14f-a4fc47c46bc4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="WINSYS">
+      <UniqueIdentifier>{ee07dfb7-00a8-4b32-b410-61b9cf65ba14}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DRAW">
+      <UniqueIdentifier>{6e1b6baa-7393-4fb5-a515-d73f83b5fc25}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SHADERS">
+      <UniqueIdentifier>{d4245a2d-3985-4f09-a41e-881c886ee22e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SHADERS\draw">
+      <UniqueIdentifier>{32e32c43-2ee2-40a6-a440-6b1e0afa478a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="UTIL">
+      <UniqueIdentifier>{da99add5-4b21-4ef2-9ed5-dff532ff48dc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GFX\GLO">
+      <UniqueIdentifier>{a8f9282a-2e1f-4b51-96a5-c0b2ad7f9e57}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\ix.cpp" />
+    <ClCompile Include="..\ixVulkan.cpp" />
+    <ClCompile Include="..\util\common.cpp">
+      <Filter>UTIL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\util\fileTEX.cpp">
+      <Filter>UTIL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\util\ixConsole.cpp">
+      <Filter>UTIL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\util\fileOBJ.cpp">
+      <Filter>UTIL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\util\fileI3D.cpp">
+      <Filter>UTIL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\draw\glDraw.cpp">
+      <Filter>DRAW</Filter>
+    </ClCompile>
+    <ClCompile Include="..\draw\vkDraw.cpp">
+      <Filter>DRAW</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\bone.cpp">
+      <Filter>GFX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\camera.cpp">
+      <Filter>GFX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\light.cpp">
+      <Filter>GFX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\material.cpp">
+      <Filter>GFX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\mesh3D.cpp">
+      <Filter>GFX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\object.cpp">
+      <Filter>GFX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\print.cpp">
+      <Filter>GFX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\resource.cpp">
+      <Filter>GFX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\shaderSys.cpp">
+      <Filter>GFX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\texStream.cpp">
+      <Filter>GFX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\texSys.cpp">
+      <Filter>GFX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\texture.cpp">
+      <Filter>GFX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winSys\button.cpp">
+      <Filter>WINSYS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winSys\dropList.cpp">
+      <Filter>WINSYS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winSys\edit.cpp">
+      <Filter>WINSYS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winSys\eventSys.cpp">
+      <Filter>WINSYS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winSys\menu.cpp">
+      <Filter>WINSYS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winSys\progressBar.cpp">
+      <Filter>WINSYS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winSys\radioButton.cpp">
+      <Filter>WINSYS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winSys\scroll.cpp">
+      <Filter>WINSYS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winSys\static.cpp">
+      <Filter>WINSYS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winSys\style.cpp">
+      <Filter>WINSYS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winSys\txtShared.cpp">
+      <Filter>WINSYS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winSys\winBase.cpp">
+      <Filter>WINSYS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winSys\window.cpp">
+      <Filter>WINSYS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\winSys\winSys.cpp">
+      <Filter>WINSYS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\glo\glObject.cpp">
+      <Filter>GFX\GLO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\glo\gloShader.cpp">
+      <Filter>GFX\GLO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\util\fileMAT.cpp">
+      <Filter>UTIL</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\ix.h" />
+    <ClInclude Include="..\ixVulkan.h" />
+    <ClInclude Include="..\util\fileTEX.h">
+      <Filter>UTIL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\util\ixConsole.h">
+      <Filter>UTIL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\util\orientation.h">
+      <Filter>UTIL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\util\common.hpp">
+      <Filter>UTIL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\draw\glDraw.h">
+      <Filter>DRAW</Filter>
+    </ClInclude>
+    <ClInclude Include="..\draw\vkDraw.h">
+      <Filter>DRAW</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GFX\bone.h">
+      <Filter>GFX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GFX\camera.h">
+      <Filter>GFX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GFX\light.h">
+      <Filter>GFX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GFX\material.h">
+      <Filter>GFX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GFX\mesh3D.h">
+      <Filter>GFX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GFX\object.h">
+      <Filter>GFX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GFX\print.h">
+      <Filter>GFX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GFX\resource.h">
+      <Filter>GFX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GFX\shaderSys.h">
+      <Filter>GFX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GFX\texStream.h">
+      <Filter>GFX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GFX\texSys.h">
+      <Filter>GFX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GFX\texture.h">
+      <Filter>GFX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\winSys.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\_privateDef.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\button.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\dropList.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\edit.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\eventSys.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\menu.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\progressBar.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\radioButton.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\scroll.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\static.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\style.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\txtShared.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\winBase.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\winSys\window.h">
+      <Filter>WINSYS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GFX\glo\glObject.h">
+      <Filter>GFX\GLO</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GFX\glo\gloShader.h">
+      <Filter>GFX\GLO</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\shaders\vkPrintM1.frag.glsl">
+      <Filter>SHADERS</Filter>
+    </None>
+    <None Include="..\shaders\vkPrintM1.vert.glsl">
+      <Filter>SHADERS</Filter>
+    </None>
+    <None Include="..\shaders\ixDraw\vkCircle.frag.glsl">
+      <Filter>SHADERS\draw</Filter>
+    </None>
+    <None Include="..\shaders\ixDraw\vkCircle.vert.glsl">
+      <Filter>SHADERS\draw</Filter>
+    </None>
+    <None Include="..\shaders\ixDraw\vkLine.frag.glsl">
+      <Filter>SHADERS\draw</Filter>
+    </None>
+    <None Include="..\shaders\ixDraw\vkLine.vert.glsl">
+      <Filter>SHADERS\draw</Filter>
+    </None>
+    <None Include="..\shaders\ixDraw\vkPoint.frag.glsl">
+      <Filter>SHADERS\draw</Filter>
+    </None>
+    <None Include="..\shaders\ixDraw\vkPoint.vert.glsl">
+      <Filter>SHADERS\draw</Filter>
+    </None>
+    <None Include="..\shaders\ixDraw\vkQuad.frag.glsl">
+      <Filter>SHADERS\draw</Filter>
+    </None>
+    <None Include="..\shaders\ixDraw\vkQuad.vert.glsl">
+      <Filter>SHADERS\draw</Filter>
+    </None>
+    <None Include="..\shaders\ixDraw\vkTriangle.frag.glsl">
+      <Filter>SHADERS\draw</Filter>
+    </None>
+    <None Include="..\shaders\ixDraw\vkTriangle.vert.glsl">
+      <Filter>SHADERS\draw</Filter>
+    </None>
+    <None Include="..\draw\vkDraw.inl">
+      <Filter>DRAW</Filter>
+    </None>
+  </ItemGroup>
+</Project>

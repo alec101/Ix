@@ -1,0 +1,511 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="100">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <logicalFolder name="HeaderFiles" displayName="INC" projectFiles="true">
+      <logicalFolder name="f3" displayName="draw" projectFiles="true">
+        <itemPath>../draw/glDraw.h</itemPath>
+        <itemPath>../draw/vkDraw.h</itemPath>
+        <itemPath>../draw/vkDraw.inl</itemPath>
+      </logicalFolder>
+      <logicalFolder name="f1" displayName="GFX" projectFiles="true">
+        <logicalFolder name="f1" displayName="glo" projectFiles="true">
+          <itemPath>../GFX/glo/glObject.h</itemPath>
+          <itemPath>../GFX/glo/gloShader.h</itemPath>
+        </logicalFolder>
+        <itemPath>../GFX/bone.h</itemPath>
+        <itemPath>../GFX/camera.h</itemPath>
+        <itemPath>../GFX/light.h</itemPath>
+        <itemPath>../GFX/material.h</itemPath>
+        <itemPath>../GFX/mesh3D.h</itemPath>
+        <itemPath>../GFX/object.h</itemPath>
+        <itemPath>../GFX/print.h</itemPath>
+        <itemPath>../GFX/resource.h</itemPath>
+        <itemPath>../GFX/shaderSys.h</itemPath>
+        <itemPath>../GFX/texStream.h</itemPath>
+        <itemPath>../GFX/texSys.h</itemPath>
+        <itemPath>../GFX/texture.h</itemPath>
+      </logicalFolder>
+      <logicalFolder name="f4" displayName="util" projectFiles="true">
+        <itemPath>../util/common.hpp</itemPath>
+        <itemPath>../util/fileTEX.h</itemPath>
+        <itemPath>../util/ixConsole.h</itemPath>
+        <itemPath>../util/orientation.h</itemPath>
+      </logicalFolder>
+      <logicalFolder name="f2" displayName="winSys" projectFiles="true">
+        <itemPath>../winSys/_privateDef.h</itemPath>
+        <itemPath>../winSys/button.h</itemPath>
+        <itemPath>../winSys/dropList.h</itemPath>
+        <itemPath>../winSys/edit.h</itemPath>
+        <itemPath>../winSys/eventSys.h</itemPath>
+        <itemPath>../winSys/menu.h</itemPath>
+        <itemPath>../winSys/progressBar.h</itemPath>
+        <itemPath>../winSys/radioButton.h</itemPath>
+        <itemPath>../winSys/scroll.h</itemPath>
+        <itemPath>../winSys/static.h</itemPath>
+        <itemPath>../winSys/style.h</itemPath>
+        <itemPath>../winSys/txtShared.h</itemPath>
+        <itemPath>../winSys/winBase.h</itemPath>
+        <itemPath>../winSys/winSys.h</itemPath>
+        <itemPath>../winSys/window.h</itemPath>
+      </logicalFolder>
+      <itemPath>../ix.h</itemPath>
+      <itemPath>../ixVulkan.h</itemPath>
+    </logicalFolder>
+    <logicalFolder name="SourceFiles" displayName="SRC" projectFiles="true">
+      <logicalFolder name="f3" displayName="draw" projectFiles="true">
+        <itemPath>../draw/glDraw.cpp</itemPath>
+        <itemPath>../draw/vkDraw.cpp</itemPath>
+      </logicalFolder>
+      <logicalFolder name="f1" displayName="GFX" projectFiles="true">
+        <logicalFolder name="f1" displayName="glo" projectFiles="true">
+          <itemPath>../GFX/glo/glObject.cpp</itemPath>
+          <itemPath>../GFX/glo/gloShader.cpp</itemPath>
+        </logicalFolder>
+        <itemPath>../GFX/bone.cpp</itemPath>
+        <itemPath>../GFX/camera.cpp</itemPath>
+        <itemPath>../GFX/light.cpp</itemPath>
+        <itemPath>../GFX/material.cpp</itemPath>
+        <itemPath>../GFX/mesh3D.cpp</itemPath>
+        <itemPath>../GFX/object.cpp</itemPath>
+        <itemPath>../GFX/print.cpp</itemPath>
+        <itemPath>../GFX/resource.cpp</itemPath>
+        <itemPath>../GFX/shaderSys.cpp</itemPath>
+        <itemPath>../GFX/texStream.cpp</itemPath>
+        <itemPath>../GFX/texSys.cpp</itemPath>
+        <itemPath>../GFX/texture.cpp</itemPath>
+      </logicalFolder>
+      <logicalFolder name="f4" displayName="util" projectFiles="true">
+        <itemPath>../util/common.cpp</itemPath>
+        <itemPath>../util/fileTEX.cpp</itemPath>
+        <itemPath>../util/ixConsole.cpp</itemPath>
+      </logicalFolder>
+      <logicalFolder name="f2" displayName="winSys" projectFiles="true">
+        <itemPath>../winSys/button.cpp</itemPath>
+        <itemPath>../winSys/dropList.cpp</itemPath>
+        <itemPath>../winSys/edit.cpp</itemPath>
+        <itemPath>../winSys/eventSys.cpp</itemPath>
+        <itemPath>../winSys/menu.cpp</itemPath>
+        <itemPath>../winSys/progressBar.cpp</itemPath>
+        <itemPath>../winSys/radioButton.cpp</itemPath>
+        <itemPath>../winSys/scroll.cpp</itemPath>
+        <itemPath>../winSys/static.cpp</itemPath>
+        <itemPath>../winSys/style.cpp</itemPath>
+        <itemPath>../winSys/txtShared.cpp</itemPath>
+        <itemPath>../winSys/winBase.cpp</itemPath>
+        <itemPath>../winSys/winSys.cpp</itemPath>
+        <itemPath>../winSys/window.cpp</itemPath>
+      </logicalFolder>
+      <itemPath>../ix.cpp</itemPath>
+      <itemPath>../ixVulkan.cpp</itemPath>
+    </logicalFolder>
+    <logicalFolder name="TestFiles"
+                   displayName="Test Files"
+                   projectFiles="false"
+                   kind="TEST_LOGICAL_FOLDER">
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
+  </logicalFolder>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="lin64.dbg" type="3">
+      <toolsSet>
+        <compilerSet>CLang|CLang</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <compileType>
+        <cTool>
+          <incDir>
+            <pElem>../..</pElem>
+            <pElem>../../Vulkan-Headers/include/vulkan</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>IX_USE_OPENGL</Elem>
+            <Elem>IX_USE_VULKAN</Elem>
+            <Elem>OSI_USE_OPENGL</Elem>
+            <Elem>OSI_USE_VKO</Elem>
+          </preprocessorList>
+        </cTool>
+        <ccTool>
+          <incDir>
+            <pElem>../..</pElem>
+            <pElem>../../Vulkan-Headers/include/vulkan</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>IX_USE_OPENGL</Elem>
+            <Elem>IX_USE_VULKAN</Elem>
+            <Elem>OSI_USE_OPENGL</Elem>
+            <Elem>OSI_USE_VKO</Elem>
+          </preprocessorList>
+        </ccTool>
+        <archiverTool>
+          <output>../lib/ix.lin64.dbg.so</output>
+        </archiverTool>
+      </compileType>
+      <packaging>
+        <packType>Tar</packType>
+        <output>../package/ix.lin64.dbg.tar</output>
+        <packFileList>
+          <packFileListElem type="File"
+                            to="${PACKAGE_TOP_DIR}lib/${OUTPUT_BASENAME}"
+                            from="${OUTPUT_PATH}"
+                            perm="644"
+                            owner="root"
+                            group="bin"/>
+        </packFileList>
+      </packaging>
+      <item path="../GFX/bone.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/bone.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/camera.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/camera.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/glo/glObject.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/glo/glObject.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/glo/gloShader.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/glo/gloShader.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/light.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/light.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/material.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/material.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/mesh3D.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/mesh3D.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/object.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/object.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/print.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/print.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/resource.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/resource.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/shaderSys.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/shaderSys.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/texStream.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/texStream.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/texSys.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/texSys.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/texture.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/texture.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../draw/glDraw.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../draw/glDraw.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../draw/vkDraw.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../draw/vkDraw.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../draw/vkDraw.inl" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../ix.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../ix.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../ixVulkan.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../ixVulkan.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../util/common.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../util/common.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../util/fileTEX.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../util/fileTEX.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../util/ixConsole.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../util/ixConsole.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../util/orientation.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/_privateDef.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/button.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/button.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/dropList.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/dropList.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/edit.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/edit.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/eventSys.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/eventSys.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/menu.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/menu.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/progressBar.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/progressBar.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/radioButton.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/radioButton.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/scroll.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/scroll.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/static.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/static.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/style.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/style.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/txtShared.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/txtShared.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/winBase.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/winBase.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/winSys.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/winSys.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/window.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/window.h" ex="false" tool="3" flavor2="0">
+      </item>
+    </conf>
+    <conf name="lin64" type="3">
+      <toolsSet>
+        <compilerSet>CLang|CLang</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <compileType>
+        <cTool>
+          <developmentMode>5</developmentMode>
+          <incDir>
+            <pElem>../..</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>IX_USE_OPENGL</Elem>
+            <Elem>IX_USE_VULKAN</Elem>
+            <Elem>OSI_USE_OPENGL</Elem>
+            <Elem>OSI_USE_VKO</Elem>
+          </preprocessorList>
+        </cTool>
+        <ccTool>
+          <developmentMode>5</developmentMode>
+          <incDir>
+            <pElem>../..</pElem>
+            <pElem>../../Vulkan-Headers/include/vulkan</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>IX_USE_OPENGL</Elem>
+            <Elem>IX_USE_VULKAN</Elem>
+            <Elem>OSI_USE_OPENGL</Elem>
+            <Elem>OSI_USE_VKO</Elem>
+          </preprocessorList>
+        </ccTool>
+        <fortranCompilerTool>
+          <developmentMode>5</developmentMode>
+        </fortranCompilerTool>
+        <asmTool>
+          <developmentMode>5</developmentMode>
+        </asmTool>
+        <archiverTool>
+          <output>../lib/ix.lin64.so</output>
+        </archiverTool>
+      </compileType>
+      <packaging>
+        <packType>Tar</packType>
+        <output>../package/ix.lin64.tar</output>
+        <packFileList>
+          <packFileListElem type="File"
+                            to="${PACKAGE_TOP_DIR}lib/${OUTPUT_BASENAME}"
+                            from="${OUTPUT_PATH}"
+                            perm="644"
+                            owner="root"
+                            group="bin"/>
+        </packFileList>
+      </packaging>
+      <item path="../GFX/bone.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/bone.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/camera.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/camera.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/glo/glObject.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/glo/glObject.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/glo/gloShader.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/glo/gloShader.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/light.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/light.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/material.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/material.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/mesh3D.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/mesh3D.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/object.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/object.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/print.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/print.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/resource.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/resource.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/shaderSys.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/shaderSys.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/texStream.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/texStream.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/texSys.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/texSys.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../GFX/texture.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../GFX/texture.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../draw/glDraw.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../draw/glDraw.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../draw/vkDraw.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../draw/vkDraw.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../draw/vkDraw.inl" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../ix.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../ix.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../ixVulkan.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../ixVulkan.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../util/common.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../util/common.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../util/fileTEX.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../util/fileTEX.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../util/ixConsole.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../util/ixConsole.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../util/orientation.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/_privateDef.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/button.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/button.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/dropList.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/dropList.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/edit.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/edit.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/eventSys.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/eventSys.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/menu.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/menu.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/progressBar.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/progressBar.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/radioButton.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/radioButton.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/scroll.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/scroll.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/static.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/static.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/style.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/style.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/txtShared.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/txtShared.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/winBase.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/winBase.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/winSys.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/winSys.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../winSys/window.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../winSys/window.h" ex="false" tool="3" flavor2="0">
+      </item>
+    </conf>
+  </confs>
+</configurationDescriptor>
