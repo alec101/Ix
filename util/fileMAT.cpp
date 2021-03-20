@@ -204,7 +204,7 @@ Exit:
   if(textBuffer2) delete[] textBuffer2;
 
   if(err) {
-    error.detail(str8().f("[%s] %s", fileMaterialDB, err), __FUNCTION__, errL);
+    error.detail(str8().f("[%s] %s", fileMaterialDB.d, err), __FUNCTION__, errL);
 
     return false;
   } else return true;

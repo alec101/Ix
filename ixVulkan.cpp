@@ -258,22 +258,14 @@ void ixVulkan::initAfterWindow() {
   // stage buffers
   stageDevice= new ixvkBuffer(clusterIxDevice);
     stageDevice->handle->cfgSize(ix->cfg.vk.size_stageBufferDevice);
-    stageDevice->handle->cfgUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    stageDevice->handle->cfgUsage(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT| VK_BUFFER_USAGE_TRANSFER_SRC_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   stageDevice->build();
 
   stageHost= new ixvkBuffer(clusterIxHost);
     stageHost->handle->cfgSize(ix->cfg.vk.size_stageBufferHost);
     stageHost->handle->cfgUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   stageHost->build();
-
-  // main objects init
-
-  render.init();
-  swap.init();
-  ortho.init();
-  render.updateViewportAndScissor();
-  defrag.init();      // depends on render.cmdMain[] - so always init AFTER render class
-
+  
   // setup the pools
   poolTool= ix->vk.objects.addCommandPool();
   poolTool->configure(qTool->family);
@@ -303,7 +295,13 @@ void ixVulkan::initAfterWindow() {
   cmdCompute->cfgUsage(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
   cmdCompute->build();
 
+  // main objects init
 
+  render.init();
+  swap.init();
+  ortho.init();
+  render.updateViewportAndScissor();
+  defrag.init();      // depends on render.cmdMain[] - so always init AFTER render class
 
 
   /// glb buffer layout
@@ -314,8 +312,8 @@ void ixVulkan::initAfterWindow() {
   // <<< add more layouts here, for ix if needed
 
   /// ix static set pool - includes glb buffer
-  ixStaticSetPool= ix->vk.objects.addDescriptorPool();
-  ixStaticSetPool->cfgAddDescriptorsFromLayout(glbLayout, 2);
+  ixStaticSetPool= new ixvkDescPool(this->ix);
+  ixStaticSetPool->configure(glbLayout, 2);
   ixStaticSetPool->build();
 
   /// glb buffer creation
@@ -332,8 +330,10 @@ void ixVulkan::initAfterWindow() {
     glb[a]->build();
 
     glb[a]->layout= glbLayout;
-    glb[a]->set= ixStaticSetPool->allocVkoSet(glbLayout);
-
+    ixStaticSetPool->addSet(&glb[a]->set);
+    glb[a]->set->bind(0, glb[a]);
+    glb[a]->set->update();
+    /*
     VkDescriptorBufferInfo bufInfo= { glb[a]->handle->buffer, 0, VK_WHOLE_SIZE }; // buffer, offset, range
 
     VkWriteDescriptorSet setWrite= {
@@ -350,6 +350,7 @@ void ixVulkan::initAfterWindow() {
     }; 
 
     ix->vk.UpdateDescriptorSets(ix->vk, 1, &setWrite, 0, null);
+    */
   }
   
 
@@ -494,7 +495,22 @@ void ixVulkan::Swap::init() {
   depthStencil->cfgFormat(VK_FORMAT_D24_UNORM_S8_UINT);
   depthStencil->cfgSize(VkExtent3D{handle->dx, handle->dy, 1}, 1, 1);
   depthStencil->cfgUsage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+  depthStencil->access[0].qFamily= _ix->vki.q1->family;
   if(!depthStencil->build()) goto Exit;
+
+  _ix->vk.DeviceWaitIdle(_ix->vk);
+  _ix->vki.cmdTool->pool->reset();
+  _ix->vki.cmdTool->startRecording();
+  depthStencil->barrier(_ix, *_ix->vki.cmdTool, 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                        VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
+                        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+                        //VK_QUEUE_FAMILY_IGNORED, _ix->vki.q1->family);
+  _ix->vki.cmdTool->endRecording();
+  _ix->vki.cmdTool->submit(*_ix->vki.qTool);
+  _ix->vk.QueueWaitIdle(*_ix->vki.qTool);
+
+  depthStencil->access[0].layout= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  depthStencil->access[0].qFamily= _ix->vki.q1->family;
 
   for(uint a= 0; a< 2; a++) {
     /// framebuffers
@@ -529,6 +545,17 @@ void ixVulkan::Swap::rebuild() {
   /// depth/stencil rebuild
   depthStencil->cfgSize(VkExtent3D{handle->dx, handle->dy, 1}, 1, 1);
   if(!depthStencil->rebuild()) goto Exit;
+
+  _ix->vki.cmdTool->pool->reset();
+  _ix->vki.cmdTool->startRecording();
+  depthStencil->barrier(_ix, *_ix->vki.cmdTool, 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                        VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
+                        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+                        //VK_QUEUE_FAMILY_IGNORED, _ix->vki.q1->family);
+  _ix->vki.cmdTool->endRecording();
+  _ix->vki.cmdTool->submit(*_ix->vki.qTool);
+  depthStencil->access[0].layout= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  depthStencil->access[0].qFamily= _ix->vki.q1->family;
 
   /// framebuffers rebuild
   for(uint a= 0; a< 2; a++) {
@@ -747,6 +774,7 @@ void ixVulkan::RenderPass::endRender() {
   if(_ix->vki.defrag.cmdToSubmit) {       // there is a defrag cmdBuffer to submit
     _ix->vki.defrag.cmdToSubmit->submit(_ix->vki.defrag.qToSubmit);
     _ix->vki.defrag.cmdToSubmit->fence= 0;
+    _ix->vki.defrag.cmdToSubmit= null;
   }
   cmdMain[fi]->_submitInfo.waitSemaphoreCount= 1;
   cmdMain[fi]->_submitInfo.signalSemaphoreCount= 1;
@@ -764,9 +792,12 @@ void ixVulkan::RenderPass::endRender() {
 
   // TEST TO MOVE THIS JUST AFTER DEPTH/STENCIL DEFRAG CHECK
   // defrag buffers to destroy
-  if(_ix->vki.defrag.destroyBuffersList->nrNodes)
-    _ix->vki.defrag.destroyBuffers(_ix->vki.defrag.fenceSignal[fi]);
 
+  _ix->vki.defrag.afterSubmitJobs();
+
+  //if(_ix->vki.defrag.destroyBuffersList->nrNodes)
+  //  _ix->vki.defrag.destroyBuffers(_ix->vki.defrag.fenceSignal[fi]);
+  //_ix->vki.defrag.
 
   /// reset current stuff
   _ix->vki.ortho.currentPipeline= 0;
@@ -820,6 +851,7 @@ ixVulkan::Defrag::Defrag(Ix *in_ix): _ix(in_ix), destroyBuffersList{ {10, sizeof
   _buf;
   cmdToSubmit= null;
   qToSubmit= 0;
+  resToUpdate= null;
 }
 
 
@@ -851,6 +883,7 @@ void ixVulkan::Defrag::getQueueCmd(uint32 in_qfamily, VkoQueue **out_queue, VkoC
   if(in_qfamily== _ix->vki.qTool->family)     { if(out_queue) *out_queue= _ix->vki.qTool;     if(out_cmd) *out_cmd= cmdGfx[_ix->vki.fi];     return; }
   if(in_qfamily== _ix->vki.qCompute->family)  { if(out_queue) *out_queue= _ix->vki.qCompute;  if(out_cmd) *out_cmd= cmdCompute[_ix->vki.fi]; return; }
   if(in_qfamily== _ix->vki.qTransfer->family) { if(out_queue) *out_queue= _ix->vki.qTransfer; if(out_cmd) *out_cmd= cmdTrn[_ix->vki.fi];     return; }
+  if(in_qfamily== VK_QUEUE_FAMILY_IGNORED)    { if(out_queue) *out_queue= _ix->vki.qTool;     if(out_cmd) *out_cmd= cmdGfx[_ix->vki.fi];     return; }
   if(out_queue) *out_queue= null;
   if(out_cmd) *out_cmd= null;
 }
@@ -864,7 +897,7 @@ void ixVulkan::Defrag::init() {
 
 
   _buf= new ixvkBuffer(_ix->vki.clusterIxDevice);
-  _buf->handle->cfgUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+  _buf->handle->cfgUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   //_buf->build(); NO BUILD, it's built when it's needed
 
 
@@ -923,7 +956,7 @@ void ixVulkan::Defrag::init() {
     cmdCompute[a]->cfgAddCustomWaitSemaphore(semWait[a]);
     cmdCompute[a]->build();
 
-    cmdTrn[a]= poolGfx[a]->addCommandBuffer();
+    cmdTrn[a]= poolTrn[a]->addCommandBuffer();
     cmdTrn[a]->cfgLevel(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     cmdTrn[a]->cfgUsage(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     cmdTrn[a]->cfgAddCustomSignalSemaphore(semSignal[a]);
@@ -962,6 +995,19 @@ void ixVulkan::Defrag::doJobs(uint32 in_n) {
   if(in_n== 0 || job== 0) {
     _ix->vki.render.cmdMain[fi]->_submitInfo.signalSemaphoreCount= 1;
     if(_ix->vki.render.cmdPrev) _ix->vki.render.cmdPrev->_submitInfo.waitSemaphoreCount= 1;
+
+
+    // DEBUG VVV
+    uint dbgnr= 0;
+    for(ixvkResCluster *cluster= (ixvkResCluster *)_ix->vki.resClusters.first; cluster; cluster= (ixvkResCluster *)cluster->next)
+      for(ixvkResClusterSegment *segment= (ixvkResClusterSegment *)cluster->segments.first; segment; segment= (ixvkResClusterSegment *)segment->next)
+        for(ixvkResource *res= (ixvkResource *)segment->resources.first; res; res= (ixvkResource *)res->next)
+          if(res->defragDelta)
+            dbgnr++;
+    dbgnr;
+    // DEBUG ^^^
+
+
     return;
 
   // fast 1 job- with semaphore links
@@ -974,6 +1020,9 @@ void ixVulkan::Defrag::doJobs(uint32 in_n) {
       for(ixvkResClusterSegment *segment= (ixvkResClusterSegment *)cluster->segments.first; segment; segment= (ixvkResClusterSegment *)segment->next)
         for(ixvkResource *res= (ixvkResource *)segment->resources.first; res; res= (ixvkResource *)res->next) {
 
+          if(res== _buf)
+            continue;  // skip defrag's buf
+
           // res with defrag job found
           if(res->defragDelta || res->defragDeltaInside) {
             /// special case - stage buffers move
@@ -982,39 +1031,49 @@ void ixVulkan::Defrag::doJobs(uint32 in_n) {
               res->defragDelta= 0;
               ((ixvkBuffer *)res)->handle->rebuild();                     // this avoids changing the cluster
               _ix->vk.BindBufferMemory(_ix->vk, *((ixvkBuffer *)res)->handle, *res->segment->memory, ((ixvkBuffer *)res)->handle->offset);
+
             /// normal resources move
             } else {
 
-              if(res->type== 0) qres= ((ixvkBuffer *)res)->access.qFamily;
-              else              qres= ((ixvkImage *)res)->access[0].qFamily; // an image array with different queues will screw this <<<<<<<<<<<<<<<<< but this is a rare case
+              if(res->classT== ixClassT::VKBUFFER)
+                qres= ((ixvkBuffer *)res)->access.qFamily;
+              else if(res->classT== ixClassT::VKIMAGE)
+                qres= ((ixvkImage *)res)->access[0].qFamily; // an image array with different queues will screw this <<<<<<<<<<<<<<<<< but this is a rare case
               getQueueCmd(qres, &q, &cmd);
 
               cmd->pool->reset();
               cmd->startRecording();
-
               cmd->cfgFence(*fenceSignal[fi]);
 
               /// buffer
-              if(res->type== 0) {
-                if(res->defragDelta)
+              if(res->classT== ixClassT::VKBUFFER) {
+                if(res->defragDelta) {
+
                   moveBuffer(*cmd, (ixvkBuffer *)res);
-                else if(res->defragDeltaInside)
+                  //res->defragDelta= 0;
+
+
+                } else if(res->defragDeltaInside)
                   moveInside(*cmd, (ixvkBuffer *)res);
+
               /// image
-              } else if(res->type== 1)
+              } else if(res->classT== ixClassT::VKIMAGE) {
                 moveImage(*cmd, (ixvkImage *)res);
+                //res->defragDelta= 0;
+              }
+
               else error.window("unkown resource type", true);
 
               cmd->endRecording();
-              //cmd->submit(*q);
-              //cmd->cfgFence(null);
               cmdToSubmit= cmd;
               qToSubmit= q->queue;
-            }
+              
+            } /// normal resource
 
             if(res== _ix->vki.swap.depthStencil)
               _ix->vki.swap.flags.setUp(0x01);
-              //_ix->vki.swap.rebuildDepthStencil();
+            else
+              resToUpdate= res;
 
             /// update segment freespace
             segment->updateFreespace();
@@ -1043,34 +1102,40 @@ void ixVulkan::Defrag::doJobs(uint32 in_n) {
               res->defragDelta= 0;
               ((ixvkBuffer *)res)->handle->rebuild();                     // this avoids changing the cluster
               _ix->vk.BindBufferMemory(_ix->vk, *((ixvkBuffer *)res)->handle, *res->segment->memory, ((ixvkBuffer *)res)->handle->offset);
+
             /// normal resources move
             } else {
 
-              if(res->type== 0) qres= ((ixvkBuffer *)res)->access.qFamily;
-              else              qres= ((ixvkImage *)res)->access[0].qFamily; // an image array with different queues will screw this <<<<<<<<<<<<<<<<< but this is a rare case
+              if(res->classT== ixClassT::VKBUFFER)
+                qres= ((ixvkBuffer *)res)->access.qFamily;
+              else if(res->classT== ixClassT::VKIMAGE)
+                qres= ((ixvkImage *)res)->access[0].qFamily; // an image array with different queues will screw this <<<<<<<<<<<<<<<<< but this is a rare case
               getQueueCmd(qres, &q, &cmd);
 
               cmd->pool->reset();
               cmd->startRecording();
 
               /// buffer
-              if(res->type== 0) {
+              if(res->classT== ixClassT::VKBUFFER) {
                 if(res->defragDelta)
                   moveBuffer(*cmd, (ixvkBuffer *)res);
                 else if(res->defragDeltaInside)
                   moveInside(*cmd, (ixvkBuffer *)res);
+
               /// image
-              } else if(res->type== 1)
+              } else if(res->classT== ixClassT::VKIMAGE)
                 moveImage(*cmd, (ixvkImage *)res);
               else error.window("unkown resource type", true);
+
               cmd->endRecording();
               cmd->_submitInfo.signalSemaphoreCount= cmd->_submitInfo.waitSemaphoreCount= 0;
               cmd->submit(*q);
               cmd->_submitInfo.signalSemaphoreCount= cmd->_submitInfo.waitSemaphoreCount= 1;
               _ix->vk.QueueWaitIdle(*q);
-            }
+            } /// normal resource
 
-            destroyBuffers();
+            afterSubmitJobs(false);  /// signal not to use fence
+
             /// update segment freespace
             segment->updateFreespace();
             --job, --in_n;
@@ -1082,107 +1147,174 @@ void ixVulkan::Defrag::doJobs(uint32 in_n) {
 }
 
 
-void ixVulkan::Defrag::destroyBuffers(VkoFence *in_fence) {
-  uint fi= _ix->vki.fi;
+void ixVulkan::Defrag::afterSubmitJobs(bool in_useFence) {
+  if(destroyBuffersList->nrNodes || resToUpdate) {
+    uint32 fi= _ix->vki.fi;
+    if(in_useFence) {
+      _ix->vk.WaitForFences(_ix->vk, 1, &fenceSignal[fi]->fence, true, ~0);
+      _ix->vk.ResetFences(_ix->vk, 1, &fenceSignal[fi]->fence);
+    }
 
-  if(in_fence) {
-    _ix->vk.WaitForFences(_ix->vk, 1, &in_fence->fence, true, ~0);
-    _ix->vk.ResetFences(_ix->vk, 1, &in_fence->fence);
-  }
-  
-  while(destroyBuffersList[fi].nrNodes) {
-    _ix->vk.DestroyBuffer(_ix->vk, ((DBuffer *)destroyBuffersList[fi].first)->buf, _ix->vk);
-    destroyBuffersList[fi].del(destroyBuffersList[fi].first);
+    // destroy old buffers that were moved
+    while(destroyBuffersList[fi].nrNodes) {
+      if(((DBuffer *)(destroyBuffersList[fi].first))->buf)
+        _ix->vk.DestroyBuffer(_ix->vk, ((DBuffer *)destroyBuffersList[fi].first)->buf, _ix->vk);
+      if(((DBuffer *)(destroyBuffersList[fi].first))->img)
+        _ix->vk.DestroyImage(_ix->vk, ((DBuffer *)destroyBuffersList[fi].first)->img, _ix->vk);
+      destroyBuffersList[fi].del(destroyBuffersList[fi].first);
+    }
+
+    // update sets of buffers that were moved
+    if(resToUpdate) {
+      /// re-create view if it had one
+      if(resToUpdate->classT== ixClassT::VKIMAGE)
+        if(((ixvkImage *)resToUpdate)->view)
+          ((ixvkImage *)resToUpdate)->createView();
+      resToUpdate->updateSets();
+      resToUpdate= null;
+    }
   }
 }
+
 
 
 void ixVulkan::Defrag::moveBuffer(VkCommandBuffer in_cmd, ixvkBuffer *out_b) {
   VkBuffer oldBuffer= out_b->handle->buffer;
-  
-  // DO YOU NEED A BARRIER, WHEN YOU GOT A SEMAPHORE STOPPING EVERYTHING?
-  //out_b->barrier(in_cmd, out_b->access.lastAccess, VK_ACCESS_TRANSFER_READ_BIT, out_b->access.lastStage, VK_PIPELINE_STAGE_TRANSFER_BIT);
-  
+  uint64 oldOffset= *out_b->offset();
+
   /// new buffer setup vars, get it ready for transfer
   out_b->handle->offset-= out_b->defragDelta;
   out_b->defragDelta= 0;
 
+  out_b->handle->buffer= 0;
   out_b->handle->build();           // this avoids changing the cluster
   _ix->vk.BindBufferMemory(_ix->vk, *out_b->handle, *out_b->segment->memory, out_b->handle->offset);
 
   // copy
-  
-  uint64 size= out_b->handle->createInfo.size; //memRequirements.size;
+  uint64 size= *out_b->size(); //handle->createInfo.size; //memRequirements.size;
+  //uint64 size= out_b->mem()->size;
   uint64 offset= 0;
-  while(size) {
-    uint64 copySize= (size> _ix->vki.stageDevice->handle->memRequirements.size? _ix->vki.stageDevice->handle->memRequirements.size: size);
-    VkBufferCopy region= { offset, offset, copySize };
-    _ix->vk.CmdCopyBuffer(in_cmd, oldBuffer,             *_ix->vki.stageDevice, 1, &region);
-    _ix->vk.CmdCopyBuffer(in_cmd, *_ix->vki.stageDevice, *out_b,                1, &region);
+  
+  for(ixvkResource *r= (ixvkResource *)out_b->segment->resources.first; r; r= (ixvkResource *)r->next) {
+  //for(uint a= 0; a< out_b->segment->resources.nrNodes; a++) {
+    if(r== out_b) continue;
+    uint64 s1= *out_b->offset();
+    uint64 e1= s1+ out_b->mem()->size- 1;
+    uint64 s2= *r->offset();
+    uint64 e2= s2+ r->mem()->size- 1;
+    bool intersection= false;
+    if(s1>= s2 && s1< e2)
+      intersection= true;
+    if(e1>= s2 && e1< e2)
+      intersection= true;
+    //if(*out_b->offset()>= *r->offset() && (*out_b->offset()< *r->offset()+ r->mem()->size))
+    //if(*out_b->offset()+ out_b->mem()->size>= *r->offset() && (*out_b->offset()+ out_b->mem()->size< *r->offset()+ r->mem()->size))
+      if(intersection) error.window("intersection!", true);
+    
+  }
 
-    offset+= size;
+
+
+
+
+  while(size) {
+    uint64 copySize= (size> *_ix->vki.stageDevice->size()? *_ix->vki.stageDevice->size(): size);
+    VkBufferCopy region= { offset, 0,      copySize };
+    _ix->vk.CmdCopyBuffer(in_cmd, oldBuffer, _ix->vki.stageDevice->handle->buffer, 1, &region);
+    _ix->vki.stageDevice->barrier(_ix, in_cmd, VK_ACCESS_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_MEMORY_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    that solved it. so the cmd commands were done in same time. BARRIERS<<<<<
+      omg i found it ... and it's 03:16 in the morning
+since this is a for, there has to be more barriers
+    //out_b->barrier(_ix, in_cmd, VK_ACCESS_MEMORY_WRITE
+                 region= { 0,      offset, copySize };
+    _ix->vk.CmdCopyBuffer(in_cmd, _ix->vki.stageDevice->handle->buffer, out_b->handle->buffer, 1, &region);
+
+
+    /* WORKS:
+    uint64 copySize= size;
+    VkBufferCopy region= { offset, 0,      copySize };
+    _ix->vk.CmdCopyBuffer(in_cmd, oldBuffer, out_b->handle->buffer, 1, &region);
+    */
+
+
+    /*
+    uint64 copySize= (size> *_ix->vki.stageDevice->size()? *_ix->vki.stageDevice->size(): size);
+    VkBufferCopy region= { offset, 0,      copySize };
+    _ix->vk.CmdCopyBuffer(in_cmd, oldBuffer,             *_ix->vki.stageDevice, 1, &region);
+                 region= { 0,      offset, copySize };
+    _ix->vk.CmdCopyBuffer(in_cmd, *_ix->vki.stageDevice, *out_b,                1, &region);
+    */
+
+    /* ORIG:
+    uint64 copySize= (size> *_ix->vki.stageDevice->size()? *_ix->vki.stageDevice->size(): size);
+    VkBufferCopy region= { offset, 0,      copySize };
+    _ix->vk.CmdCopyBuffer(in_cmd, oldBuffer,             *_ix->vki.stageDevice, 1, &region);
+                 region= { 0,      offset, copySize };
+    _ix->vk.CmdCopyBuffer(in_cmd, *_ix->vki.stageDevice, *out_b,                1, &region);
+    */
+
+    offset+= copySize;
     size-= copySize;
   }
 
-  //out_b->barrier(in_cmd, VK_ACCESS_TRANSFER_WRITE_BIT, out_b->access.firstAccess, VK_PIPELINE_STAGE_TRANSFER_BIT, out_b->access.firstAccess);
-
-
   // finalize
-
   DBuffer *d= (DBuffer *)destroyBuffersList[_ix->vki.fi].add();
   d->buf= oldBuffer;
+  d->img= 0;
 }
+
+
 
 
 void ixVulkan::Defrag::moveImage(VkCommandBuffer in_cmd, ixvkImage *out_i) {
   VkImageLayout saveLayout= out_i->access[0].layout;
-  //VkoQueue *out_q;
-  //bool fullBarrier= false;             /// a range barrier or a full barrier; the full barrier is for image arrays that need all layers be moved
+  uint32 saveFamily=        out_i->access[0].qFamily;
+  VkImage oldImage=         out_i->handle->image;
 
-  //if(out_i->handle->createInfo.arrayLayers> 1)
-  //  fullBarrier= true;
+  // SEMAPHORES WILL AVOID ANY NEED FOR BARRIERS.
 
-  /// barrier on start of operation
-
-  //if(fullBarrier)
-  //VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
-  // out_i->barrierRange(in_cmd, 0, out_i->handle->createInfo.arrayLayers, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
-  //  out_i->barrierRange(in_cmd, 0, out_i->handle->createInfo.arrayLayers, out_i->access[0].layout,
-  //                VK_ACCESS_TRANSFER_READ_BIT| VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT| VK_ACCESS_TRANSFER_WRITE_BIT,
-  //                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-  //else
-  //  out_i->barrier(in_cmd, 0, out_i->access[0].layout,
-  //                VK_ACCESS_TRANSFER_READ_BIT| VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT| VK_ACCESS_TRANSFER_WRITE_BIT,
-  //                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,  VK_PIPELINE_STAGE_TRANSFER_BIT);
-  
   /// populate _defragBuf
   _buf->handle->cfgSize(out_i->handle->memRequirements.size, out_i->handle->offset);
-  _buf->build();
+  
+  _buf->handle->build();        // HANDLE, NOT DIRECT BUILD
+  _buf->segment= out_i->segment;
   _ix->vk.BindBufferMemory(_ix->vk, *_buf, *out_i->segment->memory, out_i->handle->offset);
   _buf->defragDelta= out_i->defragDelta;
 
   // move by buffers
-  
+ 
   moveBuffer(in_cmd, _buf);
   
   out_i->handle->offset-= out_i->defragDelta;
   out_i->defragDelta= 0;
+  
 
   out_i->handle->cfgInitialLayout(VK_IMAGE_LAYOUT_PREINITIALIZED);
-  
-  out_i->rebuild();
+  out_i->handle->image= 0;
+  out_i->handle->build();       // HANDLE, NOT DIRECT BUILD
   _ix->vk.BindImageMemory(_ix->vk, *out_i, *out_i->segment->memory, out_i->handle->offset);
 
-  /// barrier on end of operation + layout change
-  //if(fullBarrier)
-  //  out_i->barrierRange(in_cmd, 0, out_i->handle->createInfo.arrayLayers, saveLayout, 0, VK_ACCESS_TRANSFER_READ_BIT| VK_ACCESS_TRANSFER_WRITE_BIT, 0, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-  //else
-  //  out_i->barrier(in_cmd, 0, saveLayout, 0, out_i->access[0].firstAccess, 0, out_i->access[0].firstStage);
-  out_i->barrierRange(_ix, in_cmd, 0, out_i->handle->createInfo.arrayLayers, saveLayout, 0, 0, 0, 0);
+
+  /// layout change
+  out_i->access[0].layout= VK_IMAGE_LAYOUT_PREINITIALIZED;
+  out_i->barrierRange(_ix, in_cmd, 0, out_i->handle->createInfo.arrayLayers, saveLayout, 0, 0, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+  out_i->access[0].layout= saveLayout;
 
   DBuffer *d= (DBuffer *)destroyBuffersList[_ix->vki.fi].add();
   d->buf= _buf->handle->buffer;
+  d->img= oldImage;
+
+  _buf->handle->buffer= 0;
+  _buf->segment= null;
+  _buf->defragDelta= 0;
 }
+
+
+
+
+
+
+
 
 
 void ixVulkan::Defrag::moveInside(VkCommandBuffer in_cmd, ixvkBuffer *out_b) {
@@ -1283,17 +1415,10 @@ void ixVulkan::Ortho::init() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+void ixvkResource::updateSets() {
+  for(Set *s= (Set *)_sets.first; s; s= (Set *)s->next)
+    s->set->update();
+}
 
 
 
@@ -1309,7 +1434,8 @@ void ixVulkan::Ortho::init() {
 
 
 ixvkBuffer::ixvkBuffer(ixvkResCluster *in_p): ixvkResource(in_p), handle(null) {
-  type= 0;
+  classT= ixClassT::VKBUFFER;
+  //type= 0;
   handle= in_p->_ix->vk.objects.addBuffer();
 
   /// family handling
@@ -1595,7 +1721,8 @@ Exit:
 
 
 ixvkImage::ixvkImage(ixvkResCluster *in_parent): ixvkResource(in_parent), handle(null) {
-  type= 1;
+  classT= ixClassT::VKIMAGE;
+  //type= 1;
   handle= in_parent->_ix->vk.objects.addImage();
 
   /// family handling
@@ -1611,15 +1738,27 @@ ixvkImage::ixvkImage(ixvkResCluster *in_parent): ixvkResource(in_parent), handle
   //offset= &handle->offset;
   //sizeMem= &handle->memRequirements.size;
   access= null;                   // INIT 1
+
+
+
+  view= VK_NULL_HANDLE;
+
+  viewInfo= {};
+  viewInfo.sType= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  viewInfo.pNext= nullptr;
+  viewInfo.flags= 0;
 }
 
 
 
 ixvkImage::~ixvkImage() {
   if(handle) { _ix()->vk.objects.delImage(handle); handle= null; }
+  if(view) { _ix()->vk.DestroyImageView(_ix()->vk, view, _ix()->vk); view= 0; }
   if(access) { delete[] access; access= null; }    // DEALLOC 1
   if(segment) cluster->delResource(this, false);
 }
+
+
 
 
 
@@ -1658,6 +1797,31 @@ bool ixvkImage::build() {
 void ixvkImage::destroy() {
   if(handle) handle->destroy();
   if(segment) cluster->delResource(this, false);
+}
+
+
+void ixvkImage::createView(Tex *in_t) {
+  viewInfo.image= handle->image;
+  if(in_t) {
+    viewInfo.viewType= (VkImageViewType)in_t->type;
+    viewInfo.format=   (VkFormat)in_t->format;
+
+    viewInfo.components.r= (VkComponentSwizzle)in_t->swizzR;
+    viewInfo.components.g= (VkComponentSwizzle)in_t->swizzG;
+    viewInfo.components.b= (VkComponentSwizzle)in_t->swizzB;
+    viewInfo.components.a= (VkComponentSwizzle)in_t->swizzA;
+
+    viewInfo.subresourceRange.aspectMask=     Img::vkGetAspectFromFormat(in_t->format);
+    viewInfo.subresourceRange.baseMipLevel=   0;
+    viewInfo.subresourceRange.levelCount=     in_t->nrLevels;
+    viewInfo.subresourceRange.baseArrayLayer= 0;
+    viewInfo.subresourceRange.layerCount=     1;
+  }
+
+  if(view) { _ix()->vk.DestroyImageView(_ix()->vk, view, _ix()->vk); view= 0; }
+
+  if(!error.vkCheck(_ix()->vk.CreateImageView(_ix()->vk, &viewInfo, _ix()->vk, &view))) 
+    error.detail("vkCreateImageView failed", __FUNCTION__);
 }
 
 
@@ -1794,6 +1958,11 @@ bool ixvkImage::upload(Tex *in_tex, uint32 in_layer, VkImageLayout in_layout, ui
                                         (q? q->family: VK_QUEUE_FAMILY_IGNORED), (q? copyQ->family: VK_QUEUE_FAMILY_IGNORED));
     access[in_layer].layout= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
+    /// special case, it's a new image, starting with ~0 as family. no aquire but cmd+q has to exist at this point
+    if(access[in_layer].qFamily== VK_QUEUE_FAMILY_IGNORED)
+      _ix->vki.getToolCmdAndQueue(_ix->vki.q1->family, &q, &cmd);
+
+    /// copy vars
     uint32 copyOffset= 0;
     uint32 copySize= 0;
 
@@ -2165,7 +2334,7 @@ Exit:
 
 
 
-ixvkResCluster::ixvkResCluster(Ix *in_ix): _ix(in_ix) /*, add(in_ix, this)*/ {
+ixvkResCluster::ixvkResCluster(Ix *in_ix): ixClass(ixClassT::VKCLUSTER), _ix(in_ix) /*, add(in_ix, this)*/ {
   delData();
 }
 
@@ -2270,15 +2439,26 @@ void ixvkResCluster::delResource(ixvkResource *out_r, bool in_del) {
     
     /// defrag data compute, for all resources past the deleted one
     for(; p; p= (ixvkResource *)p->next) {
+      if(p== _ix->vki.defrag._buf)
+        continue;          // defrag's buffer must be skipped
+
+      bool itAlreadyHasJob= (p->defragDelta? true: false);
+
       if(p->prev) {
         ixvkResource *prv= (ixvkResource *)p->prev;
-        uint32 alignment= p->mem()->alignment;
+        uint32 alignment= (uint32)p->mem()->alignment;
         VkDeviceSize newOffset= _getAlignedOffset(*(prv->offset())- prv->defragDelta+ prv->mem()->size, alignment);
         p->defragDelta+= (uint32)(*(p->offset())- newOffset);
-      } else
-        p->defragDelta=  (uint32)*p->offset();     // move to beginning
 
-      _ix->vki.defrag.job++;                    // signal there is another defrag job
+      } else
+        p->defragDelta=  (uint32)*p->offset();        // move to beginning
+
+      /// this logic is to avoid going thru all resources and counting all jobs, but i fear that might be necesary, in the end...
+      if(itAlreadyHasJob && !p->defragDelta)          // somehow it don't need no job anymore
+        _ix->vki.defrag.job--;
+      if(!itAlreadyHasJob && p->defragDelta)          // it has a need for a job now
+        _ix->vki.defrag.job++;
+
     } /// for each resource after deleted
   }
 }
@@ -2287,27 +2467,14 @@ void ixvkResCluster::delResource(ixvkResource *out_r, bool in_del) {
 
 bool ixvkResCluster::allocRes(ixvkResource *out_r) {
   ixvkResClusterSegment *s= null;
-  //VkMemoryRequirements *mem;
-  
-  /*
-  /// buffer
-  if(out_r->type== 0) {
-    mem= &((ixvkBuffer *)out_r)->handle->memRequirements;
-  /// image
-  } else if(out_r->type== 1) {
-    mem= &((ixvkImage *)out_r)->handle->memRequirements;
-  /// unknown
-  } else { error.detail("Unknown resource type", __FUNCTION__, __LINE__); return false; }
-  */
-
 
   /// find a segment with enough freespace
   s= _getSegment(out_r->mem());
   if(s== null) { error.detail("Fatal Error: requested memory is too big for the cluster segment size, or vukan alloc failed", __FUNCTION__); return false; }
 
-  if(out_r->type== 0) {
+  if(out_r->classT== ixClassT::VKBUFFER) {
     if(!((ixvkBuffer *)out_r)->handle->isMemoryCompatible(s->memory)) { error.detail("segment memory is not compatible with new buffer", __FUNCTION__); return false; }
-  } else if(out_r->type== 1) {
+  } else if(out_r->classT== ixClassT::VKIMAGE) {
     if(!((ixvkImage *)out_r)->handle->isMemoryCompatible(s->memory)) { error.detail("segment memory is not compatible with new buffer", __FUNCTION__); return false; }
   }
   
@@ -2318,8 +2485,8 @@ bool ixvkResCluster::allocRes(ixvkResource *out_r) {
   *out_r->offset()= _getAlignedOffset(s->freeOffset, out_r->mem()->alignment);
 
   // bind memory
-  if(out_r->type== 0)      _ix->vk.BindBufferMemory(_ix->vk, *((ixvkBuffer *)out_r)->handle, *s->memory, *out_r->offset());
-  else if(out_r->type== 1) _ix->vk.BindImageMemory(_ix->vk,  *((ixvkImage *)out_r)->handle,  *s->memory, *out_r->offset());
+  if(out_r->classT== ixClassT::VKBUFFER)     _ix->vk.BindBufferMemory(_ix->vk, *((ixvkBuffer *)out_r)->handle, *s->memory, *out_r->offset());
+  else if(out_r->classT== ixClassT::VKIMAGE) _ix->vk.BindImageMemory(_ix->vk,  *((ixvkImage *)out_r)->handle,  *s->memory, *out_r->offset());
   
   /// update segment free space
   s->freeSize-= ((*out_r->offset())- s->freeOffset);    /// substract difference between aligned/not aligned offset (thrash)
@@ -2330,7 +2497,7 @@ bool ixvkResCluster::allocRes(ixvkResource *out_r) {
   ixvkResource *last= ((ixvkResource *)s->resources.last);
   if(last)
     if(last->defragDelta) {
-      uint32 alignment= (uint32)(out_r->type== 0? ((ixvkBuffer *)out_r)->handle->memRequirements.alignment: ((ixvkImage *)out_r)->handle->memRequirements.alignment);
+      uint32 alignment= out_r->mem()->alignment;
       VkDeviceSize newOffset= _getAlignedOffset((*last->offset())- last->defragDelta+ last->mem()->size, alignment);
       out_r->defragDelta= (uint32)((*out_r->offset())- newOffset);
     } else
@@ -2338,6 +2505,7 @@ bool ixvkResCluster::allocRes(ixvkResource *out_r) {
   out_r->defragDeltaInside= 0;
   out_r->defragOffset= 0;
   out_r->defragSize= 0;
+  if(out_r->defragDelta!= 0) _ix->vki.defrag.job++;
 
   s->resources.add(out_r);
 
@@ -2371,7 +2539,7 @@ bool ixvkResCluster::allocRes(ixvkResource *out_r) {
 
 ///====================================================================///
 
-ixvkResClusterSegment::ixvkResClusterSegment(ixvkResCluster *in_parent): cluster(in_parent) {
+ixvkResClusterSegment::ixvkResClusterSegment(ixvkResCluster *in_parent): ixClass(ixClassT::VKCLUSTERSEGMENT), cluster(in_parent) {
   //_ix= parent->_ix;
 
   memory= null;
@@ -2422,5 +2590,214 @@ void ixvkResClusterSegment::updateFreespace() {
 }
 
 #endif // IX_USE_VULKAN
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ######    ########    ####      ####    ######    ########  ######    ########    ####    ######
+// ##    ##  ##        ##        ##    ##  ##    ##     ##     ##    ##     ##     ##    ##  ##    ##
+// ##    ##  ######      ####    ##        ######       ##     ######       ##     ##    ##  ######
+// ##    ##  ##              ##  ##    ##  ##    ##     ##     ##           ##     ##    ##  ##    ##
+// ######    ########   #####      ####    ##    ##  ########  ##           ##       ####    ##    ##
+
+///====================================================================///
+// POOL+SET
+
+
+
+// AMD advice:
+// Place all Descriptors in one giant Descriptor Set
+// -layout (set=0, binding=N) uniform texture2D textures[hugeNumber]
+// Leave the one giant Descriptor Set always bound
+// -No more vkCmdBindDescriptorSets() calls for each draw/dispatch
+// -Instead use Push Constant(s) via vkCmdPushConstants() for per-draw indexes into binding array
+
+
+ixvkDescPool::ixvkDescPool(Ix *in_ix): VkoDynamicSetPool(&in_ix->vk) {
+  _ix= in_ix;
+  _ix->vk.objects.addCustomDynamicSetPool(this);
+}
+
+ixvkDescPool::~ixvkDescPool() {
+  VkoDynamicSetPool::~VkoDynamicSetPool();
+}
+
+
+void ixvkDescPool::addSet(ixvkDescSet **out_s) {
+  *out_s= new ixvkDescSet;
+
+  //layout->descriptors.nrNodes;  ->number of descriptors in this set - direct number of bindings - bindings can have count 0
+  if(layout->descriptors.nrNodes) {
+    (*out_s)->binds= new ixClass *[layout->descriptors.nrNodes];
+    for(uint32 a= 0; a< layout->descriptors.nrNodes; ++a)
+      (*out_s)->binds[a]= nullptr;
+  }
+  addCustomSet(*out_s);
+  (*out_s)->_pool= this;
+}
+
+
+
+
+
+
+ixvkDescSet::ixvkDescSet(): VkoDynamicSet() {
+  binds= null;
+  _pool= null;
+}
+
+ixvkDescSet::~ixvkDescSet() {
+  if(binds) { delete[] binds; binds= null; }
+}
+
+
+void ixvkDescSet::bind(uint32 in_nr, ixClass *in_res) {
+  // any class can be binded. this can be easily expanded.
+  if(in_nr> _pool->layout->descriptors.nrNodes) { error.detail("bind out of bounds", __FUNCTION__); return; }
+  
+  if(binds[in_nr]) _unlink(in_nr);
+  binds[in_nr]= in_res;
+  _link(in_nr);
+}
+
+
+void ixvkDescSet::unbind(uint32 in_nr) {
+  if(binds[in_nr]== nullptr) { error.detail("trying to unbind a null bind", __FUNCTION__); return; }
+  _unlink(in_nr);
+  binds[in_nr]= nullptr;
+}
+
+
+void ixvkDescSet::_link(uint32 in_nr) {
+  ixvkResource *r= null;
+  if(binds[in_nr]->classT== ixClassT::VKBUFFER)
+    r= (ixvkResource *)(binds[in_nr]);
+  else if(binds[in_nr]->classT== ixClassT::TEXTURE)
+    r= (ixvkResource *)(((ixTexture *)(binds[in_nr]))->vkd.img);
+
+  if(r)
+    ixvkResource::Set *s= new ixvkResource::Set(this, r);
+}
+
+
+void ixvkDescSet::_unlink(uint32 in_nr) {
+  ixvkResource *r= null;
+  if(binds[in_nr]->classT== ixClassT::VKBUFFER)
+    r= (ixvkResource *)(binds[in_nr]);
+  else if(binds[in_nr]->classT== ixClassT::TEXTURE)
+    r= (ixvkResource *)(((ixTexture *)(binds[in_nr]))->vkd.img);
+
+  if(r)
+    for(ixvkResource::Set *s= (ixvkResource::Set *)r->_sets.first; s; s= (ixvkResource::Set *)s->next)
+      if(s->set== this) {
+        r->_sets.del(s);
+        return;
+      }
+}
+
+
+void ixvkDescSet::update() {
+  VkWriteDescriptorSet w;
+  VkDescriptorImageInfo i;
+  VkDescriptorBufferInfo b;
+  w.sType= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  w.pNext= nullptr;
+  w.dstSet= set;
+  w.dstArrayElement= 0;                   // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ARRAY ELEMENT CAN BE AN ISSUE, I CAN'T FORESEE 
+  w.descriptorCount= 1;
+  w.pBufferInfo= &b;                  // always pointing <<< hopely no issues
+  w.pImageInfo= &i;                   // always pointing <<< hopely no issues
+  w.pTexelBufferView= nullptr;
+
+  VkoDescriptorLayout *d= (VkoDescriptorLayout *)_pool->layout->descriptors.first;
+  for(uint32 a= 0; a< nbinds(); ++a, d= (VkoDescriptorLayout *)d->next)
+    if(binds[a]!= nullptr) {
+      w.dstBinding= a;
+      w.descriptorType= d->type;
+
+      /// basic BUFFER bind
+      if(binds[a]->classT== ixClassT::VKBUFFER) {
+        b.offset= 0;
+        b.range= VK_WHOLE_SIZE;
+        b.buffer= ((ixvkBuffer *)binds[a])->handle->buffer;
+        w.pBufferInfo= &b;
+        w.pImageInfo= null;
+
+      /// TEXTURE bind
+      } else if(binds[a]->classT== ixClassT::TEXTURE) {
+        w.pBufferInfo= null;
+        w.pImageInfo= &i;
+        ixTexture *tex= (ixTexture *)binds[a];
+        i.sampler= tex->vkd.sampler->sampler;
+        i.imageView= tex->vkd.img->view;
+
+        if(tex->affinity< 2)
+          //i.imageView= tex->segment->view,
+          i.imageLayout= tex->vkd.img->access[0].layout;
+        
+        else if(tex->affinity== 64)
+          //i.imageView= tex->segment->view,
+          i.imageLayout= tex->vkd.img->access[tex->layer->index].layout;
+        else error.detail(str8().f("unknown texture affinity[%d] for bind[%d]", tex->affinity, a), __FUNCTION__);
+
+      /*
+      } else if(binds[a]->classT== ixClassT::VKIMAGE) {
+        // I DON'T THINK YOU CAN BIND JUST AN IMAGE HERE, YOU NEED SAMPLER/VIEW ALSO, AND THOSE ARE NOT IN THE IMAGE.
+        error.makeme(__FUNCTION__); 
+      */
+
+      } else {
+        error.detail(str8().f("unknown class binded in slot[%d]", a), __FUNCTION__);
+      }
+      
+
+
+      _ix()->vk.UpdateDescriptorSets(_ix()->vk, 1, &w, 0, nullptr);
+    }
+  
+}
+
+
+
+void ixvkDescSet::updateStandardMat() {
+  ixTexture **map= (ixTexture **)binds;
+  VkWriteDescriptorSet w;
+  VkDescriptorImageInfo i[4];
+  w.sType= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  w.pNext= null;
+  w.dstSet= set;
+  w.dstArrayElement= 0;
+  w.dstBinding= 0;
+  w.descriptorCount= 4;   // will update binding+1/+2/+3 also
+  w.descriptorType= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  w.pImageInfo= i;
+  w.pBufferInfo= null;
+  w.pTexelBufferView= null;
+  for(uint a= 0; a< 4; a++)
+    if(binds[a]) {
+      i[a].sampler= map[a]->vkd.sampler->sampler;
+      i[a].imageView= map[a]->vkd.img->view; //segment->view;
+      i[a].imageLayout= map[a]->vkd.img->access[map[a]->layer->index].layout;
+    } else {
+      i[a].sampler= _ix()->vki.noTexture->vkd.sampler->sampler;
+      i[a].imageView= _ix()->vki.noTexture->vkd.img->view;
+      i[a].imageLayout= _ix()->vki.noTexture->vkd.img->access[0].layout;
+    }
+
+  _ix()->vk.UpdateDescriptorSets(_ix()->vk, 1, &w, 0, nullptr);
+}
+
+
 
 

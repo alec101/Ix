@@ -26,6 +26,8 @@ class ixvkStageBuffer;
 class ixvkResCluster;
 class ixvkSampler;
 class ixvkImage;
+class ixvkDescPool;
+class ixvkDescSet;
 
 ///=====================-----------------------///
 // TEXTURE SYSTEM class ======================= //
@@ -54,11 +56,13 @@ public:
   public:
     Ix *_ix;
 
-    VkoDescriptorSetLayout *standard4mapsLayout;    // standard 4 slot material layout
-    VkoDescriptorSetLayout *staticLayout; // layout for the static texture pool sets
-    VkoDynamicSetPool      *staticPool;   // pool for static textures
+    VkoDescriptorSetLayout *standard4mapsLayout;  // standard 4 slot material layout
+    VkoDescriptorSetLayout *staticLayout;         // layout for the static texture pool sets
+    ixvkDescPool           *staticPool;           // pool for static textures
 
     void assignSampler(ixTexture *out_tex);
+    //void createImageView(ixTexture *out_tex, Tex *in_texData= null);  // leaving texData null, will just pass the current createInfoStruct
+
     // vvvv ??? either this, or when a texture is destroyed, a check thru samplers happen
     void cleanSamplers();   // destroys all samplers that have no texture assigned                MAKEME+add me strategically <<<<<<<<<<<<<<<<
 
@@ -88,7 +92,7 @@ public:
 
 
 
-  class Stream: public chainData {
+  class Stream: public ixClass {
     Ix *_ix;
   public:
     // void upload() would for sure have the lowest possible detail assigned
@@ -123,7 +127,7 @@ public:
     public:
       //uint32 layersInUse;
       ixvkImage *image;
-      VkImageView view;
+      //VkImageView view;
       //VkoDynamicSet *set;         // a default set for this image array; more can be created if needed <<< HANDLED BY MATERIAL
 
       /// free space handling
@@ -177,6 +181,8 @@ public:
     void _delSegment(Segment *out_s);
     void _linkTexture(ixTexture *out_t, Stream *in_p1, Stream::Segment *in_p2, Stream::Segment::Layer *in_p3);
     void _unlinkTexture(ixTexture *out_t);
+
+    //void _createView();
 
     // constructor / destructor
 

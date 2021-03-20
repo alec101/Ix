@@ -416,7 +416,7 @@ void Ix::printIxList() {
 }
 
 
-Ix::Ix(): res(this)
+Ix::Ix(): ixClass(ixClassT::IX), res(this)
   #ifdef IX_USE_VULKAN
   , vki(this)
   #endif
@@ -626,7 +626,9 @@ void Ix::initWindow(osiWindow *in_w) {
   if(in_w== null) { error.simple("Ix init failed: in_w is null"); return; }
   if(in_w->renderer== null) { error.simple("Ix init faild: window's renderer is null"); return; }
   if(in_w->renderer->type> 1) { error.simple("Ix init failed: unknown renderer type"); return; }
-  if(in_w->renderer->type!= cfg.engine) { error.simple("Ix init failed: requested engine and window's renderer do not match"); return; }
+  
+  //if(in_w->renderer->type!= cfg.engine) { error.simple("Ix init failed: requested engine and window's renderer do not match"); return; }
+  
   #ifdef IX_USE_VULKAN
   if(cfg.vk.physicalDeviceIndex!= ~0u)    // physical device out of bounds check
     if(cfg.vk.physicalDeviceIndex> vk.info.nrPhysicalDevices()) { error.simple("Ix init failed: requested physical device index out of bounds"); return; }

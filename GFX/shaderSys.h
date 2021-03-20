@@ -32,7 +32,7 @@ private:
 
 
 
-class ixShader: public chainData {
+class ixShader: public ixClass {
 public:
   Ix *_ix;
 

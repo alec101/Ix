@@ -530,7 +530,7 @@ bool ixTexSys::OpenGL::upload(ixTexture *out_t) {
   if(!t)         { error.detail("texture data class is null", __FUNCTION__, __LINE__); return false; } 
   if(!t->bitmap) { error.detail("texture bitmap is null", __FUNCTION__, __LINE__); return false; }
   if(!t->areSizesPowerOfTwo()) { err= "Texture sizes are not power of 2"; goto Exit; }
-  if(out_t->glData.id) if(out_t->check()) { error.detail("there is already a texture uploaded in this class", __FUNCTION__, __LINE__); return false; }
+  if(out_t->glData.id) { error.detail("there is already a texture uploaded in this class", __FUNCTION__, __LINE__); return false; }
   /// try to convert the image if it's not OGL compatible - 3D textures should be already compatible (wuss, convert your images!!!)
   if(!t->glIsCompatible()) {
     if(out_t->type== Img::Type::T_3D) { err= "Image Format is NOT compatible"; goto Exit; }
@@ -651,7 +651,7 @@ bool ixTexSys::OpenGL::upload(ixTexture *out_t) {
   /// check for gl errors
   if(error.glError()) { err= "OpenGL error"; goto Exit; }
 
-  ret= out_t->check();
+  ret= true;
 
 Exit:
   
@@ -681,7 +681,7 @@ void ixTexSys::OpenGL::unload(ixTexture *out_t) {
           if(parent->_ix->glIsActive())
             glDeleteTextures(1, &out_t->glData.id);
   out_t->glData.id= 0;
-  out_t->isValid= 0;
+  //out_t->isValid= 0;
 }
 
 
@@ -738,7 +738,7 @@ void ixTexSys::Vulkan::init() {
   staticLayout->cfgAddDescriptor(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
   staticLayout->build();
 
-  staticPool= _ix->vk.objects.addDynamicSetPool();
+  staticPool= new ixvkDescPool(_ix);
   staticPool->configure(staticLayout, _ix->cfg.vk.staticTexturesDynamicSetSegmentSize);
   staticPool->build();
 
@@ -877,11 +877,11 @@ bool ixTexSys::Vulkan::upload(ixTexture *out_tex) {
 
         out_tex->vkd.img->cluster->delResource(out_tex->vkd.img);
 
-        if(out_tex->vkd.imgView)
-          _ix->vk.DestroyImageView(_ix->vk, out_tex->vkd.imgView, _ix->vk);
+        //if(out_tex->vkd.imgView)
+        //  _ix->vk.DestroyImageView(_ix->vk, out_tex->vkd.imgView, _ix->vk);
 
         out_tex->vkd.img= null;
-        out_tex->vkd.imgView= null;
+        //out_tex->vkd.imgView= null;
       }
 
     // create an ixvkImage
@@ -933,33 +933,14 @@ bool ixTexSys::Vulkan::upload(ixTexture *out_tex) {
 
   // image view
   /// image view will be destroyed at start, if vkImage needs to be created / uploaded tex differs from current
-  if((out_tex->vkd.imgView== VK_NULL_HANDLE) && (out_tex->affinity< 2)) {
-    /// Vulkan Image View
-    VkImageViewCreateInfo viewInfo;
-      viewInfo.sType= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-      viewInfo.pNext= nullptr;      // usage is inherited but can be inserted here with a VkImageViewUsageCreateInfo
-      viewInfo.flags= 0;
-
-      viewInfo.image=    out_tex->vkd.img->handle->image;
-      viewInfo.viewType= (VkImageViewType)t->type;
-      viewInfo.format=   (VkFormat)t->format;
-
-      viewInfo.components.r= (VkComponentSwizzle)t->swizzR;
-      viewInfo.components.g= (VkComponentSwizzle)t->swizzG;
-      viewInfo.components.b= (VkComponentSwizzle)t->swizzB;
-      viewInfo.components.a= (VkComponentSwizzle)t->swizzA;
-
-      viewInfo.subresourceRange.aspectMask=     Img::vkGetAspectFromFormat(t->format);
-      viewInfo.subresourceRange.baseMipLevel=   0;
-      viewInfo.subresourceRange.levelCount=     t->nrLevels;
-      viewInfo.subresourceRange.baseArrayLayer= 0;
-      viewInfo.subresourceRange.layerCount=     1;
-    if(!error.vkCheck(_ix->vk.CreateImageView(_ix->vk, &viewInfo, _ix->vk, &out_tex->vkd.imgView))) IXERR("vkCreateImageView failed.");
-
-  } else if(out_tex->affinity== 64) {
-    out_tex->vkd.imgView= out_tex->segment->view;
-
+  if((out_tex->vkd.img->view== VK_NULL_HANDLE) && (out_tex->affinity< 2)) {
+    out_tex->vkd.img->createView(t);
   }
+
+  // VIEW MOVED TO ixvkImage
+  //else if(out_tex->affinity== 64) {
+  //  out_tex->vkd.imgView= out_tex->segment->view;
+  //  }
 
   // Vulkan sampler
   assignSampler(out_tex);
@@ -971,25 +952,10 @@ bool ixTexSys::Vulkan::upload(ixTexture *out_tex) {
     if(out_tex->affinity<= 1) {
 
       if(out_tex->vkd.set== null)
-        out_tex->vkd.set= staticPool->addSet();
+        staticPool->addSet(&out_tex->vkd.set);
 
-      VkDescriptorImageInfo imgInfo;
-        imgInfo.imageView=   out_tex->vkd.imgView;
-        imgInfo.sampler=     *out_tex->vkd.sampler;
-        imgInfo.imageLayout= out_tex->vkd.img->access[0].layout;
-
-      VkWriteDescriptorSet update;
-        update.sType= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        update.pNext= null;
-        update.dstSet= out_tex->vkd.set->set;
-        update.dstBinding= 0;
-        update.dstArrayElement= 0;
-        update.descriptorCount= 1;
-        update.descriptorType= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        update.pImageInfo= &imgInfo;
-        update.pBufferInfo= null;
-        update.pTexelBufferView= null;
-      _ix->vk.UpdateDescriptorSets(_ix->vk, 1, &update, 0, null);
+      out_tex->vkd.set->bind(0, out_tex);
+      out_tex->vkd.set->update();
     }
 
     // <<<<<<<<<<  other afinity sets <<<<<<<<<<<<<
@@ -1214,6 +1180,7 @@ void ixTexSys::Vulkan::assignSampler(ixTexture *out_t) {
 
   }
 }
+
 
 
 

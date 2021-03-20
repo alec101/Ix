@@ -71,7 +71,7 @@ Exit:
 // constructors / destructors ============================= //
 ///===========================-----------------------------///
 
-ixTexSys::Stream::Stream(Ix *in_ix): _ix(in_ix) {
+ixTexSys::Stream::Stream(Ix *in_ix): ixClass(ixClassT::TEXSTREAM), _ix(in_ix) {
   cluster= null;
   //setPoolSegmentSize= 10;
 
@@ -135,7 +135,7 @@ ixTexSys::Stream::Segment::Segment() {
   freeSpacePeak= 0;
 
   image= null;
-  view= VK_NULL_HANDLE;
+  //view= VK_NULL_HANDLE;
   
   //set= null;
 
@@ -351,9 +351,21 @@ void ixTexSys::Stream::_addSegment() {
     //s->image->access[a].lastStage=  VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
   }
 
-
-
   /// vulkan image view cfg/build
+  s->image->viewInfo.viewType= VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+  s->image->viewInfo.format= (VkFormat)format;
+  s->image->viewInfo.components= swizzle;
+  s->image->viewInfo.subresourceRange.aspectMask= Img::vkGetAspectFromFormat(format);
+  s->image->viewInfo.subresourceRange.baseMipLevel= 0;
+  if(levels== 0)
+    cfgLevels(0);
+  s->image->viewInfo.subresourceRange.levelCount= levels;
+  s->image->viewInfo.subresourceRange.baseArrayLayer= 0;
+  s->image->viewInfo.subresourceRange.layerCount= segmentLayers;
+  s->image->createView();
+
+
+  /*
   VkImageViewCreateInfo viewInfo;
     viewInfo.sType= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.pNext= nullptr;      // usage is inherited but can be inserted here with a VkImageViewUsageCreateInfo
@@ -374,6 +386,8 @@ void ixTexSys::Stream::_addSegment() {
     viewInfo.subresourceRange.baseArrayLayer= 0;
     viewInfo.subresourceRange.layerCount=     segmentLayers;
   if(!error.vkCheck(_ix->vk.CreateImageView(_ix->vk, &viewInfo, _ix->vk, &s->view))) { error.simple("vkCreateImageView failed."); return; }
+  */
+
 
   /* HANDLED BY MATERIAL
   /// vulkan set layout - point this to a custom created one if needed
@@ -437,10 +451,11 @@ void ixTexSys::Stream::_delSegment(Segment *out_s) {
       _unlinkTexture(l->tex);
   }
 
-  if(out_s->view!= VK_NULL_HANDLE) {
-    _ix->vk.DestroyImageView(_ix->vk, out_s->view, _ix->vk);
-    out_s->view= VK_NULL_HANDLE;
-  }
+  // MOVED TO ixvkImage (DESTRUCTOR)
+  //if(out_s->view!= VK_NULL_HANDLE) {
+  //  _ix->vk.DestroyImageView(_ix->vk, out_s->view, _ix->vk);
+  //  out_s->view= VK_NULL_HANDLE;
+  //}
 
   if(cluster) {
     if(out_s->image) {
@@ -469,7 +484,7 @@ void ixTexSys::Stream::_linkTexture(ixTexture *out_t, ixTexSys::Stream *in_p1, i
   out_t->segment= in_p2;
   out_t->layer= out_p3;
   out_t->vkd.img= in_p2->image;
-  out_t->vkd.imgView= in_p2->view;
+  //out_t->vkd.imgView= in_p2->view;
   if(!out_t->vkd.flags.isUp(0x01))
     if(!out_t->vkd.sampler)
       out_t->vkd.sampler= in_p1->sampler;
@@ -488,7 +503,7 @@ void ixTexSys::Stream::_unlinkTexture(ixTexture *out_t) {
   out_t->stream= null;    // <<< TO BE OR NOT TO BE - maybe this can be a more static thing, that won't change
 
   out_t->vkd.img= null;
-  out_t->vkd.imgView= null;
+  //out_t->vkd.imgView= null;
 
   layer->tex= null;
   

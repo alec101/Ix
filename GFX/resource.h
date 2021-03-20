@@ -115,7 +115,7 @@ THERE HAS TO BE A HIGHER CLASS THAT TIES ASSETS TOGHEDER
 // this can be the base for every asset - it looks good, it might work so you can dynamically load everything in any engine, and set shares for any asset
 class Ix;
 
-class ixResource: public chainData {
+class ixResource: public ixClass {
   Ix *_ix;
 public:
   str8 fileName;
@@ -134,7 +134,7 @@ public:
 
   // constructors / destructors
 
-  ixResource(Ix *in_ix): _ix(in_ix)/*, _share(null)*/ {}
+  ixResource(Ix *in_ix): ixClass(ixClassT::RESOURCE), _ix(in_ix)/*, _share(null)*/ {}
   virtual ~ixResource() { delData(); }
   virtual void delData();
 

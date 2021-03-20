@@ -316,7 +316,7 @@ public:
 
   #ifdef IX_USE_VULKAN
   ixvkBuffer *data;
-  VkoDynamicSet *set;
+  ixvkDescSet *set;
   #endif
 
 };

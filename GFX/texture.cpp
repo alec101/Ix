@@ -26,6 +26,7 @@
 ///================///
 
 ixTexture::ixTexture(Ix *in_ix, uint32 in_texID): ixResource(in_ix), vkd(this) {
+  classT= ixClassT::TEXTURE;
 
   texLibID= in_texID;
 
@@ -44,13 +45,18 @@ ixTexture::ixTexture(Ix *in_ix, uint32 in_texID): ixResource(in_ix), vkd(this) {
   #ifdef IX_USE_VULKAN
   vkd.parent= this;
   vkd.img= null;
-  vkd.imgView= null;
+  //vkd.imgView= null;
   vkd.sampler= null;
   vkd.customSampler= null;
   vkd.set= null;           // either own set from staticPool, or points to the set of the stream
 
   vkd.flags.setDown(0x01);   // own sampler
   vkd.flags.setUp(0x02);     // create the set
+
+  //vkd.imgViewInfo= {};
+  //vkd.imgViewInfo.sType= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  //vkd.imgViewInfo.pNext= nullptr;
+  //vkd.imgViewInfo.flags= 0;
   #endif
 
   stream= null;
@@ -79,8 +85,8 @@ void ixTexture::Vulkan::delData() {
     if(img)
       delete img;
 
-    if(imgView)
-      _ix->vk.DestroyImageView(_ix->vk, imgView, _ix->vk);
+    //if(imgView)
+    //  _ix->vk.DestroyImageView(_ix->vk, imgView, _ix->vk);
 
     if(sampler) {
       if(flags.isUp(0x01))
@@ -103,7 +109,7 @@ void ixTexture::Vulkan::delData() {
   } /// types of textures
 
   img= null;
-  imgView= null;
+  //imgView= null;
   sampler= null;
   set= null;
 }

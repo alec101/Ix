@@ -48,15 +48,18 @@ public:
   struct Vulkan {
     ixTexture *parent;
 
-    VkImageView   imgView;
+    //VkImageViewCreateInfo imgViewInfo;
+    //VkImageView   imgView;
     ixvkImage     *img;
     ixvkSampler   *sampler;
     VkSamplerCreateInfo *customSampler; // point this to a samplerCreateInfo for another way to customize the sampler
-    VkoDynamicSet *set;                 // affinity 64: this is always null, the material must handle it
+    ixvkDescSet   *set;                 // affinity 64: this is always null, the material must handle it
 
     // 0x01 [def:down] own sampler - [true: the sampler is unique to this texture] [false: sampler can be shared with multiple textures]
     // 0x02 [def:up] create set - ignored for affinity64
     ixFlags8 flags;
+
+    //void createImageView();
 
     inline Vulkan(ixTexture *in_parent): parent(in_parent) {}
     void delData();

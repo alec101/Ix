@@ -69,7 +69,7 @@ MESHES
 
 ///======================================///
 
-ixMesh::ixMesh(Ix *in_ix): _ix(in_ix) {
+ixMesh::ixMesh(Ix *in_ix): ixClass(ixClassT::MESH), _ix(in_ix) {
   nrVert= 0;
   fileIndex= 0;
   dataType= 1;
@@ -202,7 +202,7 @@ bool ixMeshSys::load(cchar *in_file, ixMesh *out_m) {
 
   out_m->fileName= in_file;
 
-  if(ext== "obj")
+  if(ext== "i3d")
     return out_m->_loadI3D(in_file);  
   else if(ext== "obj")
     return loadOBJ(in_file, 1, out_m, &out_m->fileIndex);

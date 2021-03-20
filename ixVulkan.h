@@ -9,6 +9,12 @@ class ixvkImage;
 class ixvkResCluster;
 class vkDraw;
 
+
+class ixvkDescPool;
+class ixvkDescSet;
+
+
+
 ///========================================///
 // ixvkResCluster class - Resources Cluster //
 ///========================================///
@@ -23,7 +29,7 @@ class vkDraw;
 
 class ixvkResClusterSegment;
 
-class ixvkResCluster: public chainData {
+class ixvkResCluster: public ixClass {
 public:
   Ix *_ix;                             // parent ix engine
   
@@ -33,7 +39,7 @@ public:
   uint32_t memTypeBits;               // [def:~0] you can specify a direct memory to use; if left default, memReq+memPref will be used to search for one
 
   chainList segments;                 // [chainData:ixvkResClusterSegment] list with all segments
-  
+
   /* DEFRAG brainstorm:
   - on each delete, you can mark all resources past the deleted one, to move a certain number of bytes.
   - alignments must be recalculated for ALL movements
@@ -75,7 +81,7 @@ private:
 
 
 
-class ixvkResClusterSegment: public chainData {
+class ixvkResClusterSegment: public ixClass {
 public:
   inline Ix *_ix() { return cluster->_ix; }
   ixvkResCluster *cluster;   // parent ResCluster
@@ -106,10 +112,9 @@ public:
 // ixvk RESOURCE class
 ///===================
 
-class ixvkResource: public chainData {
+class ixvkResource: public ixClass {
 public:
   inline Ix *_ix() { return cluster->_ix; }
-  uint32 type;                        // 0= VkoBuffer, 1= VkoImage
   ixvkResCluster *cluster;            // parent cluster
   ixvkResClusterSegment *segment;     // parent segment - populated on build
 
@@ -117,6 +122,9 @@ public:
   uint32 defragDeltaInside;           // amount of movement for the inside movement defrag
   uint32 defragOffset;                // [~0: whole handle move in memory] / [offset of the defrag - INSIDE defrag only]
   uint32 defragSize;                  // size of the INSIDE defrag only
+
+
+
 
   //std::atomic_flag defragFlag;        // fast raise flag
   //std::atomic_uint32_t defragDelta;   // [oldoffset - defragDelta = new offset] - if not zero, defrag must happen
@@ -142,15 +150,26 @@ public:
               */
   };
 
-  inline VkMemoryRequirements *mem(); // memRequirements of the resource
-  inline VkDeviceSize *offset();       // memory offset (memory start is ref point)
+  virtual VkMemoryRequirements *mem()= 0; // memRequirements of the resource
+  virtual VkDeviceSize *offset()= 0;       // memory offset (memory start is ref point)
 
   virtual bool build()= 0;
   virtual bool rebuild()= 0;
   virtual void destroy()= 0;
 
-  ixvkResource(ixvkResCluster *in_p): cluster(in_p), segment(null), defragDelta(0), defragDeltaInside(0), defragOffset(0), defragSize(0) {}
+  void updateSets();
+
+  ixvkResource(ixvkResCluster *in_p): ixClass(ixClassT::VKRESOURCE), cluster(in_p), segment(null), defragDelta(0), defragDeltaInside(0), defragOffset(0), defragSize(0) {}
   inline virtual ~ixvkResource() {}
+
+private:
+  //class Set: public onewayData { public: ixvkDescSet *set; Set(ixvkDescSet *s, ixvkResource *r): set(s) { r->_sets.add(this); } };
+  //onewayList _sets;                    // sets that use this resource
+  
+  class Set: public chainData { public: ixvkDescSet *set; Set(ixvkDescSet *s, ixvkResource *r): set(s) { r->_sets.add(this); } };
+  chainList _sets;                    // sets that use this resource
+
+  friend class ixvkDescSet;
 };
 
 
@@ -179,7 +198,9 @@ public:
 
   // usage funcs
 
-  inline VkDeviceSize *size() { return &handle->createInfo.size; }
+  inline VkDeviceSize         *offset() { return &handle->offset; }
+  inline VkMemoryRequirements *mem()    { return &handle->memRequirements; }
+  inline VkDeviceSize         *size()   { return &handle->createInfo.size; }
 
   void barrier(Ix *ix, VkCommandBuffer in_cmd, VkAccessFlags in_srcAccess, VkAccessFlags in_dstAccess, VkPipelineStageFlags in_srcStage, VkPipelineStageFlags in_dstStage, uint32 in_oldFamily= VK_QUEUE_FAMILY_IGNORED, uint32 in_newFamily= VK_QUEUE_FAMILY_IGNORED);
   void barrierRange(Ix *ix, VkCommandBuffer in_cmd, VkDeviceSize in_offset, VkDeviceSize in_size, VkAccessFlags in_srcAccess, VkAccessFlags in_dstAccess, VkPipelineStageFlags in_srcStage, VkPipelineStageFlags in_dstStage, uint32 in_oldFamily= VK_QUEUE_FAMILY_IGNORED, uint32 in_newFamily= VK_QUEUE_FAMILY_IGNORED);
@@ -202,10 +223,10 @@ public:
 class ixvkImage: public ixvkResource {
 
 public:
-  VkoImage *handle;
-
-  Access *access;   // [def:null] array of access for each image layer - created AFTER setting the size
-  //VkImageLayout currentLayout;
+  VkoImage              *handle;
+  VkImageViewCreateInfo viewInfo;
+  VkImageView           view;
+  Access                *access;   // [def:null] array of access for each image layer - created AFTER setting the size
 
   operator VkImage() { return handle->image; }
 
@@ -222,9 +243,13 @@ public:
   virtual void destroy();
   virtual inline bool rebuild() { destroy(); return build(); }
 
+  inline VkDeviceSize         *offset() { return &handle->offset; }
+  inline VkMemoryRequirements *mem()    { return &handle->memRequirements; }
+
   void barrier(Ix *ix, VkCommandBuffer in_cmd, uint32 in_layer, VkImageLayout in_newLayout, VkAccessFlags in_srcAccess, VkAccessFlags in_dstAccess, VkPipelineStageFlags in_srcStage, VkPipelineStageFlags in_dstStage, uint32 in_oldFamily= VK_QUEUE_FAMILY_IGNORED, uint32 in_newFamily= VK_QUEUE_FAMILY_IGNORED);
   void barrierRange(Ix *ix, VkCommandBuffer in_cmd, uint32 in_fromLayer, uint32 in_nrLayers, VkImageLayout in_newLayout, VkAccessFlags in_srcAccess, VkAccessFlags in_dstAccess, VkPipelineStageFlags in_srcStage, VkPipelineStageFlags in_dstStage, uint32 in_newFamily= VK_QUEUE_FAMILY_IGNORED);
   void barrierRange2(Ix *ix, VkCommandBuffer in_cmd, VkImageSubresourceRange *in_range, VkImageLayout in_newLayout, VkAccessFlags in_srcAccess, VkAccessFlags in_dstAccess, VkPipelineStageFlags in_srcStage, VkPipelineStageFlags in_dstStage, uint32 in_newFamily= VK_QUEUE_FAMILY_IGNORED);
+  void createView(Tex *in_tex= null);       // leave null to use current viewInfo
 
   bool upload(Tex *in_tex, uint32 in_layer, VkImageLayout in_layout, uint32 in_level= 0, uint32 in_nlevels= 0);  // nlevels=0 means all levels; in_layout= final layout of the image
   bool download(Tex *out_tex, uint32 in_layer, uint32 in_level= 0, uint32 in_nlevels= 0);  // nlevels=0 means all levels
@@ -233,26 +258,61 @@ public:
   virtual ~ixvkImage();
 };
 
-// inlines for ixvkResource
-VkMemoryRequirements *ixvkResource::mem() { return (type== 0? &((ixvkBuffer *)this)->handle->memRequirements: &((ixvkImage *)this)->handle->memRequirements); }
-VkDeviceSize *ixvkResource::offset()      { return (type== 0? &((ixvkBuffer *)this)->handle->offset:          &((ixvkImage *)this)->handle->offset); }
-//VkDeviceSize ixvkResource::size()         { return (type== 0?  ((ixvkBuffer *)this)->handle->createInfo.size:  ((ixvkImage *)this)->handle->memRequirements.size); }
+/// inlines for ixvkResource
+//VkMemoryRequirements *ixvkResource::mem() { return (type== 0? &((ixvkBuffer *)this)->handle->memRequirements: &((ixvkImage *)this)->handle->memRequirements); }
+//VkDeviceSize *ixvkResource::offset()      { return (type== 0? &((ixvkBuffer *)this)->handle->offset:          &((ixvkImage *)this)->handle->offset); }
 
 
-
-
-
-
-
-
-class ixvkStream: public ixvkImage {
+class ixvkDescPool: public VkoDynamicSetPool {
+  Ix *_ix;
 public:
+  
+  void addSet(ixvkDescSet **out_set);
 
+  ixvkDescPool(Ix *in_ix);
+  ~ixvkDescPool();
 
 private:
-
-
+  friend class ixvkDescSet;
 };
+
+
+
+
+class ixvkDescSet: public VkoDynamicSet {
+public:
+  // set[this], binding[binds]
+  ixClass **binds;        // the number of binds is taken from the layout
+  inline uint32 nbinds() { return _pool->layout->descriptors.nrNodes; }
+
+  void bind(uint32 in_nr, ixClass *in_res); // can bind ixvkBuffers / ixTextures atm, but can be easily expanded.
+  void unbind(uint32 in_nr);
+
+  void update();
+  void updateStandardMat();     // updates the 4 maps in the material - must be a material set
+
+  ixvkDescSet();
+  ~ixvkDescSet();
+
+private:
+  ixvkDescPool *_pool;
+  inline Ix *_ix() { return _pool->_ix; }
+  friend class ixvkDescPool;
+
+  void _link(uint32 bindNr);
+  void _unlink(uint32 bindNr);
+};
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -371,6 +431,7 @@ public:
 
     VkoCommandBuffer *cmdToSubmit;          /// used only on the 1 defrag per frame; if there's something to do, this will point to what to be submited
     VkQueue qToSubmit;
+    ixvkResource *resToUpdate;
 
     /*
     yes, the new buffer vals are computed imediatly, it can happen, cuz the handle updates happen instant
@@ -387,11 +448,14 @@ public:
     uint64 job;                 // number of jobs avaible
     ixvkBuffer *_buf;           // used to move images; binds over the image's memory
 
+    void recountJobs();
+
     void init();                // init after window is created
 
 
     void doJobs(uint32 n= 1);   // <n>: number of jobs to do - 1 job: fits between frames ; multiple jobs: stop everything and do multiple jobs first.
-    //void doAllJobs();
+
+    void afterSubmitJobs(bool useFence= true);
 
     void getQueueCmd(uint32 in_qfamily, VkoQueue **out_q, VkoCommandBuffer **out_c);
 
@@ -400,8 +464,8 @@ public:
     void moveInside(VkCommandBuffer in_cmd, ixvkBuffer *out_buffer); // inside the buffer move operation
     
 
-    void destroyBuffers(VkoFence *in_fence= null);
-    class DBuffer: public segData { public: VkBuffer buf; };
+    //void destroyBuffers(VkoFence *in_fence= null);
+    class DBuffer: public segData { public: VkBuffer buf; VkImage img; };
     segList destroyBuffersList[2]; // [10 segment size] list with buffers that need destroying
 
 
@@ -437,7 +501,7 @@ public:
   ixvkResCluster *clusterDevice;    // [cfg::size_resourcesClusterDevice] single textures / single buffers - device memory
   ixvkResCluster *clusterHost;      // [cfg::size_resourcesClusterHost]   single textures / single buffers (UNIFORMS) - host visible memory
 
-  VkoDescriptorPool *ixStaticSetPool;   // global set, static stuff, has fixed size
+  ixvkDescPool *ixStaticSetPool;   // global set, static stuff, has fixed size
 
   // global set 0, binding 0, 
 
@@ -469,7 +533,7 @@ public:
     inline uint32 getSize() { return sizeof(Data); }
 
     VkoDescriptorSetLayout *layout;     // [points to ixStaticPool] layout of global buffer [set 0, binding 0]
-    VkoSet *set;                        // [pool: ixVulkan::ixStaticPool]
+    ixvkDescSet *set;                   // [pool: ixVulkan::ixStaticPool]
 
     GlbBuffer(ixvkResCluster *in_c): ixvkBuffer(in_c), layout(null), set(null) {}
   } *glb[2];

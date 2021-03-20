@@ -16,7 +16,7 @@ research in descriptor indexing:
 
 class ixMesh;
 
-class ixMaterial: public chainData {
+class ixMaterial: public ixClass {
   Ix *_ix;
 public:
   /*
@@ -42,8 +42,16 @@ public:
     descriptor indexing should be a future, but not sure when, atm i should do a standard thing, with these dynamic pools, cuz they're also good
     */
 
-
-  VkoDynamicSet *set;
+  
+  
+  
+  // ixvkDescriptorSet <<<<<<<<<<<<<<; MAKEME
+  
+  
+  
+  
+  
+  ixvkDescSet *set;
 
   // try to order the list and keep all mats that have same shader in one place
   //     then sort those mats so all that have same textures are kept togheder too
@@ -87,7 +95,7 @@ class ixMatSys {
   Ix *_ix;
 public:
 
-  VkoDynamicSetPool *setPool;
+  ixvkDescPool *setPool;
 
   str8 fileMaterialDB;  // [def: "/gfx/materialDB.mat"] .MAT file name
 

@@ -76,6 +76,9 @@
       </logicalFolder>
       <logicalFolder name="f4" displayName="util" projectFiles="true">
         <itemPath>../util/common.cpp</itemPath>
+        <itemPath>../util/fileI3D.cpp</itemPath>
+        <itemPath>../util/fileMAT.cpp</itemPath>
+        <itemPath>../util/fileOBJ.cpp</itemPath>
         <itemPath>../util/fileTEX.cpp</itemPath>
         <itemPath>../util/ixConsole.cpp</itemPath>
       </logicalFolder>
@@ -151,6 +154,12 @@
         <packType>Tar</packType>
         <output>../package/ix.lin64.dbg.tar</output>
         <packFileList>
+          <packFileListElem type="File"
+                            to="${PACKAGE_TOP_DIR}lib/${OUTPUT_BASENAME}"
+                            from="${OUTPUT_PATH}"
+                            perm="644"
+                            owner="root"
+                            group="bin"/>
           <packFileListElem type="File"
                             to="${PACKAGE_TOP_DIR}lib/${OUTPUT_BASENAME}"
                             from="${OUTPUT_PATH}"
@@ -236,6 +245,12 @@
       <item path="../util/common.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="../util/common.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../util/fileI3D.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../util/fileMAT.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../util/fileOBJ.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="../util/fileTEX.cpp" ex="false" tool="1" flavor2="0">
       </item>
@@ -358,6 +373,12 @@
                             perm="644"
                             owner="root"
                             group="bin"/>
+          <packFileListElem type="File"
+                            to="${PACKAGE_TOP_DIR}lib/${OUTPUT_BASENAME}"
+                            from="${OUTPUT_PATH}"
+                            perm="644"
+                            owner="root"
+                            group="bin"/>
         </packFileList>
       </packaging>
       <item path="../GFX/bone.cpp" ex="false" tool="1" flavor2="0">
@@ -437,6 +458,12 @@
       <item path="../util/common.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="../util/common.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../util/fileI3D.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../util/fileMAT.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../util/fileOBJ.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="../util/fileTEX.cpp" ex="false" tool="1" flavor2="0">
       </item>

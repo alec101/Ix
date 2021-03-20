@@ -68,6 +68,8 @@ public:
   ixMenu *createMenu(ixBaseWindow *parent);
   ixMenuBar *createMenuBar(ixBaseWindow *parent);
 
+  ixStaticText *createStaticText(ixBaseWindow *parent, int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy);
+
   void bringToFront(ixBaseWindow *);                // brings window to the top in the chainlist it's from (the parent chainlist); it will be drawn last, updated first
   void bringToBack(ixBaseWindow *);                 // brings window to bottom in the chainlist it's from (the parent chainlist); it will be drawn first, updated last
   void bringAfter(ixBaseWindow *win, ixBaseWindow *after);    // aranges window to be after the selected window

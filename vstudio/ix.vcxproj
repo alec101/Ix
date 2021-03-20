@@ -105,6 +105,7 @@
     <ClInclude Include="..\util\common.hpp" />
     <ClInclude Include="..\util\fileTEX.h" />
     <ClInclude Include="..\util\ixConsole.h" />
+    <ClInclude Include="..\util\onewayList.hpp" />
     <ClInclude Include="..\util\orientation.h" />
     <ClInclude Include="..\winSys\button.h" />
     <ClInclude Include="..\winSys\dropList.h" />

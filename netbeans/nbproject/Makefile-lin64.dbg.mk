@@ -54,6 +54,9 @@ OBJECTFILES= \
 	${OBJECTDIR}/_ext/5c0/ix.o \
 	${OBJECTDIR}/_ext/5c0/ixVulkan.o \
 	${OBJECTDIR}/_ext/d2aad2f1/common.o \
+	${OBJECTDIR}/_ext/d2aad2f1/fileI3D.o \
+	${OBJECTDIR}/_ext/d2aad2f1/fileMAT.o \
+	${OBJECTDIR}/_ext/d2aad2f1/fileOBJ.o \
 	${OBJECTDIR}/_ext/d2aad2f1/fileTEX.o \
 	${OBJECTDIR}/_ext/d2aad2f1/ixConsole.o \
 	${OBJECTDIR}/_ext/d6128080/button.o \
@@ -192,6 +195,21 @@ ${OBJECTDIR}/_ext/d2aad2f1/common.o: ../util/common.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/d2aad2f1
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -DIX_USE_OPENGL -DIX_USE_VULKAN -DOSI_USE_OPENGL -DOSI_USE_VKO -I../.. -I../../Vulkan-Headers/include/vulkan -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/d2aad2f1/common.o ../util/common.cpp
+
+${OBJECTDIR}/_ext/d2aad2f1/fileI3D.o: ../util/fileI3D.cpp
+	${MKDIR} -p ${OBJECTDIR}/_ext/d2aad2f1
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -DIX_USE_OPENGL -DIX_USE_VULKAN -DOSI_USE_OPENGL -DOSI_USE_VKO -I../.. -I../../Vulkan-Headers/include/vulkan -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/d2aad2f1/fileI3D.o ../util/fileI3D.cpp
+
+${OBJECTDIR}/_ext/d2aad2f1/fileMAT.o: ../util/fileMAT.cpp
+	${MKDIR} -p ${OBJECTDIR}/_ext/d2aad2f1
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -DIX_USE_OPENGL -DIX_USE_VULKAN -DOSI_USE_OPENGL -DOSI_USE_VKO -I../.. -I../../Vulkan-Headers/include/vulkan -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/d2aad2f1/fileMAT.o ../util/fileMAT.cpp
+
+${OBJECTDIR}/_ext/d2aad2f1/fileOBJ.o: ../util/fileOBJ.cpp
+	${MKDIR} -p ${OBJECTDIR}/_ext/d2aad2f1
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -DIX_USE_OPENGL -DIX_USE_VULKAN -DOSI_USE_OPENGL -DOSI_USE_VKO -I../.. -I../../Vulkan-Headers/include/vulkan -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/d2aad2f1/fileOBJ.o ../util/fileOBJ.cpp
 
 ${OBJECTDIR}/_ext/d2aad2f1/fileTEX.o: ../util/fileTEX.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/d2aad2f1

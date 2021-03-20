@@ -11,7 +11,7 @@
 class ixMaterial;
 class ixvkBuffer;
 
-class ixMesh: public chainData {
+class ixMesh: public ixClass {
   Ix *_ix;
 public:
   

@@ -29,14 +29,28 @@
 #include "osi/include/osinteraction.h"
 
 
-
 #include "osi/include/util/typeShortcuts.h"
 #include "osi/include/util/str8.h"
 #include "osi/include/util/mlib.hpp"
 #include "osi/include/util/chainList.hpp"
 #include "osi/include/util/circleList.hpp"
+#include "ix/util/onewayList.hpp"
 
 inline void ixMemcpy(void *dst, const void *src, uint64_t n) { return Str::memcpy(dst, src, n); }
+
+
+enum class ixClassT: uint16 {
+  IX, MATERIAL, MESH, RESOURCE, SHADER, TEXSTREAM, TEXTURE, VKCLUSTER, VKCLUSTERSEGMENT, VKRESOURCE, VKBUFFER, VKIMAGE
+};
+
+// base class for all ix objects
+class ixClass: public chainData {
+public:
+  ixClassT classT;
+  ixClass(ixClassT in_t): classT(in_t) {}
+};
+
+
 
 #include "util/common.hpp"
 #include "osi/include/util/imgClass.h"
@@ -187,10 +201,7 @@ class ixShaderSys;
 
 
 
-
-
-
-class Ix: public chainData {
+class Ix: public ixClass {
 public:
 
   // chainlist with all created Ix engines

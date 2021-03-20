@@ -305,7 +305,7 @@ struct _ixpr {
       int outline;            // [0= disable] [1-5= outline size] character outline
     } push;
 
-    VkoDynamicSetPool *poolDesc;
+    ixvkDescPool *poolDesc;
 
     void txt(const void *text, int type, int start, int end, int startBytes, int endBytes);
 
@@ -487,10 +487,9 @@ _ixpr::vkM1::vkM1(Ix *in_ix): ixPrintShader(in_ix) {
   _ix->vki.cmdTool->submit(*_ix->vki.qTool);
   _ix->vk.QueueWaitIdle(*_ix->vki.qTool);
 
-  poolDesc= _ix->vk.objects.addDynamicSetPool();
+  poolDesc= new ixvkDescPool(_ix);
   poolDesc->configure(vk->descSet[1], _ix->cfg.vk.printDynamicSetSegmentSize);
   poolDesc->build();
-
 }
 
 
@@ -522,21 +521,24 @@ void _ixpr::vkM1::_create(_ixFPage *in_page) {
 
   /// create vulkan buffer
   in_page->data= new ixvkBuffer(_ix->vki.clusterIxDevice);
-
   //in_page->data->access.firstAccess= VK_ACCESS_UNIFORM_READ_BIT;
   //in_page->data->access.lastAccess= VK_ACCESS_UNIFORM_READ_BIT;
   //in_page->data->access.firstStage= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
   //in_page->data->access.lastStage= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-
   in_page->data->handle->cfgUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT| VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   in_page->data->handle->cfgSize(sizeof(BufferData));
+  
   in_page->data->build();
 
   // upload data to vulkan buffer
   in_page->data->upload(buffer, 0, sizeof(BufferData));
 
-  in_page->set= poolDesc->addSet();
+  poolDesc->addSet(&in_page->set);
+  in_page->set->bind(0, in_page->data);
+  in_page->set->bind(1, in_page->tex);
+  in_page->set->update();
 
+  /*
   VkDescriptorBufferInfo bufInfo;
   bufInfo.buffer= *in_page->data->handle;
   bufInfo.offset= 0;
@@ -573,6 +575,7 @@ void _ixpr::vkM1::_create(_ixFPage *in_page) {
   update[1].pTexelBufferView= null;
 
   _ix->vk.UpdateDescriptorSets(_ix->vk, 2, update, 0, null);
+  */
   //ix->vk.DeviceWaitIdle(ix->vk);
   if(buffer) delete buffer;
 }
@@ -603,7 +606,7 @@ void _ixpr::vkM1::_delete(_ixFPage *out_page) {
 void _ixpr::vkM1::_prePrintInit() {
   _prevTex= nullptr;
   VkCommandBuffer cmd= _ix->vki.ortho.cmd[_ix->vki.fi]->buffer;
-
+  
   _ix->vk.CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipeline);
   _ix->vk.CmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &_ix->vki.glb[_ix->vki.fi]->set->set, 0, null);
   //_ix->vk.CmdPushConstants(cmd, vk->pipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(push), &push);
@@ -2460,7 +2463,7 @@ void *ixPrint::_loadFNT(cchar *name, int size, int16 page) {
   fread(&pp->texDy, 2, 1, f);         /// texture dy
   
   pp->tex= _ix->res.tex.add.ixStaticTexture();
-
+  
 
   //if(pp->tex->data) delete pp->tex->data;
   pp->tex->data= new Tex;
@@ -2537,6 +2540,8 @@ void *ixPrint::_loadFNT(cchar *name, int size, int16 page) {
   #ifdef IX_USE_VULKAN
   _shader->_create(pp);
   #endif
+
+
 
   /// there are some pages that span more than 1024 characters. these are split in multiple pages of 1024 characters max
   /// all pages will be loaded

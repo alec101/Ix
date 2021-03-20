@@ -19,10 +19,10 @@ namespace _ixMat {
 
 
 
-ixMaterial::ixMaterial(Ix *in_parent): _ix(in_parent) {
+ixMaterial::ixMaterial(Ix *in_parent): ixClass(ixClassT::MATERIAL), _ix(in_parent) {
   map[0]= map[1]= map[2]= map[3]= null;
 
-  set= _ix->res.mat.setPool->addSet();
+  _ix->res.mat.setPool->addSet(&set);
 }
 
 
@@ -37,6 +37,13 @@ void ixMaterial::delData() {
 
 
 void ixMaterial::updateSet() {
+  for(uint32 a= 0; a< 4; ++a)
+    if(map[a])
+      set->bind(a, map[a]);
+  //set->bind
+
+  set->updateStandardMat();
+  /*
   VkWriteDescriptorSet w;
   VkDescriptorImageInfo i[4];
   w.sType= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -61,6 +68,7 @@ void ixMaterial::updateSet() {
     }
 
   _ix->vk.UpdateDescriptorSets(_ix->vk, 1, &w, 0, nullptr);
+  */
 }
 
 
@@ -125,7 +133,7 @@ void ixMatSys::delData() {
 
 
 void ixMatSys::_init() {
-  setPool= _ix->vk.objects.addDynamicSetPool();
+  setPool= new ixvkDescPool(_ix);
   setPool->configure(_ix->res.tex.vkd.standard4mapsLayout, 30);
   setPool->build();
 }

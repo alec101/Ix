@@ -243,6 +243,9 @@
     <ClInclude Include="..\GFX\glo\gloShader.h">
       <Filter>GFX\GLO</Filter>
     </ClInclude>
+    <ClInclude Include="..\util\onewayList.hpp">
+      <Filter>UTIL</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\shaders\vkPrintM1.frag.glsl">

@@ -28,7 +28,7 @@
 ///==========================================================///
 
 
-ixShader::ixShader(Ix *in_ix, uint32 in_matID): _ix(in_ix), matID(in_matID) {
+ixShader::ixShader(Ix *in_ix, uint32 in_matID): ixClass(ixClassT::SHADER), _ix(in_ix), matID(in_matID) {
 
   // VULKAN shader
   #ifdef IX_USE_VULKAN

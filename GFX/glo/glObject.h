@@ -11,7 +11,7 @@ public:
   //template <class T>
   inline void createShader(gloShader **out_shader) { *out_shader= new gloShader; shaders.add(*out_shader); }
   inline void delShader(gloShader *in_s) { shaders.del(in_s); }
-  inline void delAllShaders() { while(shaders.first) delShader(shaders.first); }
+  inline void delAllShaders() { while(shaders.first) delShader((gloShader *)shaders.first); }
 
   gloShader *getShader(cchar *vertFile, cchar *fragFile);
 

@@ -164,6 +164,36 @@ ixEdit *ixWinSys::createEdit(ixBaseWindow *in_parent, int32 in_x0, int32 in_y0, 
 }
 
 
+ixStaticText *ixWinSys::createStaticText(ixBaseWindow *in_parent, int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
+  ixStaticText *t= new ixStaticText;
+
+  /// parent / children chain
+  if(in_parent)
+    in_parent->childrens.add(t);
+  else
+    topObjects.add(t);
+  t->parent= in_parent;
+
+  /// default vars
+  t->style= &selStyle->text;
+  t->_applyColorsFromStyle();
+  t->setFont(Ix::getMain()->pr.style->selFont);
+
+  //t->text.font= *(Ix::getMain()->pr.style);
+  t->is.visible= true;
+
+  /// position / hook
+  t->setPos(in_x0, in_y0, in_dx, in_dy);
+  t->hook.setAnchor(in_parent);
+  t->_createScrollbars();
+
+  if(in_parent)
+    in_parent->_computeChildArea();
+
+  return t;
+}
+
+
 ixRadioButton *ixWinSys::createRadioButton(ixBaseWindow *in_parent, int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
   ixRadioButton *b= new ixRadioButton;
 

@@ -158,7 +158,7 @@ bool ixMesh::_loadI3DdataV0_0_1(FILE *in_f) {
 
 Exit:
   if(err) {
-    error.detail(str8().f("[%s] %s", fileName, err), __FUNCTION__, errL);
+    error.detail(str8().f("[%s] %s", fileName.d, err), __FUNCTION__, errL);
 
     return false;
   } else return true;
