@@ -247,11 +247,12 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshe
       m->size= ixMesh::Data1i::size()* m->nrVert;
       m->data= new uint8[m->size];
       ixMesh::Data1i p(m);
+      
 
       for(uint32 a= 0; a< o->nrInd; ++a) // f v/vt/vn v/vt/vn v/vt/vn
-        p.vert[a].pos=  o->pos [o->ind[a].x],
-        p.vert[a].tex1= o->tex1[o->ind[a].y],
-        p.vert[a].nrm=  o->nrm [o->ind[a].z];
+        p.vert[a].pos=  o->pos [o->ind[a].x- 1],
+        p.vert[a].tex1= o->tex1[o->ind[a].y- 1],
+        p.vert[a].nrm=  o->nrm [o->ind[a].z- 1];
 
     } else {
       m->delData();

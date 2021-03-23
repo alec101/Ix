@@ -10,6 +10,8 @@ static inline const char *_IXFILEWRITEERROR() { static const char *_ixFWE= "file
 #define IXFWRITE(a, b, c, d) if(fwrite(a, b, c, d)!= (c)) { err= _IXFILEWRITEERROR(), errL= __LINE__; goto Exit; }
 #endif
 
+
+
 struct ixFlags32 {
   uint32 flags;
   ixFlags32(): flags(0) {}
@@ -158,6 +160,9 @@ bool _getBool(str8 *s);
 void parseGenericTxtCommand(str8 *in_line, str8 *out_command, str8 *out_v1= null, str8 *out_v2= null, str8 *out_v3= null, str8 *out_v4= null);
 
 //VkRect2D::VkRect2D(const recti &r);
+
+inline bool intersect1D(int32 x1_start, int32 x1_end, int32 x2_start, int32 x2_end) { return (x1_start< x2_end) && (x1_end> x2_start); }
+
 
 
 

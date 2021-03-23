@@ -655,7 +655,7 @@ void Ix::initWindow(osiWindow *in_w) {
   //_FUNCconsole= &console.ixErrorPrint;
   
   // ALL CLASSES INIT HERE
-
+  
   res.mat._init();
 
   pr.init();
@@ -664,7 +664,6 @@ void Ix::initWindow(osiWindow *in_w) {
     console().init();
 
   //wsys.loadAssets(this);
-
   /// debug font
   fnt5x6= pr.loadFont("5x6.fnt", 6);
   debugStyle.selFont= fnt5x6;

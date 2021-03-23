@@ -521,10 +521,6 @@ void _ixpr::vkM1::_create(_ixFPage *in_page) {
 
   /// create vulkan buffer
   in_page->data= new ixvkBuffer(_ix->vki.clusterIxDevice);
-  //in_page->data->access.firstAccess= VK_ACCESS_UNIFORM_READ_BIT;
-  //in_page->data->access.lastAccess= VK_ACCESS_UNIFORM_READ_BIT;
-  //in_page->data->access.firstStage= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-  //in_page->data->access.lastStage= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
   in_page->data->handle->cfgUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT| VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   in_page->data->handle->cfgSize(sizeof(BufferData));
   
@@ -538,45 +534,7 @@ void _ixpr::vkM1::_create(_ixFPage *in_page) {
   in_page->set->bind(1, in_page->tex);
   in_page->set->update();
 
-  /*
-  VkDescriptorBufferInfo bufInfo;
-  bufInfo.buffer= *in_page->data->handle;
-  bufInfo.offset= 0;
-  bufInfo.range= *in_page->data->size();
 
-  VkDescriptorImageInfo imgInfo;
-  imgInfo.imageView=   in_page->tex->vkd.imgView;
-  imgInfo.sampler=     in_page->tex->vkd.sampler->sampler;
-  imgInfo.imageLayout= in_page->tex->vkd.img->access[0].layout;
-
-
-  VkWriteDescriptorSet update[2];
-
-  update[0].sType= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  update[0].pNext= null;
-  update[0].dstSet= in_page->set->set;
-  update[0].dstBinding= 0;
-  update[0].dstArrayElement= 0;
-  update[0].descriptorCount= 1;
-  update[0].descriptorType= VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  update[0].pImageInfo= null;
-  update[0].pBufferInfo= &bufInfo;
-  update[0].pTexelBufferView= null;
-
-  update[1].sType= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  update[1].pNext= null;
-  update[1].dstSet= in_page->set->set;
-  update[1].dstBinding= 1;
-  update[1].dstArrayElement= 0;
-  update[1].descriptorCount= 1;
-  update[1].descriptorType= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  update[1].pImageInfo= &imgInfo;
-  update[1].pBufferInfo= null;
-  update[1].pTexelBufferView= null;
-
-  _ix->vk.UpdateDescriptorSets(_ix->vk, 2, update, 0, null);
-  */
-  //ix->vk.DeviceWaitIdle(ix->vk);
   if(buffer) delete buffer;
 }
 

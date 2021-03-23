@@ -345,10 +345,6 @@ void ixTexSys::Stream::_addSegment() {
   for(uint a= 0; a< segmentLayers; a++) {
     s->image->access[a].layout= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     s->image->access[a].qFamily= _ix->vki.q1->family;
-    //s->image->access[a].firstAccess= VK_ACCESS_MEMORY_READ_BIT| VK_ACCESS_MEMORY_WRITE_BIT;
-    //s->image->access[a].lastAccess=  VK_ACCESS_MEMORY_READ_BIT| VK_ACCESS_MEMORY_WRITE_BIT;
-    //s->image->access[a].firstStage= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    //s->image->access[a].lastStage=  VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
   }
 
   /// vulkan image view cfg/build
@@ -412,29 +408,6 @@ void ixTexSys::Stream::_addSegment() {
     sampler->createInfo= samplerInfo;
     if(!sampler->build()) error.detail("VKO own sampler build failed.", __FUNCTION__, __LINE__);
   }
-
-  /*  HANDLED BY MATERIAL
-  /// vulkan set create and update
-  s->set= setPool->addSet();
-
-  VkDescriptorImageInfo imgInfo;
-    imgInfo.imageView=   s->view;
-    imgInfo.sampler=     *sampler;
-    imgInfo.imageLayout= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-  VkWriteDescriptorSet update;
-    update.sType= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    update.pNext= null;
-    update.dstSet= s->set->set;
-    update.dstBinding= 0;
-    update.dstArrayElement= 0;
-    update.descriptorCount= 1;
-    update.descriptorType= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    update.pImageInfo= &imgInfo;
-    update.pBufferInfo= null;
-    update.pTexelBufferView= null;
-  _ix->vk.UpdateDescriptorSets(_ix->vk, 1, &update, 0, null);
-  */
 
   segments.add(s);  // all done
 }

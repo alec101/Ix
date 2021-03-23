@@ -227,11 +227,11 @@ bool ixMeshSys::upload(ixMesh *in_mesh) {
 
   // create a buffer if it has none
   if(in_mesh->buf== null) {
-
     /// own buffer in device/host memory
     if(in_mesh->affinity< 2) {
       if     (in_mesh->affinity== 0) in_mesh->buf= new ixvkBuffer(_ix->vki.clusterDevice);
       else if(in_mesh->affinity== 1) in_mesh->buf= new ixvkBuffer(_ix->vki.clusterHost);
+      else IXERR("unknown mesh affinity");
 
       /// usage setup based on data type
       if(in_mesh->dataType< 2) in_mesh->buf->handle->cfgUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT| VK_BUFFER_USAGE_TRANSFER_SRC_BIT);

@@ -188,11 +188,15 @@ void ixVulkan::initAfterWindow() {
   ix->vk.cfg.gpuFeatures= &ix->cfg.vk.gpuFeatures;
   ix->vk.cfg.extensions.device.vk_KHR_swapchain.enable= 1;
 
+  
+
   // physical device selection
   /// use specified physical device, if set
   if(ix->cfg.vk.physicalDeviceIndex!= ~0u)
     ix->vk.physicalDevice= &((*ix->vk.info.physicalDevice())[ix->cfg.vk.physicalDeviceIndex]);
-      
+
+  
+
   /// try to get the physical device from OSI (some systems can't match right atm)
   else if(ix->gpu->vkGPU!= null) {
     // OLD ix->vk.physicalDevice= (VkPhysicalDevice)ix->gpu->vkGPU;
@@ -207,10 +211,14 @@ void ixVulkan::initAfterWindow() {
   } else
     ix->vk.physicalDevice= &((*ix->vk.info.physicalDevice())[0]);
 
-  if(!ix->vk.build()) { error.simple("Ix init failed: VKO device build failed"); return; }
-    
-  _handleQueues();
+  
 
+  if(!ix->vk.build()) { error.simple("Ix init failed: VKO device build failed"); return; }
+
+
+
+  _handleQueues();
+  
   // flag to use memory barriers for queue family switches
   switchFamily= (qTransfer->family!= qTool->family);
   if(ix->cfg.vk.resourcesUseSharedQueueFamilies)
@@ -249,6 +257,8 @@ void ixVulkan::initAfterWindow() {
   addCluster(&clusterIxHost);
   addCluster(&clusterDevice);
   addCluster(&clusterHost);
+    
+
 
   clusterIxDevice->cfg(ix->cfg.vk.size_clusterIxDevice, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
   clusterIxHost->cfg(ix->cfg.vk.size_clusterIxHost, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -265,7 +275,7 @@ void ixVulkan::initAfterWindow() {
     stageHost->handle->cfgSize(ix->cfg.vk.size_stageBufferHost);
     stageHost->handle->cfgUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   stageHost->build();
-  
+
   // setup the pools
   poolTool= ix->vk.objects.addCommandPool();
   poolTool->configure(qTool->family);
@@ -996,8 +1006,9 @@ void ixVulkan::Defrag::doJobs(uint32 in_n) {
     _ix->vki.render.cmdMain[fi]->_submitInfo.signalSemaphoreCount= 1;
     if(_ix->vki.render.cmdPrev) _ix->vki.render.cmdPrev->_submitInfo.waitSemaphoreCount= 1;
 
-
+    
     // DEBUG VVV
+    /*
     uint dbgnr= 0;
     for(ixvkResCluster *cluster= (ixvkResCluster *)_ix->vki.resClusters.first; cluster; cluster= (ixvkResCluster *)cluster->next)
       for(ixvkResClusterSegment *segment= (ixvkResClusterSegment *)cluster->segments.first; segment; segment= (ixvkResClusterSegment *)segment->next)
@@ -1005,6 +1016,7 @@ void ixVulkan::Defrag::doJobs(uint32 in_n) {
           if(res->defragDelta)
             dbgnr++;
     dbgnr;
+    */
     // DEBUG ^^^
 
 
@@ -1180,7 +1192,11 @@ void ixVulkan::Defrag::afterSubmitJobs(bool in_useFence) {
 
 void ixVulkan::Defrag::moveBuffer(VkCommandBuffer in_cmd, ixvkBuffer *out_b) {
   VkBuffer oldBuffer= out_b->handle->buffer;
-  uint64 oldOffset= *out_b->offset();
+  VkBufferCopy region;
+
+  /// check for buffer intersection (any part of them being inside of the other)
+  bool intersected= intersect1D((int32)(*out_b->offset()),                     (int32)(*out_b->offset()+ *out_b->size()),
+                                (int32)(*out_b->offset()- out_b->defragDelta), (int32)(*out_b->offset()+ *out_b->size()- out_b->defragDelta));
 
   /// new buffer setup vars, get it ready for transfer
   out_b->handle->offset-= out_b->defragDelta;
@@ -1191,70 +1207,31 @@ void ixVulkan::Defrag::moveBuffer(VkCommandBuffer in_cmd, ixvkBuffer *out_b) {
   _ix->vk.BindBufferMemory(_ix->vk, *out_b->handle, *out_b->segment->memory, out_b->handle->offset);
 
   // copy
-  uint64 size= *out_b->size(); //handle->createInfo.size; //memRequirements.size;
-  //uint64 size= out_b->mem()->size;
-  uint64 offset= 0;
   
-  for(ixvkResource *r= (ixvkResource *)out_b->segment->resources.first; r; r= (ixvkResource *)r->next) {
-  //for(uint a= 0; a< out_b->segment->resources.nrNodes; a++) {
-    if(r== out_b) continue;
-    uint64 s1= *out_b->offset();
-    uint64 e1= s1+ out_b->mem()->size- 1;
-    uint64 s2= *r->offset();
-    uint64 e2= s2+ r->mem()->size- 1;
-    bool intersection= false;
-    if(s1>= s2 && s1< e2)
-      intersection= true;
-    if(e1>= s2 && e1< e2)
-      intersection= true;
-    //if(*out_b->offset()>= *r->offset() && (*out_b->offset()< *r->offset()+ r->mem()->size))
-    //if(*out_b->offset()+ out_b->mem()->size>= *r->offset() && (*out_b->offset()+ out_b->mem()->size< *r->offset()+ r->mem()->size))
-      if(intersection) error.window("intersection!", true);
-    
-  }
+  /// buffers are intersected- requires extra stage buffer
+  if(intersected) {
+    uint64 size= *out_b->size();
+    uint64 offset= 0;
+    while(size) {
+      uint64 copySize= (size> *_ix->vki.stageDevice->size()? *_ix->vki.stageDevice->size(): size);
 
+      _ix->vki.stageDevice->barrier(_ix, in_cmd, VK_ACCESS_MEMORY_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);  
+      region= { offset, 0,      copySize };
+      _ix->vk.CmdCopyBuffer(in_cmd, oldBuffer, _ix->vki.stageDevice->handle->buffer, 1, &region);
+      _ix->vki.stageDevice->barrier(_ix, in_cmd, VK_ACCESS_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_MEMORY_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);  
 
+      region= { 0,      offset, copySize };
+      _ix->vk.CmdCopyBuffer(in_cmd, _ix->vki.stageDevice->handle->buffer, out_b->handle->buffer, 1, &region);
 
-
-
-  while(size) {
-    uint64 copySize= (size> *_ix->vki.stageDevice->size()? *_ix->vki.stageDevice->size(): size);
-    VkBufferCopy region= { offset, 0,      copySize };
-    _ix->vk.CmdCopyBuffer(in_cmd, oldBuffer, _ix->vki.stageDevice->handle->buffer, 1, &region);
-    _ix->vki.stageDevice->barrier(_ix, in_cmd, VK_ACCESS_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_MEMORY_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-    that solved it. so the cmd commands were done in same time. BARRIERS<<<<<
-      omg i found it ... and it's 03:16 in the morning
-since this is a for, there has to be more barriers
-    //out_b->barrier(_ix, in_cmd, VK_ACCESS_MEMORY_WRITE
-                 region= { 0,      offset, copySize };
-    _ix->vk.CmdCopyBuffer(in_cmd, _ix->vki.stageDevice->handle->buffer, out_b->handle->buffer, 1, &region);
-
-
-    /* WORKS:
-    uint64 copySize= size;
-    VkBufferCopy region= { offset, 0,      copySize };
-    _ix->vk.CmdCopyBuffer(in_cmd, oldBuffer, out_b->handle->buffer, 1, &region);
-    */
-
-
-    /*
-    uint64 copySize= (size> *_ix->vki.stageDevice->size()? *_ix->vki.stageDevice->size(): size);
-    VkBufferCopy region= { offset, 0,      copySize };
-    _ix->vk.CmdCopyBuffer(in_cmd, oldBuffer,             *_ix->vki.stageDevice, 1, &region);
-                 region= { 0,      offset, copySize };
-    _ix->vk.CmdCopyBuffer(in_cmd, *_ix->vki.stageDevice, *out_b,                1, &region);
-    */
-
-    /* ORIG:
-    uint64 copySize= (size> *_ix->vki.stageDevice->size()? *_ix->vki.stageDevice->size(): size);
-    VkBufferCopy region= { offset, 0,      copySize };
-    _ix->vk.CmdCopyBuffer(in_cmd, oldBuffer,             *_ix->vki.stageDevice, 1, &region);
-                 region= { 0,      offset, copySize };
-    _ix->vk.CmdCopyBuffer(in_cmd, *_ix->vki.stageDevice, *out_b,                1, &region);
-    */
-
-    offset+= copySize;
-    size-= copySize;
+      offset+= copySize;
+      size-= copySize;
+    }
+  /// buffers are not intersected - direct copy from old to new
+  } else {
+    if(*out_b->size()) {
+      region= { 0, 0, *out_b->size() };
+      _ix->vk.CmdCopyBuffer(in_cmd, oldBuffer, out_b->handle->buffer, 1, &region);
+    }
   }
 
   // finalize
@@ -1982,6 +1959,8 @@ bool ixvkImage::upload(Tex *in_tex, uint32 in_layer, VkImageLayout in_layout, ui
     ixMemcpy((uint8 *)bufMap, in_tex->bitmap+ in_tex->levFrom[in_level], copySize);
     _ix->vk.UnmapMemory(_ix->vk, *_ix->vki.stageHost->segment->memory);
 
+    _ix->vki.stageHost->barrier(_ix, *copyCmd, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
     // copy [stage buffer]->[vkImage]
     for(uint a= in_level; a< in_nlevels; a++, mx/= 2, my/= 2, mz/= 2) {
       mx= MAX(mx, 1), my= MAX(my, 1), mz= MAX(mz, 1);
@@ -2497,7 +2476,7 @@ bool ixvkResCluster::allocRes(ixvkResource *out_r) {
   ixvkResource *last= ((ixvkResource *)s->resources.last);
   if(last)
     if(last->defragDelta) {
-      uint32 alignment= out_r->mem()->alignment;
+      uint32 alignment= (uint32)out_r->mem()->alignment;
       VkDeviceSize newOffset= _getAlignedOffset((*last->offset())- last->defragDelta+ last->mem()->size, alignment);
       out_r->defragDelta= (uint32)((*out_r->offset())- newOffset);
     } else

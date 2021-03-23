@@ -498,8 +498,7 @@ bool Tex::loadFromLevel(cchar *fileName) {
 
 bool Tex::mipmapGenerate() {
   uint32 tdx, tdy, tdz;
-  uint8 *p;
-  uint16 adv;
+  uint8 *newBitmap;
 
   /// simple checks
   if(nrLevels> 1)            return true;
@@ -522,7 +521,6 @@ bool Tex::mipmapGenerate() {
 
   levFrom[0]= 0, levSize[0]= 0;
   
-  
   tdx= dy, tdy= dy, tdz= depth;
   for(uint a= 0; a< nrLevels; a++) {
     levSize[a]= tdx* tdy* tdz* (bpp/ 8);
@@ -533,113 +531,114 @@ bool Tex::mipmapGenerate() {
   }
   
   // new bitmap alloc and old deleted
-  p= new uint8[size];
-  Str::memcpy(p, bitmap, size);
+  newBitmap= new uint8[size];
+  Str::memcpy(newBitmap, bitmap, size);
 
   if(_wrap) {
     delete[] *wrapBitmap;
-    *wrapBitmap= p;
+    *wrapBitmap= newBitmap;
   } else
     delete[] bitmap;
+  bitmap= newBitmap;
 
-  bitmap= p;
-
-  tdx= dy/ 2, tdy= dy/ 2, tdz= depth/ 2;
-  adv= bpp>> 3; // bpp/ 8
+  tdx= dy, tdy= dy, tdz= depth;
 
   if(format== ImgFormat::R4G4_UNORM_PACK8) {
-    uint8 *src8= bitmap;
-    uint8 *p8= bitmap+ levSize[0];
-
-    for(uint a= nrLevels; a> 0; a--, tdx/= (tdx> 1? 2: 1), tdy/= (tdy> 1? 2: 1), tdz/= (tdz> 1? 2: 1))
-      if(!tdx) tdx= 1;
-      for(uint b= tdx* tdy* tdz; b> 0; b--, p8++, src8+= 2) {  // advance src, skipping 1 texel
-        uint32 t= _Tex::r44(*src8)+ _Tex::r44(*(src8+ 1))+ _Tex::r44(*(src8+ tdx))+ _Tex::r44(*(src8+ tdx+ 1));
-        *p8=  (uint8)((t/ 4)+ (t% 4> 2? 1: 0))<< 4;   // t% 4 can return 1, 2 or 3. 3 will be tied to the ceil of the division
-
-        t= _Tex::g44(*src8)+ _Tex::g44(*(src8+ 1))+ _Tex::g44(*(src8+ tdx))+ _Tex::g44(*(src8+ tdx+ 1));
-        *p8|= (uint8)((t/ 4)+ (t% 4> 2? 1: 0));
-      } /// for each texel
-
+    for(uint a= 1; a< nrLevels; a++, tdx= max(1, tdx/ 2), tdy= max(1, tdy/ 2), tdz= max(1, tdz/ 2)) {
+      uint8 *p= bitmap+ levFrom[a], *src= bitmap+ levFrom[a- 1];
+      for(uint32 z= max(1, tdz/ 2); z; --z, src+= tdy* tdx)
+      for(uint32 y= max(1, tdy/ 2); y; --y, src+= tdx)
+      for(uint32 x= max(1, tdx/ 2); x; --x, src++, p++) {
+        uint32 t= _Tex::r44(*src)+ _Tex::r44(*(src+ 1))+ _Tex::r44(*(src+ tdx))+ _Tex::r44(*(src+ tdx+ 1));
+        *p=  (uint8)((t/ 4)+ (t% 4> 2? 1: 0))<< 4;   // t% 4 can return 1, 2 or 3. 3 will be tied to the ceil of the division
+        t= _Tex::g44(*src)+ _Tex::g44(*(src+ 1))+ _Tex::g44(*(src+ tdx))+ _Tex::g44(*(src+ tdx+ 1));
+        *p|= (uint8)((t/ 4)+ (t% 4> 2? 1: 0));
+      } /// for each texel on the x
+    } /// for each level- 1
+    
   } else if(format== ImgFormat::R4G4B4A4_UNORM_PACK16 || format== ImgFormat::B4G4R4A4_UNORM_PACK16) {
-    uint16 *src16= (uint16 *)bitmap;
-    uint16 *p16= (uint16 *)(bitmap+ levSize[0]);
+    for(uint a= 1; a< nrLevels; a++, tdx= max(1, tdx/ 2), tdy= max(1, tdy/ 2), tdz= max(1, tdz/ 2)) {
+      uint16 *p= (uint16 *)bitmap+ levFrom[a], *src= (uint16 *)bitmap+ levFrom[a- 1];
+      for(uint32 z= max(1, tdz/ 2); z; --z, src+= tdy* tdx)
+      for(uint32 y= max(1, tdy/ 2); y; --y, src+= tdx)
+      for(uint32 x= max(1, tdx/ 2); x; --x, src++, p++) {
+        uint32 t= _Tex::r4444(*src)+ _Tex::r4444(*(src+ 1))+ _Tex::r4444(*(src+ tdx))+ _Tex::r4444(*(src+ tdx+ 1));
+        *p=  (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 12;
 
-    for(uint a= nrLevels; a> 0; a--, tdx/= (tdx> 1? 2: 1), tdy/= (tdy> 1? 2: 1), tdz/= (tdz> 1? 2: 1))
-      for(uint b= tdx* tdy* tdz; b> 0; b--, p16++, src16+= 2) {   // advance src, skipping 1 texel
-        uint32 t= _Tex::r4444(*src16)+ _Tex::r4444(*(src16+ 1))+ _Tex::r4444(*(src16+ tdx))+ _Tex::r4444(*(src16+ tdx+ 1));
-        *p16=  (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 12;
+        t= _Tex::g4444(*src)+ _Tex::g4444(*(src+ 1))+ _Tex::g4444(*(src+ tdx))+ _Tex::g4444(*(src+ tdx+ 1));
+        *p|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 8;
 
-        t= _Tex::g4444(*src16)+ _Tex::g4444(*(src16+ 1))+ _Tex::g4444(*(src16+ tdx))+ _Tex::g4444(*(src16+ tdx+ 1));
-        *p16|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 8;
+        t= _Tex::b4444(*src)+ _Tex::b4444(*(src+ 1))+ _Tex::b4444(*(src+ tdx))+ _Tex::b4444(*(src+ tdx+ 1));
+        *p|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 4;
 
-        t= _Tex::b4444(*src16)+ _Tex::b4444(*(src16+ 1))+ _Tex::b4444(*(src16+ tdx))+ _Tex::b4444(*(src16+ tdx+ 1));
-        *p16|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 4;
-
-        t= _Tex::a4444(*src16)+ _Tex::a4444(*(src16+ 1))+ _Tex::a4444(*(src16+ tdx))+ _Tex::a4444(*(src16+ tdx+ 1));
-        *p16|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0));
-      } /// for each texel
+        t= _Tex::a4444(*src)+ _Tex::a4444(*(src+ 1))+ _Tex::a4444(*(src+ tdx))+ _Tex::a4444(*(src+ tdx+ 1));
+        *p|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0));
+      } /// for each texel on the x
+    } /// for each level- 1
 
   } else if(format== ImgFormat::R5G6B5_UNORM_PACK16 || format== ImgFormat::B5G6R5_UNORM_PACK16) {
-    uint16 *src16= (uint16 *)bitmap;
-    uint16 *p16= (uint16 *)(bitmap+ levSize[0]);
+    for(uint a= 1; a< nrLevels; a++, tdx= max(1, tdx/ 2), tdy= max(1, tdy/ 2), tdz= max(1, tdz/ 2)) {
+      uint16 *p= (uint16 *)bitmap+ levFrom[a], *src= (uint16 *)bitmap+ levFrom[a- 1];
+      for(uint32 z= max(1, tdz/ 2); z; --z, src+= tdy* tdx)
+      for(uint32 y= max(1, tdy/ 2); y; --y, src+= tdx)
+      for(uint32 x= max(1, tdx/ 2); x; --x, src++, p++) {
+        uint32 t= getR565(*src)+ getR565(*(src+ 1))+ getR565(*(src+ tdx))+ getR565(*(src+ tdx+ 1));
+        *p=  (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 11;
 
-    for(uint a= nrLevels; a> 0; a--, tdx/= (tdx> 1? 2: 1), tdy/= (tdy> 1? 2: 1), tdz/= (tdz> 1? 2: 1))
-      for(uint b= tdx* tdy* tdz; b> 0; b--, p16++, src16+= 2) {  // advance src, skipping 1 texel
-        uint32 t= getR565(*src16)+ getR565(*(src16+ 1))+ getR565(*(src16+ tdx))+ getR565(*(src16+ tdx+ 1));
-        *p16=  (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 11;
+        t= getG565(*src)+ getG565(*(src+ 1))+ getG565(*(src+ tdx))+ getG565(*(src+ tdx+ 1));
+        *p|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 5;
 
-        t= getG565(*src16)+ getG565(*(src16+ 1))+ getG565(*(src16+ tdx))+ getG565(*(src16+ tdx+ 1));
-        *p16|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 5;
-
-        t= getB565(*src16)+ getB565(*(src16+ 1))+ getB565(*(src16+ tdx))+ getB565(*(src16+ tdx+ 1));
-        *p16|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0));
-      } /// for each texel
+        t= getB565(*src)+ getB565(*(src+ 1))+ getB565(*(src+ tdx))+ getB565(*(src+ tdx+ 1));
+        *p|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0));
+      } /// for each texel on the x
+    } /// for each level- 1
 
   } else if(format== ImgFormat::R5G5B5A1_UNORM_PACK16 || format== ImgFormat::B5G5R5A1_UNORM_PACK16) {
-    uint16 *src16= (uint16 *)bitmap;
-    uint16 *p16= (uint16 *)(bitmap+ levSize[0]);
+    for(uint a= 1; a< nrLevels; a++, tdx= max(1, tdx/ 2), tdy= max(1, tdy/ 2), tdz= max(1, tdz/ 2)) {
+      uint16 *p= (uint16 *)bitmap+ levFrom[a], *src= (uint16 *)bitmap+ levFrom[a- 1];
+      for(uint32 z= max(1, tdz/ 2); z; --z, src+= tdy* tdx)
+      for(uint32 y= max(1, tdy/ 2); y; --y, src+= tdx)
+      for(uint32 x= max(1, tdx/ 2); x; --x, src++, p++) {
+        uint32 t= getR5551(*src)+ getR5551(*(src+ 1))+ getR5551(*(src+ tdx))+ getR5551(*(src+ tdx+ 1));
+        *p= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 11;
 
-    for(uint a= nrLevels; a> 0; a--, tdx/= (tdx> 1? 2: 1), tdy/= (tdy> 1? 2: 1), tdz/= (tdz> 1? 2: 1))
-      for(uint b= tdx* tdy* tdz; b> 0; b--, p16++, src16+= 2) {  // advance src, skipping 1 texel
-        uint32 t= getR5551(*src16)+ getR5551(*(src16+ 1))+ getR5551(*(src16+ tdx))+ getR5551(*(src16+ tdx+ 1));
-        *p16= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 11;
+        t= getG5551(*src)+ getG5551(*(src+ 1))+ getG5551(*(src+ tdx))+ getG5551(*(src+ tdx+ 1));
+        *p|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 6;
 
-        t= getG5551(*src16)+ getG5551(*(src16+ 1))+ getG5551(*(src16+ tdx))+ getG5551(*(src16+ tdx+ 1));
-        *p16|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 6;
+        t= getB5551(*src)+ getB5551(*(src+ 1))+ getB5551(*(src+ tdx))+ getB5551(*(src+ tdx+ 1));
+        *p|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 1;
 
-        t= getB5551(*src16)+ getB5551(*(src16+ 1))+ getB5551(*(src16+ tdx))+ getB5551(*(src16+ tdx+ 1));
-        *p16|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 1;
-
-        t= getA5551(*src16)+ getA5551(*(src16+ 1))+ getA5551(*(src16+ tdx))+ getA5551(*(src16+ tdx+ 1));
-        *p16|= (uint16)(t/ 4);
-      } /// for each texel
+        t= getA5551(*src)+ getA5551(*(src+ 1))+ getA5551(*(src+ tdx))+ getA5551(*(src+ tdx+ 1));
+        *p|= (uint16)(t/ 4);
+      } /// for each texel on the x
+    } /// for each level- 1
 
   } else if(format== ImgFormat::A1R5G5B5_UNORM_PACK16) {
-    uint16 *src16= (uint16 *)bitmap;
-    uint16 *p16= (uint16 *)(bitmap+ levSize[0]);
+    for(uint a= 1; a< nrLevels; a++, tdx= max(1, tdx/ 2), tdy= max(1, tdy/ 2), tdz= max(1, tdz/ 2)) {
+      uint16 *p= (uint16 *)bitmap+ levFrom[a], *src= (uint16 *)bitmap+ levFrom[a- 1];
+      for(uint32 z= max(1, tdz/ 2); z; --z, src+= tdy* tdx)
+      for(uint32 y= max(1, tdy/ 2); y; --y, src+= tdx)
+      for(uint32 x= max(1, tdx/ 2); x; --x, src++, p++) {
+        uint32 t= getA1555(*src)+ getA1555(*(src+ 1))+ getA1555(*(src+ tdx))+ getA1555(*(src+ tdx+ 1));
+        *p=  (uint16)((t/ 4)<< 15);
 
-    for(uint a= nrLevels; a> 0; a--, tdx/= (tdx> 1? 2: 1), tdy/= (tdy> 1? 2: 1), tdz/= (tdz> 1? 2: 1))
-      for(uint b= tdx* tdy* tdz; b> 0; b--, p16++, src16+= 2) {  // advance src, skipping 1 texel
-        uint32 t= getA1555(*src16)+ getA1555(*(src16+ 1))+ getA1555(*(src16+ tdx))+ getA1555(*(src16+ tdx+ 1));
-        *p16=  (uint16)((t/ 4)<< 15);
+        t= getR1555(*src)+ getR1555(*(src+ 1))+ getR1555(*(src+ tdx))+ getR1555(*(src+ tdx+ 1));
+        *p|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 10;
 
-        t= getR1555(*src16)+ getR1555(*(src16+ 1))+ getR1555(*(src16+ tdx))+ getR1555(*(src16+ tdx+ 1));
-        *p16|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 10;
+        t= getG1555(*src)+ getG1555(*(src+ 1))+ getG1555(*(src+ tdx))+ getG1555(*(src+ tdx+ 1));
+        *p|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 5;
 
-        t= getG1555(*src16)+ getG1555(*(src16+ 1))+ getG1555(*(src16+ tdx))+ getG1555(*(src16+ tdx+ 1));
-        *p16|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0))<< 5;
-
-        t= getB1555(*src16)+ getB1555(*(src16+ 1))+ getB1555(*(src16+ tdx))+ getB1555(*(src16+ tdx+ 1));
-        *p16|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0));
-      } /// for each texel
+        t= getB1555(*src)+ getB1555(*(src+ 1))+ getB1555(*(src+ tdx))+ getB1555(*(src+ tdx+ 1));
+        *p|= (uint16)((t/ 4)+ (t% 4> 2? 1: 0));
+      } /// for each texel on the x
+    } /// for each level- 1
 
   } else if(bpc[0]== 2) { // only A2R10G10B10_UNORM_PACK32 family will start with 2 bits for first channel
-    uint32 *src32= (uint32 *)bitmap;
-    uint32 *p32= (uint32 *)(bitmap+ levSize[0]);
-
-    for(uint a= nrLevels; a> 0; a--, tdx/= (tdx> 1? 2: 1), tdy/= (tdy> 1? 2: 1), tdz/= (tdz> 1? 2: 1))
-      for(uint b= tdx* tdy* tdz; b> 0; b--, p32++, src32+= 2) {  // advance src, skipping 1 texel
+    for(uint a= 1; a< nrLevels; a++, tdx= max(1, tdx/ 2), tdy= max(1, tdy/ 2), tdz= max(1, tdz/ 2)) {
+      uint32 *p32= (uint32 *)bitmap+ levFrom[a], *src32= (uint32 *)bitmap+ levFrom[a- 1];
+      for(uint32 z= max(1, tdz/ 2); z; --z, src32+= tdy* tdx)
+      for(uint32 y= max(1, tdy/ 2); y; --y, src32+= tdx)
+      for(uint32 x= max(1, tdx/ 2); x; --x, src32++, p32++) {
         uint64 t= _Tex::a2101010(*src32)+ _Tex::a2101010(*(src32+ 1))+ _Tex::a2101010(*(src32+ tdx))+ _Tex::a2101010(*(src32+ tdx+ 1));
         *p32=  (uint32)((t/ 4)+ (t% 4> 2? 1: 0))<< 30;   // t% 4 can return 1, 2 or 3. 3 will be tied to the ceil of the division
           
@@ -651,62 +650,72 @@ bool Tex::mipmapGenerate() {
 
         t= _Tex::b2101010(*src32)+ _Tex::b2101010(*(src32+ 1))+ _Tex::b2101010(*(src32+ tdx))+ _Tex::b2101010(*(src32+ tdx+ 1));
         *p32|= (uint32)((t/ 4)+ (t% 4> 2? 1: 0));
-      } /// for each texel
-    
-  } else if(bpc[0]== 8) {
-    uint8 *src8= bitmap;
-    uint8 *p8= bitmap+ levSize[0];
+      } /// for each texel on the x
+    } /// for each level- 1
 
-    for(uint a= nrLevels; a> 0; a--, tdx/= (tdx> 1? 2: 1), tdy/= (tdy> 1? 2: 1), tdz/= (tdz> 1? 2: 1))
-      for(uint b= tdx* tdy* tdz; b> 0; b--, src8+= (uint8)adv)    // advance src, skipping 1 texel
-        for(uint c= nchannels; c> 0; c--, src8++, p8++) {
-          uint32 t= *src8+ *(src8+ nchannels)+ *(src8+ tdx)+ *(src8+ tdx+ nchannels);
-          *p8= (uint8)(t/ 4)+ (t% 4> 2? 1: 0);
+  // vvvvvvvvvv the most used vvvvvvvvvv
+  } else if(bpc[0]== 8) {
+    for(uint a= 1; a< nrLevels; a++, tdx= max(1, tdx/ 2), tdy= max(1, tdy/ 2), tdz= max(1, tdz/ 2)) {
+      uint8 *p= bitmap+ levFrom[a], *src= bitmap+ levFrom[a- 1];
+      uint32 tdxNchan= tdx* nchannels;
+      for(uint32 z= max(1, tdz/ 2); z; --z, src+= tdy* tdxNchan)
+      for(uint32 y= max(1, tdy/ 2); y; --y, src+= tdxNchan)
+      for(uint32 x= max(1, tdx/ 2); x; --x, src+= nchannels)
+        for(uint c= nchannels; c> 0; c--, src++, p++) {
+          uint32 t= (*src)+ (*(src+ nchannels))+ (*(src+ tdxNchan))+ (*(src+ tdxNchan+ nchannels));
+          *p= (uint8)(t/ 4)+ (t% 4> 2? 1: 0);
         } /// for each channel
+    } /// for each level- 1
+  // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
   } else if(bpc[0]== 16) {
-    uint16 *src16= (uint16 *)bitmap;
-    uint16 *p16= (uint16 *)((uint8 *)bitmap+ levSize[0]);
-
-    for(uint a= nrLevels; a> 0; a--, tdx/= (tdx> 1? 2: 1), tdy/= (tdy> 1? 2: 1), tdz/= (tdz> 1? 2: 1))
-      for(uint b= tdx* tdy* tdz; b> 0; b--, src16+= adv)        // advance src, skipping 1 texel
-        for(uint c= nchannels; c> 0; c--, src16++, p16++) {
-          uint32 t= *src16+ *(src16+ nchannels)+ *(src16+ tdx)+ *(src16+ tdx+ nchannels);
-          *p16= (uint16)(t/ 4)+ (t% 4> 2? 1: 0);
+    for(uint a= 1; a< nrLevels; a++, tdx= max(1, tdx/ 2), tdy= max(1, tdy/ 2), tdz= max(1, tdz/ 2)) {
+      uint16 *p= (uint16 *)bitmap+ levFrom[a], *src= (uint16 *)bitmap+ levFrom[a- 1];
+      uint32 tdxNchan= tdx* nchannels;
+      for(uint32 z= max(1, tdz/ 2); z; --z, src+= tdy* tdxNchan)
+      for(uint32 y= max(1, tdy/ 2); y; --y, src+= tdxNchan)
+      for(uint32 x= max(1, tdx/ 2); x; --x, src+= nchannels)
+        for(uint c= nchannels; c> 0; c--, src++, p++) {
+          uint32 t= (*src)+ (*(src+ nchannels))+ (*(src+ tdxNchan))+ (*(src+ tdxNchan+ nchannels));
+          *p= (uint16)(t/ 4)+ (t% 4> 2? 1: 0);
         } /// for each channel
+    } /// for each level- 1
 
   } else if(bpc[0]== 32) {
-    uint32 *src32= (uint32 *)bitmap;
-    uint32 *p32= (uint32 *)((uint8 *)bitmap+ levSize[0]);
-
-    for(uint a= nrLevels; a> 0; a--, tdx/= (tdx> 1? 2: 1), tdy/= (tdy> 1? 2: 1), tdz/= (tdz> 1? 2: 1))
-      for(uint b= tdx* tdy* tdz; b> 0; b--, src32+= adv)    // advance src, skipping 1 texel
-        for(uint c= nchannels; c> 0; c--, src32++, p32++) {
-          uint64 t= *src32+ *(src32+ nchannels)+ *(src32+ tdx)+ *(src32+ tdx+ nchannels);
-          *p32= (uint32)(t/ 4)+ (t% 4> 2? 1: 0);
+    for(uint a= 1; a< nrLevels; a++, tdx= max(1, tdx/ 2), tdy= max(1, tdy/ 2), tdz= max(1, tdz/ 2)) {
+      uint32 *p= (uint32 *)bitmap+ levFrom[a], *src= (uint32 *)bitmap+ levFrom[a- 1];
+      uint32 tdxNchan= tdx* nchannels;
+      for(uint32 z= max(1, tdz/ 2); z; --z, src+= tdy* tdxNchan)
+      for(uint32 y= max(1, tdy/ 2); y; --y, src+= tdxNchan)
+      for(uint32 x= max(1, tdx/ 2); x; --x, src+= nchannels)
+        for(uint c= nchannels; c> 0; c--, src++, p++) {
+          uint32 t= (*src)+ (*(src+ nchannels))+ (*(src+ tdxNchan))+ (*(src+ tdxNchan+ nchannels));
+          *p= (uint32)(t/ 4)+ (t% 4> 2? 1: 0);
         } /// for each channel
+    } /// for each level- 1
 
   } else if(bpc[0]== 64) {
-    uint64 *src64= (uint64 *)bitmap;
-    uint64 *p64= (uint64 *)((uint8 *)bitmap+ levSize[0]);
-
-    for(uint a= nrLevels; a> 0; a--, tdx/= (tdx> 1? 2: 1), tdy/= (tdy> 1? 2: 1), tdz/= (tdz> 1? 2: 1))  // for each level
-      for(uint b= tdx* tdy* tdz; b> 0; b--, src64+= adv)                                                // for each texel+ advance src, skipping 1 texel
-        for(uint c= nchannels; c> 0; c--, src64++, p64++) {                                             // for each channel
-          // doing (v1+v2+v3+v4)/ 4 would exceed uint64, therefore another method must happen
+    for(uint a= 1; a< nrLevels; a++, tdx= max(1, tdx/ 2), tdy= max(1, tdy/ 2), tdz= max(1, tdz/ 2)) {
+      uint64 *p= (uint64 *)bitmap+ levFrom[a], *src= (uint64 *)bitmap+ levFrom[a- 1];
+      uint32 tdxNchan= tdx* nchannels;
+      for(uint32 z= max(1, tdz/ 2); z; --z, src+= tdy* tdxNchan)
+      for(uint32 y= max(1, tdy/ 2); y; --y, src+= tdxNchan)
+      for(uint32 x= max(1, tdx/ 2); x; --x, src+= nchannels)
+        for(uint c= nchannels; c> 0; c--, src++, p++) {
           uint64 avg1, avg2, swp;
-          uint64 v1= *src64;
-          uint64 v2= *(src64+ nchannels);
+          uint64 v1= *src;
+          uint64 v2= *(src+ nchannels);
           if(v1> v2) swp= v1, v1= v2, v2= swp;              // making sure v2 > v1
-          uint64 v3= *(src64+ tdx);
-          uint64 v4= *(src64+ tdx+ nchannels);
+          uint64 v3= *(src+ tdxNchan);
+          uint64 v4= *(src+ tdxNchan+ nchannels);
           if(v3> v4) swp= v3, v3= v4, v4= swp;              // making sure v4 > v3
-            
+        
           avg1= ((v2- v1)/ 2)+ v1;                          // won't exceed i64
           avg2= ((v4- v3)/ 2)+ v3;                          // won't exceed i64
           if(avg1> avg2) swp= avg1, avg1= avg2, avg2= swp;  // making sure avg2 > avg1
-          *p64= ((avg2- avg1)/ 2)+ avg1;                    // won't exceed i64
+          *p= ((avg2- avg1)/ 2)+ avg1;                      // won't exceed i64
         } /// for each channel
+    } /// for each level- 1
 
   } else {
     err= 14;
