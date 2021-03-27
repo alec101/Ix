@@ -137,7 +137,7 @@ public:
   bool saveI3D(cchar *in_fname, ixMesh *in_mesh);
 
 
-  bool loadOBJ(cchar *in_fileName, uint32 nrOutMeshes, ixMesh *out_meshes, uint32 *in_OBJmeshNr= null);
+  bool loadOBJ(cchar *in_fileName, uint32 nrOutMeshes, ixMesh **out_meshes, uint32 *in_OBJmeshNr= null, const char **in_OBJmeshNames= null);
 
   // device data handling
 

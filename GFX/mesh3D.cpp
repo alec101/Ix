@@ -205,7 +205,7 @@ bool ixMeshSys::load(cchar *in_file, ixMesh *out_m) {
   if(ext== "i3d")
     return out_m->_loadI3D(in_file);  
   else if(ext== "obj")
-    return loadOBJ(in_file, 1, out_m, &out_m->fileIndex);
+    return loadOBJ(in_file, 1, &out_m, &out_m->fileIndex);
 
   return false;
 }

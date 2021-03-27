@@ -178,7 +178,7 @@ void parseGenericTxtCommand(str8 *in_line, str8 *out_command, str8 *out_v1, str8
   if(out_command->d== null) goto ClearText;
   if(*out_command== "") goto ClearText;
 
-  out_command->lower();
+  //out_command->lower();
   if(out_command->len>= 2) {
     if(out_command->d[out_command->len- 2]== '=') *out_command-= 1;
     else if(out_command->d[out_command->len- 2]== ':') *out_command-= 1;
@@ -189,10 +189,10 @@ void parseGenericTxtCommand(str8 *in_line, str8 *out_command, str8 *out_v1, str8
   p= skipWhitespace(p);
   
   // the parameters
-  if(out_v1) { p= readWordOrWordsInQuotes(p, out_v1); out_v1->lower(); p= skipWhitespace(p); if(*p== ',') { p= (char *)((int8 *)p+ 1); p= skipWhitespace(p); } }
-  if(out_v2) { p= readWordOrWordsInQuotes(p, out_v2); out_v2->lower(); p= skipWhitespace(p); if(*p== ',') { p= (char *)((int8 *)p+ 1); p= skipWhitespace(p); } }
-  if(out_v3) { p= readWordOrWordsInQuotes(p, out_v3); out_v3->lower(); p= skipWhitespace(p); if(*p== ',') { p= (char *)((int8 *)p+ 1); p= skipWhitespace(p); } }
-  if(out_v4) { p= readWordOrWordsInQuotes(p, out_v4); out_v4->lower(); p= skipWhitespace(p); if(*p== ',') { p= (char *)((int8 *)p+ 1); p= skipWhitespace(p); } }
+  if(out_v1) { p= readWordOrWordsInQuotes(p, out_v1); /*out_v1->lower();*/ p= skipWhitespace(p); if(*p== ',') { p= (char *)((int8 *)p+ 1); p= skipWhitespace(p); } }
+  if(out_v2) { p= readWordOrWordsInQuotes(p, out_v2); /*out_v2->lower();*/ p= skipWhitespace(p); if(*p== ',') { p= (char *)((int8 *)p+ 1); p= skipWhitespace(p); } }
+  if(out_v3) { p= readWordOrWordsInQuotes(p, out_v3); /*out_v3->lower();*/ p= skipWhitespace(p); if(*p== ',') { p= (char *)((int8 *)p+ 1); p= skipWhitespace(p); } }
+  if(out_v4) { p= readWordOrWordsInQuotes(p, out_v4); /*out_v4->lower();*/ p= skipWhitespace(p); if(*p== ',') { p= (char *)((int8 *)p+ 1); p= skipWhitespace(p); } }
 
   return; // the normal return
 

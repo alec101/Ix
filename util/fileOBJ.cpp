@@ -14,7 +14,7 @@
 /// <in_nrOutMeshes>: number or <out_meshes> to populate
 /// <in_OBJmeshNr>: [optional] for each <out_meshes>, what respective object(mesh) number to load in the OBJ file
 ///                 if left null, each mesh will load it's coresponding number in the obj file (first mesh will load first mesh in file, etc)
-bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshes, uint32 *in_OBJmeshNr) {
+bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh **out_meshes, uint32 *in_OBJmeshNr, const char **in_OBJmeshNames) {
   cchar *err= null;
   int errL;
 
@@ -33,15 +33,24 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshe
     vec3 *nrm, *tex1;
     vec3i *ind;           // triangle index data
 
-    uint32 nrPos, nrNrm, nrTex1, nrInd;
+    uint32 nrPos, nrNrm, nrTex1, nrInd, startPos, startNrm, startTex1;
     str8 name;
     str8 materialName;
-    OBJdata(): pos(null), nrm(null), tex1(null), ind(null) { nrPos= nrNrm= nrTex1= nrInd= 0; }
+    OBJdata(chainList *list): pos(null), nrm(null), tex1(null), ind(null) {
+      nrPos= nrNrm= nrTex1= nrInd= 0;
+      OBJdata *l= (OBJdata *)list->last;
+      if(l) { startPos= l->startPos+ l->nrPos; startNrm= l->startNrm+ l->nrNrm; startTex1= l->startTex1+ l->nrTex1; } 
+      else    startPos= startNrm= startTex1= 1;
+      list->add(this);
+    }
     ~OBJdata() { if(pos)  delete[] pos;
                  if(nrm)  delete[] nrm;
                  if(tex1) delete[] tex1;
                  if(ind)  delete[] ind;
     }
+    //void start(chainList *list) { OBJdata *l= (OBJdata *)list->last;
+    //                              if(l) { startPos= l->startPos+ l->nrPos; startNrm= l->startNrm+ l->nrNrm; startTex1= l->startTex1+ l->nrTex1; } 
+    //                              list->add(this); }
   };
 
   str8 matLibFile;
@@ -65,7 +74,7 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshe
       if(d== null)  start= true;
       if(d) if(d->name.d) start= true;    // already a name in this obj? then it's another obj
       //if(d) if((!d->pos) && (!d->nrm) && (!d->tex1) && (!d->ind)) start= true;
-      if(start) { d= new OBJdata; objMeshes.add(d); }
+      if(start) d= new OBJdata(&objMeshes);
 
       d->name= w1;
 
@@ -78,12 +87,13 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshe
       start= false;
       if(d== null)     start= true;
       if(d) if(d->pos) start= true;     // there is data already loaded current node, then a new node must happen
-      if(start) { d= new OBJdata; objMeshes.add(d); }
+      if(start) d= new OBJdata(&objMeshes);
 
       /// count the number of vertex positions in the file
       d->nrPos= 1;
       while(1) {
         if(!readLine8(f, &s)) break;
+        if((s.d[0]== 's') && (s.d[1]== ' ')) continue;      // ignore smoothing groups
         if((s.d[0]== 'v') && (s.d[1]== ' ')) d->nrPos++;
         else break;
       }
@@ -93,14 +103,17 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshe
       d->pos= new vec4[d->nrPos];
 
       /// read all vertex positions
-      for(uint32 a= 0; a< d->nrPos; a++) {
+      for(uint32 a= 0; a< d->nrPos;) {
         readLine8(f, &s);
+        if((s.d[0]== 's') && (s.d[1]== ' ')) continue;      // ignore smoothing groups
+
         parseGenericTxtCommand(&s, &cmd, &w1, &w2, &w3, &w4);
         d->pos[a].x= w1.toFloat();
         d->pos[a].y= w2.toFloat();
         d->pos[a].z= w3.toFloat();
         if(w4.nrUnicodes) d->pos[a].w= w4.toFloat();
         else              d->pos[a].w= 1.0f;           // default value
+        a++;
       }
 
     // vertex tex coords;
@@ -109,12 +122,13 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshe
       start= false;
       if(d== null)      start= true;
       if(d) if(d->tex1) start= true;     // there is data already loaded current node, then a new node must happen
-      if(start) { d= new OBJdata; objMeshes.add(d); }
+      if(start) d= new OBJdata(&objMeshes);
      
       /// count the number of vertex tex coords in the file
       d->nrTex1= 1;
       while(1) {
         if(!readLine8(f, &s)) break;
+        if((s.d[0]== 's') && (s.d[1]== ' ')) continue;      // ignore smoothing groups
         if(s.d[0]== 'v' && s.d[1]== 't') d->nrTex1++;
         else break;
       }
@@ -124,13 +138,15 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshe
       d->tex1= new vec3[d->nrTex1];
 
       /// read all vertex positions
-      for(uint32 a= 0; a< d->nrTex1; a++) {
+      for(uint32 a= 0; a< d->nrTex1;) {
         readLine8(f, &s);
+        if((s.d[0]== 's') && (s.d[1]== ' ')) continue;      // ignore smoothing groups
         parseGenericTxtCommand(&s, &cmd, &w1, &w2, &w3);
         d->tex1[a].x= w1.toFloat();
         d->tex1[a].y= w2.toFloat();
         if(w3.nrUnicodes) d->tex1[a].z= w3.toFloat();
         else              d->tex1[a].z= 0.0f;           // default value
+        a++;
       }
 
     // vertex normals
@@ -139,12 +155,13 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshe
       start= false;
       if(d== null)     start= true;
       if(d) if(d->nrm) start= true;     // there is data already loaded current node, then a new node must happen
-      if(start) { d= new OBJdata; objMeshes.add(d); }
+      if(start) d= new OBJdata(&objMeshes);
 
       /// count the number of vertex normals in the file
       d->nrNrm= 1;
       while(1) {
         if(!readLine8(f, &s)) break;
+        if((s.d[0]== 's') && (s.d[1]== ' ')) continue;      // ignore smoothing groups
         if(s.d[0]== 'v' && s.d[1]== 'n') d->nrNrm++;
         else break;
       }
@@ -154,12 +171,14 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshe
       d->nrm= new vec3[d->nrNrm];
 
       /// read all vertex positions
-      for(uint32 a= 0; a< d->nrNrm; a++) {
+      for(uint32 a= 0; a< d->nrNrm;) {
         readLine8(f, &s);
+        if((s.d[0]== 's') && (s.d[1]== ' ')) continue;      // ignore smoothing groups
         parseGenericTxtCommand(&s, &cmd, &w1, &w2, &w3);
         d->nrm[a].x= w1.toFloat();
         d->nrm[a].y= w2.toFloat();
         d->nrm[a].z= w3.toFloat();
+        a++;
       }
 
     } else if(s.d[0]== 'f' && s.d[1]== ' ') {
@@ -171,6 +190,7 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshe
       d->nrInd= 1;
       while(1) {
         if(!readLine8(f, &s)) break;
+        if((s.d[0]== 's') && (s.d[1]== ' ')) continue;      // ignore smoothing groups
         if(s.d[0]== 'f' && s.d[1]== ' ') d->nrInd++;
         else break;
       }
@@ -181,13 +201,15 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshe
       d->ind= new vec3i[d->nrInd];
       
       /// read all vertex positions
-      for(uint32 a= 0; a< d->nrInd; a+= 3) {
+      for(uint32 a= 0; a< d->nrInd;) {
         readLine8(f, &s);
+        if((s.d[0]== 's') && (s.d[1]== ' ')) continue;      // ignore smoothing groups
         if(s.s("f %d/%d/%d %d/%d/%d %d/%d/%d\n", &d->ind[a].x,    &d->ind[a].y,    &d->ind[a].z,
                                                  &d->ind[a+ 1].x, &d->ind[a+ 1].y, &d->ind[a+ 1].z,
                                                  &d->ind[a+ 2].x, &d->ind[a+ 2].y, &d->ind[a+ 2].z)!= 9) {
           IXERR("parsing text line failed (faces indexes)");
         }
+        a+= 3;
       }
 
     // longer commands
@@ -207,7 +229,7 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshe
   
   
   for(uint32 a= 0; a< in_nrOutMeshes; ++a) {
-    ixMesh *m= &out_meshes[a];
+    ixMesh *m= out_meshes[a];
     m->delData();
 
     OBJdata *o;
@@ -217,6 +239,17 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshe
         continue;
       }
       o= (OBJdata *)objMeshes.get(in_OBJmeshNr[a]);
+
+    } else if(in_OBJmeshNames) {
+      for(o= (OBJdata *)objMeshes.first; o; o= (OBJdata *)o->next)
+        if(o->name== in_OBJmeshNames[a])
+          break;
+
+      if(o== null) {
+        error.detail(str8().f("[%s] WARNING: requested mesh [%s] in obj file not found, skipping", in_file, (in_OBJmeshNames[a]? in_OBJmeshNames[a]: "null")), __FUNCTION__);
+        continue;
+      }
+
     } else {
       if(a>= objMeshes.nrNodes) {
         error.detail(str8().f("[%s] WARNING: requested mesh #%d in obj file not found, skipping.", in_file, a), __FUNCTION__);
@@ -250,9 +283,9 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh *out_meshe
       
 
       for(uint32 a= 0; a< o->nrInd; ++a) // f v/vt/vn v/vt/vn v/vt/vn
-        p.vert[a].pos=  o->pos [o->ind[a].x- 1],
-        p.vert[a].tex1= o->tex1[o->ind[a].y- 1],
-        p.vert[a].nrm=  o->nrm [o->ind[a].z- 1];
+        p.vert[a].pos=  o->pos [o->ind[a].x- o->startPos],
+        p.vert[a].tex1= o->tex1[o->ind[a].y- o->startTex1],
+        p.vert[a].nrm=  o->nrm [o->ind[a].z- o->startNrm];
 
     } else {
       m->delData();
@@ -267,7 +300,7 @@ Exit:
   if(err) {
     if(in_nrOutMeshes && out_meshes)
       for(uint32 a= 0; a< in_nrOutMeshes; ++a)
-        out_meshes[a].delData();
+        out_meshes[a]->delData();
 
     error.detail(str8("[")+ in_file+ "] "+ err, __FUNCTION__, errL);
 

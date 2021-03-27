@@ -532,7 +532,7 @@ bool Tex::mipmapGenerate() {
   
   // new bitmap alloc and old deleted
   newBitmap= new uint8[size];
-  Str::memcpy(newBitmap, bitmap, size);
+  Str::memcpy(newBitmap, bitmap, levSize[0]);
 
   if(_wrap) {
     delete[] *wrapBitmap;
