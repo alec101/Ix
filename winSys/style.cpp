@@ -902,8 +902,8 @@ void ixWSgenericStyle::delData() {
 
 /// sets the background texCoords (x0, y0, dx, dy)
 void ixWSgenericStyle::setBGcoords(int _x0, int _y0, int _dx, int _dy) {
-  texBG.dx= _dx;
-  texBG.dy= _dy;
+  texBG.dx= mlib::abs32(_dx);
+  texBG.dy= mlib::abs32(_dy);
   // THIS NEEDS TESTING FOR NVIDIA/ATI COMPATIBILITY. <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   texBG.s0= ((float)_x0)/ (float)parent->_texDx;
   texBG.t0= ((float)_y0)/ (float)parent->_texDy;
@@ -915,8 +915,8 @@ void ixWSgenericStyle::setBGcoords(int _x0, int _y0, int _dx, int _dy) {
 
 /// sets the borders (0- 8) texCoords (x0, y0, dx, dy)
 void ixWSgenericStyle::setBRDcoords(int16 nr, int _x0, int _y0, int _dx, int _dy) {
-  texBRD[nr].dx= _dx;
-  texBRD[nr].dy= _dy;
+  texBRD[nr].dx= mlib::abs32(_dx);
+  texBRD[nr].dy= mlib::abs32(_dy);
   // THIS NEEDS TESTING FOR NVIDIA/ATI COMPATIBILITY. <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   texBRD[nr].s0= ((float)_x0)/ (float)parent->_texDx;
   texBRD[nr].t0= ((float)_y0)/ (float)parent->_texDy;
@@ -993,20 +993,20 @@ void ixWSscrollStyle::delData() {
 
 
 void ixWSscrollStyle::setArrowcoords(int16 in_n, int in_x0, int in_y0, int in_dx, int in_dy) {
-  texArrows[in_n].dx= in_dx;
-  texArrows[in_n].dy= in_dy;
+  texArrows[in_n].dx= mlib::abs32(in_dx);
+  texArrows[in_n].dy= mlib::abs32(in_dy);
   // THIS NEEDS TESTING FOR NVIDIA/ATI COMPATIBILITY. <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   texArrows[in_n].s0= ((float)in_x0)/ (float)parent->_texDx;
   texArrows[in_n].t0= ((float)in_y0)/ (float)parent->_texDy;
-  texArrows[in_n].se= texArrows[in_n].s0+ (float)in_dx/ (float)parent->_texDx;
-  texArrows[in_n].te= texArrows[in_n].t0+ (float)in_dy/ (float)parent->_texDy;
+  texArrows[in_n].se= texArrows[in_n].s0+ ((float)in_dx/ (float)parent->_texDx);
+  texArrows[in_n].te= texArrows[in_n].t0+ ((float)in_dy/ (float)parent->_texDy);
   bTexArrows= 1;
 }
 
 // sets the dragable button (0- 1) tex coords (x0, y0, dx, dy)
 void ixWSscrollStyle::setDragboxCoords(int16 in_n, int in_x0, int in_y0, int in_dx, int in_dy) {
-  texDragbox[in_n].dx= in_dx;
-  texDragbox[in_n].dy= in_dy;
+  texDragbox[in_n].dx= mlib::abs32(in_dx);
+  texDragbox[in_n].dy= mlib::abs32(in_dy);
   // THIS NEEDS TESTING FOR NVIDIA/ATI COMPATIBILITY. <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   texDragbox[in_n].s0= ((float)in_x0)/ (float)parent->_texDx;
   texDragbox[in_n].t0= ((float)in_y0)/ (float)parent->_texDy;
@@ -1017,8 +1017,8 @@ void ixWSscrollStyle::setDragboxCoords(int16 in_n, int in_x0, int in_y0, int in_
 
 // sets the back-line(0- 1) texCoords (x0, y0, dx, dy)
 void ixWSscrollStyle::setScrollBackCoords(int16 in_n, int in_x0, int in_y0, int in_dx, int in_dy) {
-  texScrollBack[in_n].dx= in_dx;
-  texScrollBack[in_n].dy= in_dy;
+  texScrollBack[in_n].dx= mlib::abs32(in_dx);
+  texScrollBack[in_n].dy= mlib::abs32(in_dy);
   // THIS NEEDS TESTING FOR NVIDIA/ATI COMPATIBILITY. <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   texScrollBack[in_n].s0= ((float)in_x0)/ (float)parent->_texDx;
   texScrollBack[in_n].t0= ((float)in_y0)/ (float)parent->_texDy;

@@ -26,6 +26,7 @@ layout(push_constant) uniform PConsts {
 // ************************************************************************************
 
 void main() {
+  /*
   if(gl_VertexIndex== 0)
     gl_Position= vec4(p.x0,  p.ye,  p.z, 1),
     out_UV=      vec3(p.tx0, p.ty0, p.tDepth);
@@ -41,6 +42,25 @@ void main() {
   else if(gl_VertexIndex== 3)
     gl_Position= vec4(p.xe,  p.y0,  p.z, 1),
     out_UV=      vec3(p.txe, p.tye, p.tDepth);
+    */
+
+  if(gl_VertexIndex== 0)
+    gl_Position= vec4(p.x0,  p.ye,  p.z, 1),
+    out_UV=      vec3(p.tx0, p.tye, p.tDepth);
+
+  else if(gl_VertexIndex== 1)
+    gl_Position= vec4(p.xe,  p.ye,  p.z, 1),
+    out_UV=      vec3(p.txe, p.tye, p.tDepth);
+
+  else if(gl_VertexIndex== 2)
+    gl_Position= vec4(p.x0,  p.y0,  p.z, 1),
+    out_UV=      vec3(p.tx0, p.ty0, p.tDepth);
+
+  else if(gl_VertexIndex== 3)
+    gl_Position= vec4(p.xe,  p.y0,  p.z, 1),
+    out_UV=      vec3(p.txe, p.ty0, p.tDepth);
+
+
 
   if((p.flags& 0x0001)> 0)
     gl_Position= glb.cameraPersp* gl_Position;

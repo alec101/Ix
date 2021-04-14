@@ -1,5 +1,7 @@
 #include "ix/ix.h"
 
+
+
 #ifdef IX_USE_VULKAN
 
 /*
@@ -9,6 +11,13 @@ https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
 distance(p1, p2, (x0, y0))= |(y2- y1)x0- (x2- x1)y0 + x2y1- y2x1| / sqrt((y2- y1)^2 + (x2- x1)^2)
 */
 
+
+/*
+the draw sys could be optimized, and it must...
+        would a draw sys like that old draw i knew as a kid work? 
+        a uber shader that would accept commands...
+        or probly the best would be a buffer for all types of primitives... the quad with the buffer, etc
+*/
 
 
 

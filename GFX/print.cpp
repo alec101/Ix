@@ -8,6 +8,16 @@
 
  -fragment would have only clipping, and just execute the draw
  -
+;
+  print must have such buffer sys also
+  maybe an optimized print class, and let the old one be, for other stuff
+  and the optimized one would have all it's pages loaded, maybe tex array? or array of textures?
+  imagearray would probly be best... you have an order of chars to print, all pages with coresponding image layer
+  you'd have the advanced coord, based on orientation
+
+
+
+
 */
 
 
