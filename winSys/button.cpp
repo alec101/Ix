@@ -125,10 +125,11 @@ bool ixButton::_update(bool in_mIn, bool in_updateChildren) {
   _doSpecialAction(this);
 
   recti r; getVDcoordsRecti(&r);
+  bool inside= r.inside(in.m.x, in.m.y);
 
   /// update it's children first
   if(in_updateChildren)
-    if(_updateChildren((in_mIn? r.inside(in.m.x, in.m.y): false)))
+    if(_updateChildren((in_mIn? inside: false)))
       return true;
 
   //int32 x= hook.pos.x+ pos.x0, y= hook.pos.y+ pos.y0;
@@ -198,9 +199,16 @@ bool ixButton::_update(bool in_mIn, bool in_updateChildren) {
         return true;
       }
     } /// left mouse button is being pressed
+    //_colorToUse= &colorHover;
   } /// operation in progress / no operation in progress
 
-
+  if(is.activated) {
+    _colorToUse= (inside? &colorHover: &colorFocus);;
+    _colorBRDtoUse= &colorBRDfocus;
+  } else {
+    _colorToUse= (inside? &colorHover: &color);
+    _colorBRDtoUse= &colorBRD;
+  }
 
   return ixBaseWindow::_update(in_mIn, false);
 }

@@ -4,12 +4,15 @@
 
 layout(location= 0) out vec4 out_color;
 
+layout(location= 1) in vec4 in_vert[2];
+
 // sets
 
 layout(set= 0, binding= 0) uniform GlobalUniforms {
   mat4 cameraPersp;         // perspective camera matrix
   mat4 cameraOrtho;         // orthographic camera matrix
   vec2 vp;                  // viewport position on the virtual desktop
+  vec2 vs;                  // viewport size
 } glb;
 
 // push constants
@@ -22,27 +25,21 @@ layout(push_constant) uniform PConsts {
 } p;
 
 
+
 // ************************************************************************************
 void main() {
 
   // smoothing with alpha, based on distance of current pixel from line
   if((p.flags& 0x0010)> 0) {
     // distance(p1, p2, (x0, y0))= | (y2- y1)* x0- (x2- x1)* y0 + x2* y1- y2* x1 |  /  sqrt((y2- y1)^2 + (x2- x1)^2)
+    float dx= in_vert[1].x- in_vert[0].x;
+    float dy= in_vert[1].y- in_vert[0].y;
+    float distance= abs((dy* gl_FragCoord.x)- (dx* gl_FragCoord.y)+ (in_vert[1].x* in_vert[0].y)- (in_vert[1].y* in_vert[0].x)) / sqrt((dy* dy)+ (dx* dx));
 
-    vec2 s= p.pos[0].xy,    // start position
-         e= p.pos[1].xy;    // end position
-
-    if((p.flags& 0x0002)> 0)
-      s.x+= 0.5, s.y+= 0.5, e.x+= 0.5, e.y+= 0.5;
-
-    float dx= e.x- s.x;
-    float dy= e.y- s.y;
-    float x0= gl_FragCoord.x+ glb.vp.x;
-    float y0= gl_FragCoord.y+ glb.vp.y;
-
-    float distance= abs((dy* x0)- (dx* y0)+ (e.x* s.y)- (e.y* s.x)) / sqrt((dy* dy)+ (dx* dx));
-    float alpha= (0.5* (p.size+ 1))- distance;
-
+    float alpha= (0.5* (p.size+ 1))- distance;    // seems best
+    //float alpha= (0.5* (p.size+ .5))- distance; // not quite
+    //float alpha= (p.size* 0.5)- distance;       // this would work if there were the rule that line width should always be +1, when smoothing
+    
     if(alpha< 0) alpha= 0;
     if(alpha> 1) alpha= 1;
 

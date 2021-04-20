@@ -707,6 +707,8 @@ bool ixVulkan::RenderPass::startRender() {
   _ix->vki.glb[fi]->data.cameraPersp= _ix->cameraPersp.cameraMat;
   _ix->vki.glb[fi]->data.vp.x= (float)_ix->win->x0;
   _ix->vki.glb[fi]->data.vp.y= (float)_ix->win->y0;
+  _ix->vki.glb[fi]->data.vs.x= (float)_ix->win->dx;
+  _ix->vki.glb[fi]->data.vs.y= (float)_ix->win->dy;
   _ix->vki.glb[fi]->upload(&_ix->vki.glb[fi]->data, 0, sizeof(_ix->vki.glb[fi]->data));
 
   

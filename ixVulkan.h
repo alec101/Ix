@@ -527,6 +527,7 @@ public:
       mat4 cameraPersp;       // perspective camera matrix
       mat4 cameraOrtho;       // orthographic camera matrix
       vec2 vp;                // viewport position on the virtual desktop
+      vec2 vs;                // viewport size
     } data;
 
 

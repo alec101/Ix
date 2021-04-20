@@ -101,6 +101,9 @@ ixBaseWindow::ixBaseWindow(): hook(this), pos(0) {
   colorBRDfocus.set(1.0f, 1.0f, 1.0f, 1.0f);
   colorHover.set   (0.2f, 0.2f, 0.1f, 0.6f);
 
+  _colorToUse= &color;
+  _colorBRDtoUse= &colorBRD;
+
   //_handlesTex= false;
   delData();
 }
@@ -1564,7 +1567,7 @@ void ixBaseWindow::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *
 
   /// useBackColor usage flag - draw a rectangle using current color
   if(s->useBackColor) {
-    in_ix->vki.draw.quad.push.color= color;
+    in_ix->vki.draw.quad.push.color= *_colorToUse;
     in_ix->vki.draw.quad.flagTexture(false);
     in_ix->vki.draw.quad.setPosDi(_x, _y, 0, pos.dx, pos.dy);
     in_ix->vki.draw.quad.cmdPushAll(in_cmd);
@@ -1572,7 +1575,7 @@ void ixBaseWindow::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *
   }
 
   /// useColorOnTexture usage flag - use color for current texture
-  if(s->useColorOnTexture) in_ix->vki.draw.quad.push.color= color;
+  if(s->useColorOnTexture) in_ix->vki.draw.quad.push.color= *_colorToUse;
   else                     in_ix->vki.draw.quad.push.color.set(1.0f, 1.0f, 1.0f, 1.0f);;
   in_ix->vki.draw.quad.cmdPushColor(in_cmd);
 
@@ -1665,10 +1668,10 @@ void ixBaseWindow::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *
 
 
   /// useColorOnTexture usage flag - use color for current texture
-  if(s->useColorOnTexture) in_ix->vki.draw.quad.push.color= colorBRD;
+  if(s->useColorOnTexture) in_ix->vki.draw.quad.push.color= *_colorBRDtoUse;
   else                     in_ix->vki.draw.quad.push.color.set(1.0f, 1.0f, 1.0f, 1.0f);;
   in_ix->vki.draw.quad.cmdPushColor(in_cmd);
-
+  
   ///---------------------------------------------------------------
   // WINDOW BORDER ========================-------------------------
   ///---------------------------------------------------------------
@@ -1939,7 +1942,7 @@ void ixBaseWindow::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *
   if(!s->useTexture) {
     in_ix->vki.draw.quad.flagTexture(false);
     in_ix->vki.draw.quad.push.hollow= 3.0f;
-    in_ix->vki.draw.quad.push.color= s->colorBRD;
+    in_ix->vki.draw.quad.push.color= *_colorBRDtoUse;
     in_ix->vki.draw.quad.setPosDi(_x, _y, 0, pos.dx, pos.dy);
 
     in_ix->vki.draw.quad.cmdPushAll(in_cmd);

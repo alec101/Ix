@@ -74,6 +74,9 @@ public:
   vec4 colorBRDfocus; // borders color when it has focus
   vec4 colorHover;    // color when the window is hovered (the cursor/pointer is over it, and it don't have current focus)
 
+  vec4 *_colorToUse;
+  vec4 *_colorBRDtoUse;
+
   ixTexture *customTex; // THIS CAN BE A THING. USE THIS FOR BACKGROUND, AND BUTTONS COULD HAVE ADDITIONAL ONE OR TWO FOR PRESS / HOVER
                         //INITIALLY CUSTOMTEX IS NULL, IF SO, USE THE STYLE.
 
