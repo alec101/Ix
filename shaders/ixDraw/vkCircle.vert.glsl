@@ -8,6 +8,7 @@ layout(set= 0, binding= 0) uniform GlobalUniforms {
   mat4 cameraPersp;         // perspective camera matrix
   mat4 cameraOrtho;         // orthographic camera matrix
   vec2 vp;                  // viewport position on the virtual desktop
+  vec2 vs;                  // viewport size
 } glb;
 
 // push constants - to force more compact data, vectors are not used, as any vector ocupies 16 bytes (even vec2 or vec3)
