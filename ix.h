@@ -270,6 +270,10 @@ public:
       uint64 size_clusterResHost;         // 32MB - single textures/buffers (UNIFORM?) - in host visible
       uint64 size_stageBufferDevice;      //  1MB
       uint64 size_stageBufferHost;        // 24MB - can hold 2048x2048x4xmips textures
+
+      // add data to the glb buffer used by all shaders in here
+      ixVulkan::GlbBuffer::Data *derivedData[2]; // [def:null] derive from ixVulkan::GlbBuffer::Data then pass it here - data is NOT DESTROYED by ix, if you create it
+      uint32 derivedDataSize;                 // [def:0]    derived data size (including base)
     } vk;
     #endif
   } cfg;
@@ -338,8 +342,8 @@ public:
   void exitCleanup();   // this fun will be called if the last ix engine is called. static objects should be destroyed here
 
 
-  void init();                          // before window creation - sets up main program stuff
-  void initWindow(osiWindow *renderer); // after window creation  - sets up the renderer / monitor / window it will use
+  void init(void *glbData[2]= null, uint32 size= 0); // before window creation - sets up main program stuff; <glbData & size>: global shader uniform buffer extra data (glb)
+  void initWindow(osiWindow *renderer);           // after window creation  - sets up the renderer / monitor / window it will use
 
 
   std::mutex osiMutex;

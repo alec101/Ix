@@ -139,20 +139,24 @@ ixVulkan::~ixVulkan() {
     ix->vk.DeviceWaitIdle(ix->vk.device);
 
   resClusters.delData();
-
+  
   // MAYBE ALL BIG CLASSES SHOULD USE STUFF FROM ixVulkan
   // so all destroys happen here
-
-
-
-
-
 }
 
 
 void ixVulkan::shutdown() {
   if(swap.handle)
     swap.handle->destroy(); // swap must be destroyed before osi destroys the surfaces
+
+  // no glb derived data - destroy
+  if(ix->cfg.vk.derivedDataSize== 0)
+    for(uint a= 0; a< 2; ++a) {
+      if(glb[a]->data) {
+        delete glb[a]->data;
+        glb[a]->data= null;
+      }
+    }
 }
 
 
@@ -334,8 +338,16 @@ void ixVulkan::initAfterWindow() {
     //glb[a]->access.firstStage= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
     //glb[a]->access.firstAccess= VK_ACCESS_SHADER_READ_BIT;
 
+    // create data if no derived data
+    if(ix->cfg.vk.derivedDataSize== 0) {
+      glb[a]->dataSize= sizeof(ixVulkan::GlbBuffer::Data);
+      glb[a]->data= new ixVulkan::GlbBuffer::Data;
+    } else {
+      glb[a]->dataSize= ix->cfg.vk.derivedDataSize;
+      glb[a]->data= ix->cfg.vk.derivedData[a];
+    }
 
-    glb[a]->handle->cfgSize(sizeof(GlbBuffer::Data), 0);
+    glb[a]->handle->cfgSize(glb[a]->dataSize, 0);
     glb[a]->handle->cfgUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT| VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
     glb[a]->build();
 
@@ -703,15 +715,14 @@ bool ixVulkan::RenderPass::startRender() {
   
   // global buffer update/upload
 
-  _ix->vki.glb[fi]->data.cameraOrtho= _ix->cameraOrtho.cameraMat;
-  _ix->vki.glb[fi]->data.cameraPersp= _ix->cameraPersp.cameraMat;
-  _ix->vki.glb[fi]->data.vp.x= (float)_ix->win->x0;
-  _ix->vki.glb[fi]->data.vp.y= (float)_ix->win->y0;
-  _ix->vki.glb[fi]->data.vs.x= (float)_ix->win->dx;
-  _ix->vki.glb[fi]->data.vs.y= (float)_ix->win->dy;
-  _ix->vki.glb[fi]->upload(&_ix->vki.glb[fi]->data, 0, sizeof(_ix->vki.glb[fi]->data));
+  _ix->vki.glb[fi]->data->cameraOrtho= _ix->cameraOrtho.cameraMat;
+  _ix->vki.glb[fi]->data->cameraPersp= _ix->cameraPersp.cameraMat;
+  _ix->vki.glb[fi]->data->vp.x= (float)_ix->win->x0;
+  _ix->vki.glb[fi]->data->vp.y= (float)_ix->win->y0;
+  _ix->vki.glb[fi]->data->vs.x= (float)_ix->win->dx;
+  _ix->vki.glb[fi]->data->vs.y= (float)_ix->win->dy;
+  _ix->vki.glb[fi]->upload(_ix->vki.glb[fi]->data, 0, _ix->vki.glb[fi]->dataSize);
 
-  
 
   /*  THE WAITING HAPPEN ON RENDERPASS I THINK, there's a dependency there
   VkImageSubresourceRange range= {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}; 

@@ -460,6 +460,9 @@ Ix::Ix(): ixClass(ixClassT::IX), res(this)
   cfg.vk.size_clusterResHost=    33554432; // 32MB
   cfg.vk.size_stageBufferDevice=  1048576; //  1MB
   cfg.vk.size_stageBufferHost=   25165824; // 24MB - will fit a 2048x2048 texture (including mipmaps) (CAN BE 8MB FOR JUST 1024x1024)
+
+  cfg.vk.derivedData[0]= cfg.vk.derivedData[1]= null;
+  cfg.vk.derivedDataSize= 0;
   #endif
 
   ren= null;
@@ -579,7 +582,7 @@ void Ix::glMakeCurrent() {
 
 // main Ix init
 
-void Ix::init() {
+void Ix::init(void *in_glbData[2], uint32 in_glbSize) {
   error.useConsoleFlag= cfg.errorUseConsoleFlag;
   //bool chatty= true;
   #ifdef IX_USE_VULKAN
@@ -592,7 +595,7 @@ void Ix::init() {
     vk.cfg.queueRequestCompute=   cfg.vk.queueRequestCompute;
     vk.cfg.queueRequestGraphics=  cfg.vk.queueRequestGraphics;
     vk.cfg.queueRequestTransfer=  cfg.vk.queueRequestTransfer;
-    
+
     #ifdef OS_WIN
     vk.cfg.extensions.instance.vk_KHR_win32_surface.enable= 1;
     #endif

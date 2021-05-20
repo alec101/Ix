@@ -523,20 +523,21 @@ public:
   // there could be [set 0, binding 1], but i can't think of it now
 
   struct GlbBuffer: public ixvkBuffer {
+    
+    // derive from this struct (add to it) then pass to ix.cfg.vk.derivedData & fill in the size too (ix.cfg.vk.derivedDataSize)
     struct Data {
       mat4 cameraPersp;       // perspective camera matrix
       mat4 cameraOrtho;       // orthographic camera matrix
       vec2 vp;                // viewport position on the virtual desktop
       vec2 vs;                // viewport size
-    } data;
-
-
-    inline uint32 getSize() { return sizeof(Data); }
+    } *data;
+    uint32 dataSize;          // size of data, includes the user-derived
 
     VkoDescriptorSetLayout *layout;     // [points to ixStaticPool] layout of global buffer [set 0, binding 0]
     ixvkDescSet *set;                   // [pool: ixVulkan::ixStaticPool]
 
-    GlbBuffer(ixvkResCluster *in_c): ixvkBuffer(in_c), layout(null), set(null) {}
+    GlbBuffer(ixvkResCluster *in_c): ixvkBuffer(in_c), data(null), dataSize(0), layout(null), set(null) {}
+    ~GlbBuffer() {}
   } *glb[2];
 
 
