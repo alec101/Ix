@@ -150,21 +150,34 @@ struct recti {
 rectf &rectf::operator=(const recti &o) { l= (float)o.l, r= (float)o.r, b= (float)o.b, t= (float)o.t, dx= (float)o.dx, dy= (float)o.dy; return *this; }
 
 
+
+
+namespace ixUtil {
+
 bool isWhitespace(uint32 c);                                      // returns true if specified character is whitespace
 char *skipWhitespace(char *in_string);                            // skips whitespace characters and returns the resulting string
 char *readWordOrWordsInQuotes(char *in_string, str8 *out_string); // returns the advance of in_string; ',' breaks the word, but not '.' ATM. there should be a readNumber too
 char *readWordsInBrackets(char *in_string, str8 *out_string);     // reads words in brackets (if there are any) and returns the advanced in_string
 bool _getBool(str8 *s);
 
-
 void parseGenericTxtCommand(str8 *in_line, str8 *out_command, str8 *out_v1= null, str8 *out_v2= null, str8 *out_v3= null, str8 *out_v4= null);
-
-//VkRect2D::VkRect2D(const recti &r);
 
 inline bool intersect1D(int32 x1_start, int32 x1_end, int32 x2_start, int32 x2_end) { return (x1_start< x2_end) && (x1_end> x2_start); }
 
 
 
+// RANDOM number generation
+extern const uint32 randMax;
+extern uint32 randSeed_thread0;                 // a main thread seed, beware of thread safety if using multiple threads. use a seed for each thread
+extern uint32 randSeed_thread1;                 // secondary thread seed, beware of thread safety if using multiple threads. use a seed for each thread
+extern uint32 randSeed_thread2;                 // 3rd thread seed, beware of thread safety if using multiple threads. use a seed for each thread
+extern uint32 randSeed_thread3;                 // 4th thread seed, beware of thread safety if using multiple threads. use a seed for each thread
+
+void randInit();    // creates the 4 seeds, based on osi.getNano()
+int32 rand32(uint32 *inout_seed= null, int32 in_min= INT32_MIN, int32 in_max= INT32_MAX);   // [0 -> ~0] <inout_seed> will be randomized as well; using randSeed_thread0 if seed is null
+float randfnorm(uint32 *inout_seed= null);      // [0.0f -> 1.0f] 0-1000000 precision
+
+} /// namespace ixUtil
 
 
 

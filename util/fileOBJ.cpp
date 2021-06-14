@@ -2,6 +2,7 @@
 
 #include "osi/include/util/fileOp.h"
 
+using namespace ixUtil;
 
 #define loadOBJbufferSize 1024
 

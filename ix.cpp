@@ -620,6 +620,9 @@ void Ix::init(void *in_glbData[2], uint32 in_glbSize) {
 
   }
   #endif
+
+  // random generator seeds
+  ixUtil::randInit();
 }
 
 

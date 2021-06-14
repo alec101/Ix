@@ -1,6 +1,7 @@
 #include "ix/ix.h"
 #include "ix/winSys/_privateDef.h"
 
+using namespace ixUtil;
 
 /*
 WHEN A CHAR IS DELETED, ALL IT'S DIECRITICALS MUST BE DELETED!!!

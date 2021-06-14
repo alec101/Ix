@@ -3,8 +3,9 @@
 //#include "osi/include/util/str8.h"
 //#include "common.hpp"
 
+using namespace ixUtil;
 
-bool isWhitespace(uint32 c) {
+bool ixUtil::isWhitespace(uint32 c) {
   if     (c== ' ')  return true; // (0x20) (SPC) space 
   else if(c== '\t') return true; // (0x09) (TAB) horizontal tab 
   else if(c== '\n') return true; // (0x0a) (LF)  newline 
@@ -15,7 +16,7 @@ bool isWhitespace(uint32 c) {
 }
 
 
-char *skipWhitespace(char *in_string) {
+char *ixUtil::skipWhitespace(char *in_string) {
   uint8 *p= (uint8 *)in_string;
   while(p)
     if     (*p== ' ')  p++; // (0x20) (SPC) space 
@@ -29,7 +30,7 @@ char *skipWhitespace(char *in_string) {
 }
 
 
-char *readWordOrWordsInQuotes(char *in_string, str8 *out_string) {
+char *ixUtil::readWordOrWordsInQuotes(char *in_string, str8 *out_string) {
   in_string= skipWhitespace(in_string);   /// skip whitespaces
   uint8 *p= (uint8 *)in_string;           /// points to start
   uint8 until= 0;                         /// read the text until a whitespace or string end
@@ -115,7 +116,7 @@ char *readFirstWord(char *in_string, str8 *out_string) {
 }
 */
 
-char *readWordsInBrackets(char *in_string, str8 *out_string) {
+char *ixUtil::readWordsInBrackets(char *in_string, str8 *out_string) {
   in_string= skipWhitespace(in_string);
   uint8 *s= (uint8 *)in_string;
   if(*s != '[') return in_string;
@@ -149,7 +150,7 @@ char *readWordsInBrackets(char *in_string, str8 *out_string) {
 /// <out_v1-v4>   - multiple parameters for the command, each parameter is OPTIONAL
 /// accepts brakets [], quotes ', double quotes ". BRACKETS FOR MAIN COMMAND ONLY
 /// the command can have = or : after it, or simply a space or a comma
-void parseGenericTxtCommand(str8 *in_line, str8 *out_command, str8 *out_v1, str8 *out_v2, str8 *out_v3, str8 *out_v4) {
+void ixUtil::parseGenericTxtCommand(str8 *in_line, str8 *out_command, str8 *out_v1, str8 *out_v2, str8 *out_v3, str8 *out_v4) {
   
   char *p= (char *)in_line->d;
   if(in_line== null || out_command== null) goto ClearText;
@@ -172,8 +173,8 @@ void parseGenericTxtCommand(str8 *in_line, str8 *out_command, str8 *out_v1, str8
 
   // the command
   
-  if(*p== '[') p= readWordsInBrackets(p, out_command);
-  else         p= readWordOrWordsInQuotes(p, out_command);
+  if(*p== '[') p= ixUtil::readWordsInBrackets(p, out_command);
+  else         p= ixUtil::readWordOrWordsInQuotes(p, out_command);
 
   if(out_command->d== null) goto ClearText;
   if(*out_command== "") goto ClearText;
@@ -205,10 +206,120 @@ ClearText:
   if(out_v4) out_v4->delData();
 }
 
-bool _getBool(str8 *s) {
+bool ixUtil::_getBool(str8 *s) {
   if(*s== "true"  || *s== "1") return true;
   if(*s== "false" || *s== "0") return false;
   return false;
+}
+
+
+
+
+
+
+
+
+
+
+// RANDOM number generation
+///========================
+
+const uint32 ixUtil::randMax= ~0;
+uint32 ixUtil::randSeed_thread0;                 // a main thread seed, beware of thread safety if using multiple threads. use a seed for each thread
+uint32 ixUtil::randSeed_thread1;                 // secondary thread seed, beware of thread safety if using multiple threads. use a seed for each thread
+uint32 ixUtil::randSeed_thread2;                 // 3rd thread seed, beware of thread safety if using multiple threads. use a seed for each thread
+uint32 ixUtil::randSeed_thread3;                 // 4th thread seed, beware of thread safety if using multiple threads. use a seed for each thread
+
+/*
+void ixUtil::randInterval32(int32 *out_n, int32 in_min, int32 in_max, uint32 *inout_seed) {
+  //x - db.nrBlocks;
+  //r - RAND_MAX
+  //7  x= (r* db.nrBlocks) /RAND_MAX;
+
+  // float r= ((float)rand()/ (float)RAND_MAX)* ((float)db.nrBlocks- 2.0f);
+
+
+  // rough:
+  // *out_n= (rand()/ RAND_MAX)* (maxval);
+  //v1 = rand() % 100;         // v1 in the range 0 to 99
+  //v2 = rand() % 100 + 1;     // v2 in the range 1 to 100
+  //v3 = rand() % 30 + 1985;   // v3 in the range 1985-2014
+
+  //srand((unsigned int)osi.present);
+  
+  if(in_max< in_min) { int32 tmp= in_min; in_min= in_max; in_max= tmp; }
+  int32 delta= in_max- in_min;
+  *out_n= (int32)ixUtil::rand(inout_seed)% delta+ in_min;
+}
+
+//  with the shitty rand() it's useless.
+//void PRJ_NAME::random64(int64 *out_n, int64 in_min, int64in_max) {
+//
+//}
+
+
+float ixUtil::randIntervalf(uint32 *inout_seed) {
+  //srand((unsigned int)osi.present);
+  return (float)((double)ixUtil::rand(inout_seed)/ (double)~ixUtil::randMax)v ;
+}
+
+
+
+
+uint32 ixUtil::rand(uint32 *inout_seed) {
+  // x = x * 16807 % 2147483647 rand0
+  // x = x * 48271 % 2147483647 rand
+  if(inout_seed)
+    return (*inout_seed= *inout_seed* 48271% 2147483647);
+  else
+    return (ixUtil::randSeed_thread0= ixUtil::randSeed_thread0* 48271% 2147483647);
+}
+
+
+void ixUtil::randSeed(uint32 *out_seed) {
+  if(out_seed)
+    *out_seed= (uint32)osi.present;
+  else
+    ixUtil::randSeed_thread0= (uint32)osi.present;
+}
+*/
+
+
+void ixUtil::randInit() {
+  uint64 nano;
+  osi.getNanosecs(&nano); ixUtil::randSeed_thread0= (uint32)(  (nano& 0xffffffff));
+  osi.getNanosecs(&nano); ixUtil::randSeed_thread1= (uint32)( ~(nano& 0xffffffff));
+  osi.getNanosecs(&nano); ixUtil::randSeed_thread2= (uint32)( ((nano& 0xffffffff)* 7));
+  osi.getNanosecs(&nano); ixUtil::randSeed_thread3= (uint32)(~((nano& 0xffffffff)* 7));
+}
+
+int32 ixUtil::rand32(uint32 *inout_seed, int32 in_min, int32 in_max) {
+  // x = x * 16807 % 2147483647 rand0
+  // x = x * 48271 % 2147483647 rand
+  
+  if(inout_seed== null) inout_seed= &ixUtil::randSeed_thread0;
+
+  *inout_seed= (*inout_seed)* 48271% 2147483647;
+  
+  if((in_min== INT32_MIN) && (in_max== INT32_MAX))
+    return (int32)(*inout_seed);
+
+  else {
+    // 32bit I DON'T THINK IT'S GOOD
+    //if(in_max< in_min) { int32 tmp= in_min; in_min= in_max; in_max= tmp; }
+    //int32 delta= (in_max- in_min)+ 1;
+    //return (*inout_seed)% delta+ in_min;
+
+    // 64bit
+    if(in_max< in_min) { int32 tmp= in_min; in_min= in_max; in_max= tmp; }
+    int64 delta= (int64)in_max- (int64)in_min+ 1;
+    return (int32)(((int64)(*inout_seed))% delta+ (int64)in_min);
+  }
+}
+
+
+float ixUtil::randfnorm(uint32 *inout_seed) {
+  return (float)ixUtil::rand32(inout_seed, 0, 1000000)/ 1000000.0f;
 }
 
 

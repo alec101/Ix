@@ -2,6 +2,7 @@
 #include "osi/include/util/fileOp.h"
 #include "ix/winSys/_privateDef.h"
 
+using namespace ixUtil;
 
 /* TODO:
  - FONTS. can't use the selected font, can you? it's kinda cheap. a style should have fonts, even more than one
