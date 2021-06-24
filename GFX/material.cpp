@@ -18,8 +18,14 @@ namespace _ixMat {
 };
 
 
+ixMaterial::ixMaterial(): ixClass(ixClassT::MATERIAL), _ix(null), set(null), _fileID(0) {
+  map[0]= map[1]= map[2]= map[3]= null;
 
-ixMaterial::ixMaterial(Ix *in_parent): ixClass(ixClassT::MATERIAL), _ix(in_parent) {
+  ///_ix->res.mat.setPool->addSet(&set); <<<<
+}
+
+
+ixMaterial::ixMaterial(Ix *in_parent): ixClass(ixClassT::MATERIAL), _ix(in_parent), _fileID(0) {
   map[0]= map[1]= map[2]= map[3]= null;
 
   _ix->res.mat.setPool->addSet(&set);
@@ -32,6 +38,19 @@ ixMaterial::~ixMaterial() {
 
 
 void ixMaterial::delData() {
+  _ix->res.mat.setPool->delSet(set);
+  set= null;
+}
+
+
+
+ixMaterial *ixMaterial::allocArray(uint32 in_n, Ix *in_ix) {
+  ixMaterial *ret= new ixMaterial[in_n];
+  for(uint a= 0; a< in_n; ++a) {
+    ret[a]._ix= in_ix;
+    in_ix->res.mat.setPool->addSet(&ret[a].set);
+  }
+  return ret;
 }
 
 

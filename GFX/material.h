@@ -79,12 +79,15 @@ public:
 
   void updateSet();
 
+  // THIS COULD BECOME A STANDARD, there's no way to pass the ix engine to an array, even if you'd think it would be something trivial
+  static ixMaterial *allocArray(uint32 arraySize, Ix *in_engine);
+
   ixMaterial(Ix *in_parent);
   ~ixMaterial();
   void delData();
 
 protected:
-
+  ixMaterial();
   uint32 _fileID;   // index in the material lib file
 };
 

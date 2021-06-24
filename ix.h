@@ -48,6 +48,11 @@ class ixClass: public chainData {
 public:
   ixClassT classT;
   ixClass(ixClassT in_t): classT(in_t) {}
+
+  // THIS COULD HAPPEN....... ALSO MUST THINK ABOUT THE allocArray(..) func, if it should be here somehow, maybe =0, to force create it in derived
+  // Ix IS a ixClass ... so it can't happen? unless you just ignore _ix, or just put this... i mean... i don't even wanna know what happens, maybe end the universe?
+  //Ix *_ix;
+  //ixClass(ixClassT in_t, Ix *in_ix): classT(in_t), _ix(in_ix) {}
 };
 
 
