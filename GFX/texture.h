@@ -80,6 +80,14 @@ public:
   inline bool unload()   { return _ix->res.tex.unload(this); }
   */
 
+  inline bool load(cchar *in_fn);
+  inline bool loadMem(cchar *in_fn);
+  inline bool reload();
+  inline bool upload();
+  inline bool download();
+  inline bool unload();
+
+
   /*
    i think these could be implemented, if you know what to load, there's no file extension check.
   bool loadTEX();

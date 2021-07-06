@@ -246,8 +246,6 @@ protected:
 };
 
 
-
-
 #include "texture.h"
 
 

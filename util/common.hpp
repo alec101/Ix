@@ -15,6 +15,7 @@ static inline const char *_IXFILEWRITEERROR() { static const char *_ixFWE= "file
 struct ixFlags32 {
   uint32 flags;
   ixFlags32(): flags(0) {}
+  ixFlags32(uint32 in_f): flags(in_f) {}
 
   inline uint32 &operator= (uint32 in_f) { return (flags= in_f); }  // set bits exact
   inline void set(uint32 in_f, bool in_enable) { if(in_enable) flags|= in_f; else flags&= ~(in_f); }    // set bit depending on <in_f>

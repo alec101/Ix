@@ -414,9 +414,19 @@ void ixVulkan::RenderPass::updateViewportAndScissor() {
 
 
 
+inline bool ixTexture::load(cchar *in_fn)    { return _ix->res.tex.load(this, in_fn); }
+inline bool ixTexture::loadMem(cchar *in_fn) { return _ix->res.tex.loadMem(this, in_fn); }
+inline bool ixTexture::reload()   { return _ix->res.tex.reload(this); }        // reloads texture from disk (uses fileName as the file)
+inline bool ixTexture::upload()   { return _ix->res.tex.upload(this); }
+inline bool ixTexture::download() { return _ix->res.tex.download(this); }
+inline bool ixTexture::unload()   { return _ix->res.tex.unload(this); }
 
 
-
+inline bool ixMesh::load(cchar *in_f) { return _ix->res.mesh.load(in_f, this); }
+inline bool ixMesh::upload()   { return _ix->res.mesh.upload(this); }
+inline bool ixMesh::download() { return _ix->res.mesh.download(this); }
+inline bool ixMesh::unload()   { return _ix->res.mesh.unload(this); }
+inline bool ixMesh::loadOBJ(cchar *in_file, uint32 *in_OBJmeshNr, const char **in_OBJmeshNames) { return _ix->res.mesh.loadOBJ(in_file, 1, (ixMesh **)this, in_OBJmeshNr, in_OBJmeshNames); }
 
 
 

@@ -269,8 +269,7 @@ bool ixTexSys::loadMem(ixTexture *out_t, cchar *in_fname) {
 
   out_t->data= new Tex; if(!out_t->data) IXERR("memory alloc failed.");
 
-  if(!out_t->data->load(in_fname))
-    goto Exit;
+  if(!out_t->data->load(in_fname)) IXERR("load failed");
   
   /// populate whatever is left to fill in
   out_t->fileName= out_t->data->fileName;

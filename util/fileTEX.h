@@ -79,7 +79,7 @@ public:
   
   bool mipmapGenerate();      // creates the mipmaps
   bool mipmapDelete();        // deletes all the mipmap levels (if no mipmaps returns true)
-  
+  inline bool mipmapExist() { return (nrLevels> 1); }
 
   // error handling
 

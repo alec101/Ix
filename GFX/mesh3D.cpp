@@ -11,9 +11,21 @@ std::mutex ixMesh::mtx;     // no constructors loading no mesh, or this must be 
   - ofc, if you can use triangle strip, that will use the 2 other vertexes also, so that's also good
 
 
+  BLENDER exporter:
+  - https://docs.blender.org/api/2.93/info_quickstart.html <<< so every action every thing can be accesed in python, bpy.data.objects are all objects, etc
+  - scripting view: templates->python->[operator file export] i bet all those templates would help to put up an exporter fast
+
+
+
 
 */
   
+
+
+
+
+
+
 /*
 MESHES
 

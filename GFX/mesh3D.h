@@ -65,11 +65,13 @@ public:
 
   void setDataType(uint32 in_type); // [def:1] internal data format (Data0 struct, Data1i struct, etc)
 
-  /*
-  inline bool upload()   { _ix->res.mesh.upload(this); }
-  inline bool download() { _ix->res.mesh.download(this); }
-  inline bool unload()   { _ix->res.mesh.unload(this); }
-  */
+  // useful inlines, ix.res.mesh has the real funcs
+  inline bool load(cchar *);
+  inline bool loadOBJ(cchar *in_f, uint32 *in_OBJmeshNr= null, const char **in_OBJmeshNames= null);
+  inline bool upload();
+  inline bool download();
+  inline bool unload();
+  
 
   ixMesh(Ix *in_ix);
   ~ixMesh();
