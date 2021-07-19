@@ -13,7 +13,7 @@ public:
   bool useTitle;
   ixStaticText *title;      /// title is of object type StaticText
   void setTitle(cchar *text, ixWSgenericStyle *style= null);   // sets the window title & updates the title size, according to the text size (use title.updateSizeFromText() if not using this func)
-  void setTitlePosition(int8 in_hookBorder, int16 in_orientation, int32 in_distance, bool in_inside);  // set window title positions/characteristics: hookBorder- border that it hooks to the main window; orientation 90/270 - horizontal 0/180 vertical; distance- distance from the border, in pixels; inside- the title is inside the window
+  void setTitlePosition(ixEBorder in_hookBorder, int16 in_orientation, int32 in_distance, bool in_inside);  // set window title positions/characteristics: hookBorder- border that it hooks to the main window; orientation 90/270 - horizontal 0/180 vertical; distance- distance from the border, in pixels; inside- the title is inside the window
 
   // funcs
 

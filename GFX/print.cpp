@@ -732,7 +732,7 @@ void _ixpr::vkM1::txt(const void *s, int type, int start, int end, int startByte
 
   // shadow draw - print everything with shadow color - SLOW
   if(!_print->justDraw) {
-    if(_print->style->drawMode& 0x0002) {
+    if(_print->style->drawMode& 0x02) {
       vec2 oldPos(_print->pos);
       vec4 oldColor(_print->style->color1);
 
@@ -755,13 +755,13 @@ void _ixpr::vkM1::txt(const void *s, int type, int start, int end, int startByte
   push.flags&= ~(0x0001);
   push.flags|= 0x0002;
 
-  if(_print->style->drawMode& 0x0001)
+  if(_print->style->drawMode& 0x01)
     push.outline= _print->style->outlineSize,
     push.flags|= 0x0004;
   else
     push.flags&= ~0x0004;
 
-  if(_print->style->drawMode& 0x0004) push.flags|= 0x0008;
+  if(_print->style->drawMode& 0x04) push.flags|= 0x0008;
   else                                push.flags&= ~0x0008;
 
   _ix->vk.CmdPushConstants(cmd, vk->pipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(push), &push);
@@ -1492,7 +1492,7 @@ void _ixpr::glShader::txt(const void *s, int type, int start, int end, int start
     _prePrintInit();
 
     /// background draw - simple shadow
-    if(p->style->drawMode== 4) {
+    if(p->style->drawMode== 4) { // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< drawmode got flagg-erized;
       vec2 oldPos(p->pos);
       p->justDraw= true;
       glUniform4f(u_color, p->style->color2.r, p->style->color2.g, p->style->color2.b, p->style->color2.a);

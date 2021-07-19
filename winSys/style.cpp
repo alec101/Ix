@@ -465,17 +465,17 @@ int16 _getOrientation(str8 *s) {
   return 90;
 }
 
-int8 _getBorderPoint(str8 *s) {
+ixEBorder _getBorderPoint(str8 *s) {
   s->lower();
-  if     (*s== "up"        || *s== "0" || *s== "top")         return 0;
-  else if(*s== "right"     || *s== "1")                       return 1;
-  else if(*s== "down"      || *s== "2" || *s== "bottom")      return 2;
-  else if(*s== "left"      || *s== "3")                       return 3;
-  else if(*s== "upleft"    || *s== "4" || *s== "topleft")     return 4;
-  else if(*s== "upright"   || *s== "5" || *s== "topright")    return 5;
-  else if(*s== "downright" || *s== "6" || *s== "bottomright") return 6;
-  else if(*s== "downleft"  || *s== "7" || *s== "bottomleft")  return 7;
-  else return 0;
+  if     (*s== "up"        || *s== "0" || *s== "top")         return ixEBorder::top;
+  else if(*s== "right"     || *s== "1")                       return ixEBorder::right;
+  else if(*s== "down"      || *s== "2" || *s== "bottom")      return ixEBorder::bottom;
+  else if(*s== "left"      || *s== "3")                       return ixEBorder::left;
+  else if(*s== "upleft"    || *s== "4" || *s== "topleft")     return ixEBorder::topLeft;
+  else if(*s== "upright"   || *s== "5" || *s== "topright")    return ixEBorder::topRight;
+  else if(*s== "downright" || *s== "6" || *s== "bottomright") return ixEBorder::bottomRight;
+  else if(*s== "downleft"  || *s== "7" || *s== "bottomleft")  return ixEBorder::bottomLeft;
+  else return ixEBorder::top;
 }
 
 
@@ -941,8 +941,8 @@ ixWSwindowStyle::~ixWSwindowStyle() {
 void ixWSwindowStyle::delData() {
   ixWSgenericStyle::delData();
   useTitle= true;
-  titlePosition= 0;
-  titlePointSnap= 0;
+  titlePosition= ixEBorder::top;
+  titlePointSnap= ixEBorder::top;
   titleOrientation= 90;
   titleDist= 0;
   titleInside= false;

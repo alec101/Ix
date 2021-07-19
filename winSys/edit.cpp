@@ -26,7 +26,7 @@ void ixEdit::_setClickLimits(int32 in_delta) {
 
 ixEdit::ixEdit(): text(this) {
   ixBaseWindow();
-  _type= _IX_EDIT;
+  _type= ixeWinType::edit;
   
   enterPressed= false;
   
@@ -270,9 +270,11 @@ well... a trimming of bad chars can happen before paste, so only insert line by 
 bool ixEdit::_update(bool in_mIn, bool updateChildren) {
 
   recti r; getVDcoordsRecti(&r);
+  bool sendMIn= (in_mIn? r.inside(in.m.x, in.m.y): false);
+
   /// update it's children first
   if(updateChildren)
-    if(_updateChildren((in_mIn? r.inside(in.m.x, in.m.y): false)))
+    if(_updateChildren(sendMIn))
       return true;
 
   
@@ -285,7 +287,16 @@ bool ixEdit::_update(bool in_mIn, bool updateChildren) {
   
   bool ret= false;        /// this will return true if any action to this window happened
   enterPressed= false;    /// reset it from last time
-  uint32 c;
+  //uint32 c;
+  
+  ret= text._update(sendMIn);
+
+  // THE MOVEMENT IN txtShared.cpp OF THIS WHOLE MECHANISM IS NOT TESTED <<<<<<<<<<<<<<<<<<<<<<<
+  // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  // static seems ok, if edit works too, this whole code can just go away
+
+  /*
+
 
   // process all chars - can be unicodes, or special str manipulation codes
   if(Ix::wsys().focus== this)
@@ -548,7 +559,11 @@ bool ixEdit::_update(bool in_mIn, bool updateChildren) {
       
       }
     }
-    if(c!= 0) ret= true;
+    
+    if(c!= 0) {
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::keyboardUsed);
+      ret= true;
+    }
   } /// process all manip chars
 
 
@@ -569,6 +584,7 @@ bool ixEdit::_update(bool in_mIn, bool updateChildren) {
 
       Ix::wsys().bringToFront(this);
       Ix::wsys().focus= this;
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
       return true;
     }
   }
@@ -598,7 +614,7 @@ bool ixEdit::_update(bool in_mIn, bool updateChildren) {
 
           lx= in.m.x, ly= in.m.y;
         }
-        
+        Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
         return true;
 
       // R-Click end - final cursor and selection positions
@@ -614,10 +630,13 @@ bool ixEdit::_update(bool in_mIn, bool updateChildren) {
 
         Ix::wsys()._op.delData();
         lx= ly= -1;
+        Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
         return true;
       }
     } /// r-click event
   } /// an event happening with this window
+  */
+
 
   if(ret)
     return ret;

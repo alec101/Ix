@@ -4,7 +4,7 @@
 
 
 ixProgressBar::ixProgressBar(): ixBaseWindow() {
-  _type= _IX_PROGRESSBAR;
+  _type= ixeWinType::progressBar;
   usage._parent= this;
   position= 0;
   usage.setPercentageBar(0, 100);

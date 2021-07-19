@@ -7,12 +7,15 @@ public:
   ixTxtData text;
   int32 textX, textY;             // NYI - text position inside the window
 
-  // THIS MIGHT GO IF NO OTHER USAGE VARS ARE NEEDED...
   struct Usage: public ixBaseWindow::Usage {
-    unsigned oneLine: 1;        // limit the window to print only one line
+    // the text is readonly, of course
+    unsigned oneLine: 1;        // [def: 0] limit the window to print only one line
+    unsigned hasCursor: 1;      // [def: 1] text has a cursor that is movable
+    unsigned selection: 1;      // [def: 1] text can be selected - all selection functions avaible
+    
 
-    Usage() { _parent= null; delData(); }
-    void delData() { ixBaseWindow::Usage(); oneLine= 0; }
+    Usage(ixStaticText *in_parent): _parent(in_parent) { delData(); }
+    void delData() { ixBaseWindow::Usage(); oneLine= 0; hasCursor= selection= 1; }
 
   protected:
     ixStaticText *_parent;

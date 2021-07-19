@@ -88,7 +88,7 @@ using namespace mlib;
 
 
 ixBaseWindow::ixBaseWindow(): hook(this), pos(0) {
-  _type= _IX_BASE_WINDOW;
+  _type= ixeWinType::baseWindow;
   parent= null;
   style= null;
   vscroll= hscroll= null;
@@ -159,7 +159,7 @@ void ixBaseWindow::_createScrollbars() {
     hscroll->target= this;
     hscroll->orientation= 0;
 
-    hscroll->hook.set(this, 4, 4);
+    hscroll->hook.set(this, ixEBorder::topLeft, ixEBorder::topLeft);
     
   }
 
@@ -173,7 +173,7 @@ void ixBaseWindow::_createScrollbars() {
     vscroll->style= &Ix::wsys().selStyle->scroll;
     vscroll->orientation= 1;
 
-    vscroll->hook.set(this, 4, 4);
+    vscroll->hook.set(this, ixEBorder::topLeft, ixEBorder::topLeft);
     
   }
   
@@ -311,41 +311,41 @@ void ixBaseWindow::_computeChildArea() {
 
   for(ixBaseWindow *p= (ixBaseWindow *)childrens.first; p; p= (ixBaseWindow *)p->next) {
     if(p== vscroll || p== hscroll) continue;
-    if(_type== _IX_WINDOW)
+    if(_type== ixeWinType::window)
       if(p== ((ixWindow *)this)->title) continue;
 
     if(p->hook.ixWin== this) {  //  OPTION 1, if ixWin is this, else somehow compute the real pos in this
       recti &r(p->pos);
 
-      if(p->hook.border== IX_BORDER_BOTTOMLEFT) {
+      if(p->hook.border== ixEBorder::bottomLeft) {
         if(_childArea.xe< r.xe)  _childArea.xe= r.xe;
         if(_childArea.ye< -r.y0) _childArea.ye= -r.y0;
 
-      } else if(p->hook.border== IX_BORDER_TOPLEFT) {
+      } else if(p->hook.border== ixEBorder::topLeft) {
         if(_childArea.xe< r.xe)  _childArea.xe= r.xe;
         if(_childArea.ye< r.ye)  _childArea.ye= r.ye;
 
-      } else if(p->hook.border== IX_BORDER_TOPRIGHT) {
+      } else if(p->hook.border== ixEBorder::topRight) {
         if(_childArea.xe< -r.x0) _childArea.xe= -r.x0;
         if(_childArea.ye< r.ye)  _childArea.ye= r.ye;
 
-      } else if(p->hook.border== IX_BORDER_BOTTOMRIGHT) {
+      } else if(p->hook.border== ixEBorder::bottomRight) {
         if(_childArea.xe< -r.x0) _childArea.xe= -r.x0;
         if(_childArea.ye< -r.y0) _childArea.ye= -r.y0;
 
-      } else if(p->hook.border== IX_BORDER_TOP) {
+      } else if(p->hook.border== ixEBorder::top) {
         if(_childArea.xe< (int32)r.dx) _childArea.xe= (int32)r.dx;
         if(_childArea.ye< r.ye)        _childArea.ye= r.ye;
 
-      } else if(p->hook.border== IX_BORDER_RIGHT) {
+      } else if(p->hook.border== ixEBorder::right) {
         if(_childArea.xe< -r.x0)       _childArea.xe= -r.x0;
         if(_childArea.ye< (int32)r.dy) _childArea.ye= (int32)r.dy;
 
-      } else if(p->hook.border== IX_BORDER_BOTTOM) {
+      } else if(p->hook.border== ixEBorder::bottom) {
         if(_childArea.xe< (int32)r.dx) _childArea.xe= (int32)r.dx;
         if(_childArea.ye< -r.y0)       _childArea.ye= -r.y0;
 
-      } else if(p->hook.border== IX_BORDER_LEFT) {
+      } else if(p->hook.border== ixEBorder::left) {
         if(_childArea.xe< r.xe)        _childArea.xe= r.xe;
         if(_childArea.ye< (int32)r.dy) _childArea.ye= (int32)r.dy;
 
@@ -368,14 +368,14 @@ void ixBaseWindow::_computeChildArea() {
         else if(p->hook.border== IX_BORDER_LEFT)        r.moveD(0,                        p->hook.ixWin->pos.dy/ 2);
         */
 
-             if(p->hook.border== IX_BORDER_TOPLEFT); // do nothing
-        else if(p->hook.border== IX_BORDER_BOTTOMLEFT)  r.moveD(0,                        p->hook.ixWin->pos.dy);
-        else if(p->hook.border== IX_BORDER_TOPRIGHT)    r.moveD(p->hook.ixWin->pos.dx,    0);
-        else if(p->hook.border== IX_BORDER_BOTTOMRIGHT) r.moveD(p->hook.ixWin->pos.dx,    p->hook.ixWin->pos.dy);
-        else if(p->hook.border== IX_BORDER_TOP)         r.moveD(p->hook.ixWin->pos.dx/ 2, 0);
-        else if(p->hook.border== IX_BORDER_BOTTOM)      r.moveD(p->hook.ixWin->pos.dx/ 2, p->hook.ixWin->pos.dy);
-        else if(p->hook.border== IX_BORDER_LEFT)        r.moveD(0,                        p->hook.ixWin->pos.dy/ 2);
-        else if(p->hook.border== IX_BORDER_RIGHT)       r.moveD(p->hook.ixWin->pos.dx,    p->hook.ixWin->pos.dy/ 2);
+             if(p->hook.border== ixEBorder::topLeft); // do nothing
+        else if(p->hook.border== ixEBorder::bottomLeft)  r.moveD(0,                        p->hook.ixWin->pos.dy);
+        else if(p->hook.border== ixEBorder::topRight)    r.moveD(p->hook.ixWin->pos.dx,    0);
+        else if(p->hook.border== ixEBorder::bottomRight) r.moveD(p->hook.ixWin->pos.dx,    p->hook.ixWin->pos.dy);
+        else if(p->hook.border== ixEBorder::top)         r.moveD(p->hook.ixWin->pos.dx/ 2, 0);
+        else if(p->hook.border== ixEBorder::bottom)      r.moveD(p->hook.ixWin->pos.dx/ 2, p->hook.ixWin->pos.dy);
+        else if(p->hook.border== ixEBorder::left)        r.moveD(0,                        p->hook.ixWin->pos.dy/ 2);
+        else if(p->hook.border== ixEBorder::right)       r.moveD(p->hook.ixWin->pos.dx,    p->hook.ixWin->pos.dy/ 2);
 
 
         r.moveD(p->hook.ixWin->pos.x0, p->hook.ixWin->pos.y0);
@@ -403,9 +403,9 @@ void ixBaseWindow::_computeViewArea() {
   _viewArea.compDeltas();
   _viewArea.setD(_viewArea.x0, _viewArea.y0, (_viewArea.dx< 0? 0: _viewArea.dx), (_viewArea.dy< 0? 0: _viewArea.dy));
 
-  if(_type== _IX_EDIT)
+  if(_type== ixeWinType::edit)
     ((ixEdit *)this)->text._computeWrapLen();
-  else if(_type== _IX_STATIC_TEXT)
+  else if(_type== ixeWinType::staticText)
     ((ixStaticText *)this)->text._computeWrapLen();
 }
 
@@ -502,7 +502,7 @@ void ixBaseWindow::removeParent() {
 
 ixWinHook::ixWinHook(void *in_p): pos(0) {
   parent= (ixBaseWindow *)in_p;
-  border= 0;
+  border= ixEBorder::top;
   ixWin= null;
   osiWin= null;
   osiMon= null;
@@ -511,7 +511,7 @@ ixWinHook::ixWinHook(void *in_p): pos(0) {
 
 
 void ixWinHook::delData() {
-  border= 0;
+  border= ixEBorder::top;
   ixWin= null;
   osiWin= null;
   osiMon= null;
@@ -550,14 +550,14 @@ inline void ixWinHook::_compute() {
   }
 
   // bottom left don't have to do nothin, only the scroll adjust
-       if(border== IX_BORDER_TOPLEFT);
-  else if(border== IX_BORDER_BOTTOMLEFT)                 pos.y+= dy;
-  else if(border== IX_BORDER_TOPRIGHT)    pos.x+= dx;
-  else if(border== IX_BORDER_BOTTOMRIGHT) pos.x+= dx,    pos.y+= dy;
-  else if(border== IX_BORDER_TOP)         pos.x+= dx/ 2;
-  else if(border== IX_BORDER_BOTTOM)      pos.x+= dx/ 2, pos.y+= dy;
-  else if(border== IX_BORDER_LEFT)                       pos.y+= dy/ 2;
-  else if(border== IX_BORDER_RIGHT)       pos.x+= dx,    pos.y+= dy/ 2;
+       if(border== ixEBorder::topLeft);
+  else if(border== ixEBorder::bottomLeft)                 pos.y+= dy;
+  else if(border== ixEBorder::topRight)    pos.x+= dx;
+  else if(border== ixEBorder::bottomRight) pos.x+= dx,    pos.y+= dy;
+  else if(border== ixEBorder::top)         pos.x+= dx/ 2;
+  else if(border== ixEBorder::bottom)      pos.x+= dx/ 2, pos.y+= dy;
+  else if(border== ixEBorder::left)                       pos.y+= dy/ 2;
+  else if(border== ixEBorder::right)       pos.x+= dx,    pos.y+= dy/ 2;
   
 
   // adjust the hook with the scrolling
@@ -573,7 +573,7 @@ inline void ixWinHook::_adjustHookPosWithScroll(/*ixBaseWindow *out_window*/) {
   if(parent->parent== null) return;             /// no parent, no scroll
   if(parent->parent->hscroll== parent) return;  /// parent's scroll is this window, nothing to do here
   if(parent->parent->vscroll== parent) return;  /// parent's scroll is this window, nothing to do here
-  if(parent->parent->_type== _IX_WINDOW)        /// parent's title is this window, nothing to do here
+  if(parent->parent->_type== ixeWinType::window)/// parent's title is this window, nothing to do here
     if(((ixWindow *)parent->parent)->title== parent) return;
 
   // scrolling affects this window if reached this point
@@ -610,18 +610,18 @@ void ixWinHook::_computeParentHooksDelta(int32 in_dx, int32 in_dy) {
 
 
 // in_border, is the border of <this> not the target window - basically what border to touch what border
-void ixWinHook::_setWinPosBorderTo0(int8 in_border) {
+void ixWinHook::_setWinPosBorderTo0(ixEBorder in_border) {
   // this func will act only on window position, nothing to do with hook or parent
   int32 dx= parent->pos.dx, dy= parent->pos.dy;
 
-       if(in_border== IX_BORDER_TOPLEFT)     parent->pos.move(0,      0     );  // was 0,     -dy
-  else if(in_border== IX_BORDER_BOTTOMLEFT)  parent->pos.move(0,      -dy   );  // was 0,     0
-  else if(in_border== IX_BORDER_TOPRIGHT)    parent->pos.move(-dx,    0     );  // was -dx,   -dy
-  else if(in_border== IX_BORDER_BOTTOMRIGHT) parent->pos.move(-dx,    -dy   );  // was -dx,   0
-  else if(in_border== IX_BORDER_TOP)         parent->pos.move(-dx/ 2, 0     );  // was -dx/2, -dy
-  else if(in_border== IX_BORDER_BOTTOM)      parent->pos.move(-dx/ 2, -dy   );  // was -dx/2, 0
-  else if(in_border== IX_BORDER_LEFT)        parent->pos.move(0,      -dy/ 2);  // was 0,     -dy/2
-  else if(in_border== IX_BORDER_RIGHT)       parent->pos.move(-dx,    -dy/ 2);  // was -dx,   -dy/2
+       if(in_border== ixEBorder::topLeft)     parent->pos.move(0,      0     );  // was 0,     -dy
+  else if(in_border== ixEBorder::bottomLeft)  parent->pos.move(0,      -dy   );  // was 0,     0
+  else if(in_border== ixEBorder::topRight)    parent->pos.move(-dx,    0     );  // was -dx,   -dy
+  else if(in_border== ixEBorder::bottomRight) parent->pos.move(-dx,    -dy   );  // was -dx,   0
+  else if(in_border== ixEBorder::top)         parent->pos.move(-dx/ 2, 0     );  // was -dx/2, -dy
+  else if(in_border== ixEBorder::bottom)      parent->pos.move(-dx/ 2, -dy   );  // was -dx/2, 0
+  else if(in_border== ixEBorder::left)        parent->pos.move(0,      -dy/ 2);  // was 0,     -dy/2
+  else if(in_border== ixEBorder::right)       parent->pos.move(-dx,    -dy/ 2);  // was -dx,   -dy/2
 }
 
 
@@ -633,7 +633,7 @@ inline bool ixWinHook::_computeAnchorToEdgeVar(ixBaseWindow *in_window) {
     if(parent== parent->parent->vscroll || parent== parent->parent->hscroll)
       return true;        // this is the scroll of the parent
     
-    if(parent->parent->_type== _IX_WINDOW)
+    if(parent->parent->_type== ixeWinType::window)
       if(((ixWindow *)parent->parent)->title== parent)
         return true;      // this is the title of a window
   } else
@@ -649,7 +649,7 @@ inline bool ixWinHook::_computeAnchorToEdgeVar(ixBaseWindow *in_window) {
 
 // window hooking functions =============-----------------------
 
-void ixWinHook::setAnchor(ixBaseWindow *in_window, int8 in_border) {
+void ixWinHook::setAnchor(ixBaseWindow *in_window, ixEBorder in_border) {
   if(in_window== null) return setAnchor(in_border);
 
   if(!((parent->parent== in_window) || (in_window->parent== parent))) {
@@ -676,7 +676,7 @@ void ixWinHook::setAnchor(ixBaseWindow *in_window, int8 in_border) {
 }
 
 
-void ixWinHook::setAnchor(osiWindow *in_window, int8 in_border) {
+void ixWinHook::setAnchor(osiWindow *in_window, ixEBorder in_border) {
   if(parent->parent) {
     error.detail("not possible to hook to osiWindow- <this> has a parent", __FUNCTION__, __LINE__);
     return;
@@ -701,7 +701,7 @@ void ixWinHook::setAnchor(osiWindow *in_window, int8 in_border) {
 }
 
 
-void ixWinHook::setAnchor(osiMonitor *in_window, int8 in_border) {
+void ixWinHook::setAnchor(osiMonitor *in_window, ixEBorder in_border) {
   if(parent->parent) {
     error.detail("not possible to hook to osiMonitor- <this> has a parent", __FUNCTION__, __LINE__);
     return;
@@ -726,7 +726,7 @@ void ixWinHook::setAnchor(osiMonitor *in_window, int8 in_border) {
 }
 
 /// sets the hook to the virtual desktop
-void ixWinHook::setAnchor(int8 in_border) {
+void ixWinHook::setAnchor(ixEBorder in_border) {
   if(parent->parent) {
     error.detail("not possible to hook to virtual desktop- <this> has a parent", __FUNCTION__, __LINE__);
     return;
@@ -752,7 +752,7 @@ void ixWinHook::setAnchor(int8 in_border) {
 
 
 // hooks to ixBaseWindow (in point border1) and moves current window (point border2) to touch it
-void ixWinHook::set(ixBaseWindow *in_window, int8 in_border1, int8 in_border2) {
+void ixWinHook::set(ixBaseWindow *in_window, ixEBorder in_border1, ixEBorder in_border2) {
   if(!((parent->parent== in_window) || (in_window->parent== parent->parent))) {
     error.detail("not possible to hook to that window - must have same parent or both no parent at all", __FUNCTION__, __LINE__);
     return;
@@ -779,7 +779,7 @@ void ixWinHook::set(ixBaseWindow *in_window, int8 in_border1, int8 in_border2) {
 }
 
 // hooks to osiWindow (in point border1) and moves current window (point border2) to touch it
-void ixWinHook::set(osiWindow *in_window, int8 in_border1, int8 in_border2) {
+void ixWinHook::set(osiWindow *in_window, ixEBorder in_border1, ixEBorder in_border2) {
   if(parent->parent) {
     error.detail("not possible to hook to osiWindow- <this> has a parent", __FUNCTION__, __LINE__);
     return;
@@ -805,7 +805,7 @@ void ixWinHook::set(osiWindow *in_window, int8 in_border1, int8 in_border2) {
 }
 
 // hooks to osiMonitor (in point border1) and moves current window (point border2) to touch it
-void ixWinHook::set(osiMonitor *in_window, int8 in_border1, int8 in_border2) {
+void ixWinHook::set(osiMonitor *in_window, ixEBorder in_border1, ixEBorder in_border2) {
   if(parent->parent) {
     error.detail("not possible to hook to osiMonitor- <this> has a parent", __FUNCTION__, __LINE__);
     return;
@@ -829,7 +829,7 @@ void ixWinHook::set(osiMonitor *in_window, int8 in_border1, int8 in_border2) {
 }
  
 // hooks to virtual desktop (in point border1) and moves current window (point border2) to touch it
-void ixWinHook::set(int8 in_border1, int8 in_border2) {
+void ixWinHook::set(ixEBorder in_border1, ixEBorder in_border2) {
   if(parent->parent) {
     error.detail("not possible to hook to virtual desktop- <this> has a parent", __FUNCTION__, __LINE__);
     return;
@@ -2036,13 +2036,14 @@ bool ixBaseWindow::_update(bool in_mouseInside, bool in_updateChildren) {
     /// button released - the action stopped
     if(!in.m.but[0].down) {
       Ix::wsys()._op.delData();
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
       return true;
     }
 
     /// a window drag is in progress
     if(Ix::wsys()._op.moving) {
       moveDelta(in.m.dx, in.m.dy);
-
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
       return true;
     }
 
@@ -2052,6 +2053,7 @@ bool ixBaseWindow::_update(bool in_mouseInside, bool in_updateChildren) {
         //pos.moveD(0, in.m.dy); // bottom origin, -in.m.dy on next line
         resizeDelta(0, in.m.dy);
       }
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
       return true;
     }
 
@@ -2060,12 +2062,14 @@ bool ixBaseWindow::_update(bool in_mouseInside, bool in_updateChildren) {
         pos.moveD(in.m.dx, 0);
         resizeDelta(-in.m.dx, 0);
       }
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
       return true;
     }
     if(Ix::wsys()._op.resizeRight) {
       if(pos.dx+ in.m.dx>= getMinDx()) {
         resizeDelta(in.m.dx, 0);
       }
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
       return true;
     }
 
@@ -2090,6 +2094,7 @@ bool ixBaseWindow::_update(bool in_mouseInside, bool in_updateChildren) {
             Ix::wsys()._op.win= this;
             Ix::wsys().bringToFront(this);
             Ix::wsys().focus= this;
+            Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
             return true;
           }
 
@@ -2103,6 +2108,7 @@ bool ixBaseWindow::_update(bool in_mouseInside, bool in_updateChildren) {
             Ix::wsys()._op.win= this;
             Ix::wsys().bringToFront(this);
             Ix::wsys().focus= this;
+            Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
             return true;
           }
           /// resize right
@@ -2111,6 +2117,7 @@ bool ixBaseWindow::_update(bool in_mouseInside, bool in_updateChildren) {
             Ix::wsys()._op.win= this;
             Ix::wsys().bringToFront(this);
             Ix::wsys().focus= this;
+            Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
             return true;
           }
           /// resize bottom
@@ -2119,6 +2126,7 @@ bool ixBaseWindow::_update(bool in_mouseInside, bool in_updateChildren) {
             Ix::wsys()._op.win= this;
             Ix::wsys().bringToFront(this);
             Ix::wsys().focus= this;
+            Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
             return true;
           }
         } /// useResizeable
@@ -2127,6 +2135,7 @@ bool ixBaseWindow::_update(bool in_mouseInside, bool in_updateChildren) {
         //if(mPos(r.x0, y, pos.dx, pos.dy)) {
         if(r.inside(in.m.x, in.m.y)) {
           Ix::wsys().focus= this;
+          Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
           return true;
         }
 

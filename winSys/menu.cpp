@@ -22,7 +22,7 @@
 // constructors / destructors
 
 ixMenu::ixMenu(): ixBaseWindow() {
-  _type= _IX_MENU;
+  _type= ixeWinType::menu;
 
   _customPos= false;
   _highlighted= null;
@@ -500,12 +500,17 @@ bool ixMenu::_update(bool in_mIn, bool updateChildren) {
     r= p->_pos; r.moveD(_x, _y);
     if(r.inside(in.m.x, in.m.y)) {
       _highlighted= p;
+
+      // THIS FUNC IS NOT DONE, THIS IS JUST HOVER WITH MOUSE
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);  /// flag mouse was used with this window
+
       anyHighlight= true;
       break;
     }
   }
 
   if(!anyHighlight) _highlighted= null;
+    
 
 
   //makeme;
@@ -727,7 +732,7 @@ void ixMenu::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_sty
 
 ixMenuBar::ixMenuBar() {
   ixBaseWindow();
-  _type= _IX_MENUBAR;
+  _type= ixeWinType::menuBar;
 
   _hovered= _selected= null;
 }
@@ -884,6 +889,7 @@ bool ixMenuBar::_update(bool in_mIn,bool updateChildren) {
                 _selected= (ixMenuBarItem *)Ix::wsys()._op.p;
 
               Ix::wsys()._op.delData();
+              Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
               return true;
             } /// mouse is depressed and still inside the operation menu bar item
           }
@@ -904,6 +910,7 @@ bool ixMenuBar::_update(bool in_mIn,bool updateChildren) {
             Ix::wsys()._op.win= this;
             Ix::wsys()._op.p= p;
             Ix::wsys().bringToFront(this);
+            Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
             return true;
           }
         }
@@ -936,11 +943,11 @@ bool ixMenuBar::_update(bool in_mIn,bool updateChildren) {
   /// 1. if current focus window is not part of this bar at all, hide
   bool hide= false;
   if(Ix::wsys().focus) {
-    if(Ix::wsys().focus->_type== _IX_MENU) {
+    if(Ix::wsys().focus->_type== ixeWinType::menu) {
       if(((ixMenu *)Ix::wsys().focus)->root!= this)
         hide= true;
 
-    } else if(Ix::wsys().focus->_type== _IX_MENUBAR) {
+    } else if(Ix::wsys().focus->_type== ixeWinType::menuBar) {
       if(Ix::wsys().focus!= this)
         hide= true;
 

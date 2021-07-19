@@ -16,22 +16,22 @@ public:
   //  - you can hook to a window that has the same parent as this
   //  - if this is top window (no parent), hooked window has to be top object also
 
-  int8 border;            // corner that is being hooked to [0-7] (same wheel used)
+  ixEBorder border;       // corner that is being hooked to [0-7] (same wheel used)
   vec3i pos;              // hooked point position in virtual desktop.
   ixBaseWindow *ixWin;    // ix base window hooked to
   osiWindow *osiWin;      // osiWindow hooked to
   osiMonitor *osiMon;     // osiMonitor hooked to
   ixBaseWindow *parent;   // window target / parent 
   
-  void setAnchor(ixBaseWindow *, int8 in_border= 4);  // sets the hook to the ixBaseWindow - if window is null, it uses the virtual desktop
-  void setAnchor(osiWindow *, int8 in_border= 4);     // sets the hook to the osiWindow
-  void setAnchor(osiMonitor *, int8 in_border= 4);    // sets the hook to the osiMonitor
-  void setAnchor(int8 in_border= 4);                  // sets the hook to the virtual desktop
+  void setAnchor(ixBaseWindow *, ixEBorder in_border= ixEBorder::topLeft);  // sets the hook to the ixBaseWindow - if window is null, it uses the virtual desktop
+  void setAnchor(osiWindow *, ixEBorder in_border= ixEBorder::topLeft);     // sets the hook to the osiWindow
+  void setAnchor(osiMonitor *, ixEBorder in_border= ixEBorder::topLeft);    // sets the hook to the osiMonitor
+  void setAnchor(ixEBorder in_border= ixEBorder::topLeft);                  // sets the hook to the virtual desktop
 
-  void set(ixBaseWindow *, int8 in_border1= 4, int8 in_border2= 4);  // hooks to ixBaseWindow (in point border1) and moves current window (point border2) to touch it
-  void set(osiWindow *, int8 in_border1= 4, int8 in_border2= 4);     // hooks to osiWindow (in point border1) and moves current window (point border2) to touch it
-  void set(osiMonitor *, int8 in_border1= 4, int8 in_border2= 4);    // hooks to osiMonitor (in point border1) and moves current window (point border2) to touch it
-  void set(int8 in_border1= 4, int8 in_border2= 4);                  // hooks to virtual desktop (in point border1) and moves current window (point border2) to touch it
+  void set(ixBaseWindow *, ixEBorder in_border1= ixEBorder::topLeft, ixEBorder in_border2= ixEBorder::topLeft);  // hooks to ixBaseWindow (in point border1) and moves current window (point border2) to touch it
+  void set(osiWindow *, ixEBorder in_border1= ixEBorder::topLeft, ixEBorder in_border2= ixEBorder::topLeft);     // hooks to osiWindow (in point border1) and moves current window (point border2) to touch it
+  void set(osiMonitor *, ixEBorder in_border1= ixEBorder::topLeft, ixEBorder in_border2= ixEBorder::topLeft);    // hooks to osiMonitor (in point border1) and moves current window (point border2) to touch it
+  void set(ixEBorder in_border1= ixEBorder::topLeft, ixEBorder in_border2= ixEBorder::topLeft);                  // hooks to virtual desktop (in point border1) and moves current window (point border2) to touch it
 
   //void setHookDefault();    // sets the hook to virtual desktop - 0, 0 bottom left border
   virtual void updateHooks(bool updateThis= true);       // !!! after a window is moved, the hook and all the children's hooks _must_ be updated !!!
@@ -51,7 +51,7 @@ private:
   void _computeParentHooks();                               // updates hooked windows that are tied to this window
   void _computeParentHooksDelta(int32 in_dx, int32 in_dy);  // updates hooked windows that are tied to this window
   void _adjustHookPosWithScroll();
-  void _setWinPosBorderTo0(int8 in_borderOfThis);
+  void _setWinPosBorderTo0(ixEBorder in_borderOfThis);
   bool _computeAnchorToEdgeVar(ixBaseWindow *in_window);    // calculates if the anchor will be a window edge or a childArea edge
 
   friend class ixBaseWindow;
@@ -79,6 +79,10 @@ public:
 
   ixTexture *customTex; // THIS CAN BE A THING. USE THIS FOR BACKGROUND, AND BUTTONS COULD HAVE ADDITIONAL ONE OR TWO FOR PRESS / HOVER
                         //INITIALLY CUSTOMTEX IS NULL, IF SO, USE THE STYLE.
+
+
+
+
 
   // behavior flags
 
@@ -112,7 +116,7 @@ public:
     }
   } usage;
 
-  // informational flags
+  // functional flags
 
   struct Is {
     unsigned visible: 1;     // if it is currently visible
@@ -169,7 +173,7 @@ public:
   virtual int32 getMinDx() { return 15; }           // returns the minimum dx of the window, in pixels
   virtual int32 getMinDy() { return 15; }           // returns the minimum dy of the window, in pixels
 
-  void setDisable(int in_b) { is.disabled= (in_b? 1: 0); }
+  void setDisable(bool in_b) { is.disabled= (in_b? 1: 0); }
   void setVisible(bool in_b) { is.visible= (in_b? 1: 0); }
 
   void changeParent(ixBaseWindow *);
@@ -215,7 +219,7 @@ protected:
   void _computeClipPlane();
   void _computeClipPlaneDelta(int32 dx, int32 dy);
 
-  uint8 _type;                    // [constant] window type, this is set in constructor
+  ixeWinType _type;                    // [constant] window type, this is set in constructor
 
 
   virtual bool _update(bool mouseInside, bool updateChildren= true);  // the update func that every derived class will have to further build upon

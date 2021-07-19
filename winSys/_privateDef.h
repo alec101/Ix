@@ -1,5 +1,26 @@
 #pragma once
 
+/*
+// window types <_type> private var
+enum class ixeWinType: uint16 {
+  baseWindow= 0,  // ixBaseWindow
+  window,         // ixWindow
+  button,         // ixButton
+  staticText,     // ixStatic
+  edit,           // ixEdit
+  title,          // ixTitle
+  scrollBar,      // ixScroll
+  menu,           // ixMenu         "menu.h"
+  menuBar,        // ixMenuBar      "menu.h"
+  radioButton,    // ixRadioButton  
+  dropList,       // ixDropList     
+  progressBar,    // ixProgressBar  
+
+  endOfList
+};
+*/
+
+/*
 // window types <_type> private var
 #define _IX_BASE_WINDOW 0     // ixBaseWindow
 #define _IX_WINDOW      1     // ixWindow
@@ -13,6 +34,7 @@
 #define _IX_RADIOBUTTON 9     // ixRadioButton  
 #define _IX_DROPLIST    10    // ixDropList     
 #define _IX_PROGRESSBAR 11    // ixProgressBar  
+*/
 
 // window borders
 #define _BRD_TOP          0

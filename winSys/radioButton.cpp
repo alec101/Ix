@@ -15,7 +15,7 @@
 
 
 ixRadioButton::ixRadioButton(): ixBaseWindow() {
-  _type= _IX_RADIOBUTTON;
+  _type= ixeWinType::radioButton;
 
   usage._parent= this;
   usage.setTextHeading(RIGHT);
@@ -264,6 +264,7 @@ bool ixRadioButton::_update(bool in_mIn,bool updateChildren) {
             sel= p;
             selNr= a;
             Ix::wsys()._op.delData();
+            Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
             return true;
           }
         }
@@ -280,6 +281,7 @@ bool ixRadioButton::_update(bool in_mIn,bool updateChildren) {
         Ix::wsys()._op.mLclick= true;
         Ix::wsys()._op.win= this;
         Ix::wsys().bringToFront(this);
+        Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
         return true;
       }
     } /// left mouse button is being pressed

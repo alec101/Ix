@@ -245,10 +245,15 @@ protected:
   #ifdef IX_USE_VULKAN
   void _vkDraw(VkCommandBuffer in_cmd, Ix *ix, const recti pos, const vec3i scroll);    // draws the text and selection and cursor, 
   #endif
+  
+
+
+  bool _update(bool mouseInside); // handles keyboard input, text selection, depending if _parent has flags that allow any of such operations
+
+
 
   // first seen line - window position on the text, 
 
-  // WIP VVV - NONE ACTUALLY WORK ATM
 
   // this should basically be the second cursor but without any position, only line and wline, everything about them
   //  based where one of the cursors goes, the other can follow
@@ -266,14 +271,14 @@ protected:
     void advanceLine();
     void decreaseLine();
 
-    //ViewPos() { delData(); }
     ViewPos(ixTxtData *in_parent): _parent(in_parent) { delData(); }
 
     inline void delData() { line= wline= pos= 0; pWline= null; pLine= null; }
   protected:
     ixTxtData *_parent;
   } _view;
-  // WIP ^^^
+
+  
 
   // wrap lines - actual lines in the window, not lines in the text
 

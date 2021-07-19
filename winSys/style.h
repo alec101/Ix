@@ -89,8 +89,8 @@ public:
   // title cfg
 
   bool useTitle;          // create a title bar or not
-  int8 titlePosition;     // <<< CONFLICT WITH POINTSNAP  >>> 0, 1, 2, 3 - up, down, left, right - DEFAULT 0(up)
-  int8 titlePointSnap;    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 0-3: middle points, same as titlePosition; 4-7: snap to a corner (check texBrd[8] figure) - DEFAULT 0(up-middle)
+  ixEBorder titlePosition;     // <<< CONFLICT WITH POINTSNAP  >>> 0, 1, 2, 3 - up, down, left, right - DEFAULT 0(up)
+  ixEBorder titlePointSnap;    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 0-3: middle points, same as titlePosition; 4-7: snap to a corner (check texBrd[8] figure) - DEFAULT 0(up-middle)
   int16 titleOrientation; // text orientation, in degrees - DEFAULT 90(left to right)
   int16 titleDist;        // distance from border; default: fits entirely inside the window
   bool titleInside;       // if the title is inside or outside the object - DEFAULT false(outside)

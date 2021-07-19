@@ -1,5 +1,34 @@
 #pragma once
 
+enum class ixEBorder: uint8 {
+  top= 0,
+  right= 1,
+  bottom= 2,
+  left= 3,
+  topLeft= 4,
+  topRight= 5,
+  bottomRight= 6,
+  bottomLeft= 7
+};
+
+// window types <_type> private var
+enum class ixeWinType: uint16 {
+  baseWindow= 0,  // ixBaseWindow
+  window,         // ixWindow
+  button,         // ixButton
+  staticText,     // ixStatic
+  edit,           // ixEdit
+  title,          // ixTitle
+  scrollBar,      // ixScroll
+  menu,           // ixMenu         "menu.h"
+  menuBar,        // ixMenuBar      "menu.h"
+  radioButton,    // ixRadioButton  
+  dropList,       // ixDropList     
+  progressBar,    // ixProgressBar  
+
+  endOfList
+};
+
 #include "ix/winSys/style.h"
 #include "ix/winSys/winBase.h"
 #include "ix/winSys/txtShared.h"
@@ -17,15 +46,22 @@
 
 
 
-// these are the default notations for any border point
-#define IX_BORDER_TOP         0
-#define IX_BORDER_RIGHT       1
-#define IX_BORDER_BOTTOM      2
-#define IX_BORDER_LEFT        3
-#define IX_BORDER_TOPLEFT     4
-#define IX_BORDER_TOPRIGHT    5
-#define IX_BORDER_BOTTOMRIGHT 6
-#define IX_BORDER_BOTTOMLEFT  7
+
+enum class ixeWSflags: uint32 {
+  none=         0x0000,
+
+  mouseUsed=    0x0001,     // any mouse activity used in any of the windows
+  keyboardUsed= 0x0002,     // any keyboard activity used in any of the windows
+  joyUsed=      0x0004,     // any joystick activity used in any of the windows
+  gpUsed=       0x0008,     // any gamepad activity used in any of the windows
+  gwUsed=       0x0010,     // any gamewheel activity used in any of the windows
+
+  endOfList
+};
+
+
+
+
 
 //class ixWSshader;
 
@@ -39,6 +75,9 @@ public:
   ixBaseWindow *focus;      // WIP - window that has focus - USING IT FOR IXMENUS AND THE SIMPLICITY IS MAKING IT WORK GREAT
   ixBaseWindow *hover;      // window that is hovered
   ixWinEventSys eventSys;   // event system
+
+
+  ixFlags32 flags;          // [ixeWSflags: flag enum] 
 
   // CAN YOU REALLY HAVE 2 FOCUSES? ... AS A HUMAN YOU CAN'T SO WHY SHOULD THERE BE MORE THAN ONE VARIABLE WITH THE FOCUS?
 
@@ -84,7 +123,7 @@ public:
 
   void draw();                  // draws all the top objects on all Ix engines
   void drawSpecific(Ix *in_ix); // draws all the top objects, on the specified engine only
-  void update();
+  bool update();                // sets [flags] down, returns true if any HID activity happened with any of the windows, and flags what HID was used in [flags]
   void updateHooks();           // updates all top objects and their children hooks (in case hooked target moved)
 
 

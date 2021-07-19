@@ -417,21 +417,25 @@ void ixWinSys::drawSpecific(Ix *in_ix) {
 
 
 /// updates all windows
-void ixWinSys::update() {
+bool ixWinSys::update() {
+  flags= (uint32)ixeWSflags::none;      // set flags down
+  bool ret= false;
   if(osi.flags.windowMoved || osi.flags.windowResized)
     for(ixBaseWindow *p= (ixBaseWindow *)topObjects.first; p; p= (ixBaseWindow *)p->next) {
       p->hook.updateHooks();
       p->_computeAll();
       //if(p->hscroll) { p->hscroll->_computePos(); p->hscroll->_computeButtons(); }
       //if(p->vscroll) { p->vscroll->_computePos(); p->vscroll->_computeButtons(); }
-      p->update();
+      if(p->update()) ret= true;
     }
 
   else 
     for(ixBaseWindow *p= (ixBaseWindow *)topObjects.first; p; p= (ixBaseWindow *)p->next)
-      p->update();
+      if(p->update()) ret= true;
 
   eventSys._update();
+
+  return true;
 }
 
 

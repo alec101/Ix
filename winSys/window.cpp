@@ -6,7 +6,7 @@
 
 ixWindow::ixWindow() {
   ixBaseWindow();
-  _type= _IX_WINDOW;
+  _type= ixeWinType::window;
   title= null;
 }
 
@@ -82,31 +82,31 @@ void ixWindow::setTitle(cchar *in_text, ixWSgenericStyle *in_style) {
 
 
 // set window title positions/characteristics: hookBorder- border that it hooks to the main window; orientation 90/270 - horizontal 0/180 vertical; distance- distance from the border, in pixels; inside- the title is inside the window
-void ixWindow::setTitlePosition(int8 in_hookBorder, int16 in_orientation, int32 in_distance, bool in_inside) {
+void ixWindow::setTitlePosition(ixEBorder in_hookBorder, int16 in_orientation, int32 in_distance, bool in_inside) {
   if(title== null) {
     error.console("ixWindow::setTitlePosition(): changes to window title were requested, but title is not created");
     return;
   }
 
   /// title border hook (snap) based on orientation
-  int8 b= in_hookBorder;
+  ixEBorder b= in_hookBorder;
 
   if(!in_inside) {
-    if(b== IX_BORDER_TOP)               b= IX_BORDER_BOTTOM;
-    else if(b== IX_BORDER_RIGHT)        b= IX_BORDER_LEFT;
-    else if(b== IX_BORDER_BOTTOM)       b= IX_BORDER_TOP;
-    else if(b== IX_BORDER_LEFT)         b= IX_BORDER_RIGHT;
+    if(b== ixEBorder::top)               b= ixEBorder::bottom;
+    else if(b== ixEBorder::right)        b= ixEBorder::left;
+    else if(b== ixEBorder::bottom)       b= ixEBorder::top;
+    else if(b== ixEBorder::left)         b= ixEBorder::right;
 
     if(in_orientation== 90|| in_orientation== 270) {
-      if(b== IX_BORDER_TOPLEFT)           b= IX_BORDER_BOTTOMLEFT;
-      else if(b== IX_BORDER_TOPRIGHT)     b= IX_BORDER_BOTTOMRIGHT;
-      else if(b== IX_BORDER_BOTTOMRIGHT)  b= IX_BORDER_TOPRIGHT;
-      else if(b== IX_BORDER_BOTTOMLEFT)   b= IX_BORDER_TOPLEFT;
+      if(b== ixEBorder::topLeft)           b= ixEBorder::bottomLeft;
+      else if(b== ixEBorder::topRight)     b= ixEBorder::bottomRight;
+      else if(b== ixEBorder::bottomRight)  b= ixEBorder::topRight;
+      else if(b== ixEBorder::bottomLeft)   b= ixEBorder::topLeft;
     } else {
-      if(b== IX_BORDER_TOPLEFT)           b= IX_BORDER_TOPRIGHT;
-      else if(b== IX_BORDER_TOPRIGHT)     b= IX_BORDER_TOPLEFT;
-      else if(b== IX_BORDER_BOTTOMRIGHT)  b= IX_BORDER_BOTTOMLEFT;
-      else if(b== IX_BORDER_BOTTOMLEFT)   b= IX_BORDER_BOTTOMRIGHT;
+      if(b== ixEBorder::topLeft)           b= ixEBorder::topRight;
+      else if(b== ixEBorder::topRight)     b= ixEBorder::topLeft;
+      else if(b== ixEBorder::bottomRight)  b= ixEBorder::bottomLeft;
+      else if(b== ixEBorder::bottomLeft)   b= ixEBorder::bottomRight;
     }
   }
 
@@ -114,22 +114,22 @@ void ixWindow::setTitlePosition(int8 in_hookBorder, int16 in_orientation, int32 
 
   /// distance from the border
   if(in_orientation== 90 || in_orientation== 270) {
-    if(in_hookBorder== IX_BORDER_TOP || in_hookBorder== IX_BORDER_TOPLEFT|| in_hookBorder== IX_BORDER_TOPRIGHT)
+    if(in_hookBorder== ixEBorder::top|| in_hookBorder== ixEBorder::topLeft|| in_hookBorder== ixEBorder::topRight)
       pos.y0-= in_distance;
-    else if(in_hookBorder== IX_BORDER_BOTTOM || in_hookBorder== IX_BORDER_BOTTOMLEFT || in_hookBorder== IX_BORDER_BOTTOMRIGHT)
+    else if(in_hookBorder== ixEBorder::bottom || in_hookBorder== ixEBorder::bottomLeft || in_hookBorder== ixEBorder::bottomRight)
       pos.y0+= in_distance;
-    else if(in_hookBorder== IX_BORDER_LEFT)
+    else if(in_hookBorder== ixEBorder::left)
       pos.x0-= in_distance;
-    else if(in_hookBorder== IX_BORDER_RIGHT)
+    else if(in_hookBorder== ixEBorder::right)
       pos.x0+= in_distance;
   } else {
-    if(in_hookBorder== IX_BORDER_LEFT || in_hookBorder== IX_BORDER_TOPLEFT || in_hookBorder== IX_BORDER_BOTTOMLEFT)
+    if(in_hookBorder== ixEBorder::left || in_hookBorder== ixEBorder::topLeft || in_hookBorder== ixEBorder::bottomLeft)
       pos.x0-= in_distance;
-    else if(in_hookBorder== IX_BORDER_RIGHT || in_hookBorder== IX_BORDER_TOPRIGHT || in_hookBorder== IX_BORDER_BOTTOMRIGHT)
+    else if(in_hookBorder== ixEBorder::right || in_hookBorder== ixEBorder::topRight || in_hookBorder== ixEBorder::bottomRight)
       pos.x0+= in_distance;
-    else if(in_hookBorder== IX_BORDER_TOP)
+    else if(in_hookBorder== ixEBorder::top)
       pos.y0-= in_distance;
-    else if(in_hookBorder== IX_BORDER_BOTTOM)
+    else if(in_hookBorder== ixEBorder::bottom)
       pos.y0+= in_distance;
   } /// orientation
 
@@ -174,6 +174,7 @@ void ixWindow::_glDraw(Ix *in_ix, ixWSsubStyleBase *in_style) {
 
 #ifdef IX_USE_VULKAN
 void ixWindow::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_style) {
+  if(is.visible== 0) return;
   ixBaseWindow::_vkDraw(in_cmd, in_ix, in_style);       /// start by drawing the base
   
   if(useTitle && title)
@@ -222,13 +223,15 @@ bool ixWindow::_update(bool in_mouseInside, bool in_updateChildren) {
   // no operation is in progress
   } else {
     if(in_mouseInside) {
+
+      // mouse title drag-move
       if(in.m.but[0].down) {
-        /// if using a window title, moving is done by dragging the title
         if(usage.movable && useTitle && title)
           if(mPos(title->hook.pos.x+ title->pos.x0, title->hook.pos.y+ title->pos.y0, (int32)title->pos.dx, (int32)title->pos.dy)) {
             Ix::wsys()._op.moving= true;
             Ix::wsys()._op.win= this;
             Ix::wsys().bringToFront(this);
+            Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
             return true;
           }
 

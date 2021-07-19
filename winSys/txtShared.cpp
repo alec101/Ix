@@ -70,7 +70,7 @@ still... dono if that is possible tho ... the more i think the more see it's not
 */
 
 
-
+using namespace Str;
 
 
 
@@ -328,10 +328,10 @@ void ixTxtData::findUnicodeLineForCoords(int32 in_x, int32 in_y, int32 *out_unic
 bool ixTxtData::checkLimits(char32 unicode) {
   if(!_parent) return true;
 
-  if(_parent->_type== _IX_EDIT)
+  if(_parent->_type== ixeWinType::edit)
     return ((ixEdit *)_parent)->_checkLimits(unicode);
 
-  if(_parent->_type== _IX_STATIC_TEXT)
+  if(_parent->_type== ixeWinType::staticText)
     return ((ixStaticText *)_parent)->_checkLimits(unicode);
 
   return true;
@@ -1726,7 +1726,450 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
 
 
 
+// handles keyboard input, text selection, depending if _parent has flags that allow any of such operations
+bool ixTxtData::_update(bool in_mIn) {
+  bool ret= false;
+  uint32 c;
+  bool selPossible, cursorUsable, readOnly;
 
+  if(_parent->_type== ixeWinType::staticText) {
+    readOnly= true;
+    cursorUsable=      ((ixStaticText *)_parent)->usage.hasCursor;
+    selPossible= ((ixStaticText *)_parent)->usage.selection;
+  } else if(_parent->_type== ixeWinType::edit) {
+    readOnly=          ((ixEdit *)_parent)->usage.readOnly;
+    cursorUsable=      ((ixEdit *)_parent)->usage.hasCursor;
+    selPossible= ((ixEdit *)_parent)->usage.selection;
+  }
+  
+  // process all chars - can be unicodes, or special str manipulation codes
+  if(Ix::wsys().focus== _parent)
+  while((c= in.k.getChar())) {
+    /// shortcuts
+    str32 *s= &cur.pLine->text;  // AFTER A _delSelection() OR SIMILAR, THIS POINTER WILL BE BAD, CAREFUL TO UPDATE
+    int32 *cpos= &cur.pos;
+
+    // new line
+    if(c== Kch_enter) {
+      
+      /// ixEdit one line usage
+      if(_parent->_type== ixeWinType::edit) {
+        if(((ixEdit *)_parent)->usage.oneLine) {
+          ((ixEdit *)_parent)->enterPressed= true;
+          ret= true;
+          continue;
+        }
+      }
+
+      /// ixStatic one line usage
+      if(_parent->_type== ixeWinType::staticText)
+        if(((ixStaticText *)_parent)->usage.oneLine)
+          continue;
+
+      if(readOnly) continue;
+      
+      if(!checkLimits('\n')) continue;
+
+      if(selPossible) {
+        sel.delSelection();
+        s= &cur.pLine->text;
+      }
+
+      /// if the cursor is in the middle of diacriticals, move it back, so the whole char is moved to the next line
+      while(*cpos> 0) {
+        if(!Str::isComb(s->d[*cpos- 1]))
+          break;
+        (*cpos)--;
+      }
+        
+      s->insert('\n', *cpos);
+      nrUnicodes++;
+      int32 ipos= (*cpos)+ 1;
+        
+
+      ixTxtData::Line *p= new ixTxtData::Line;
+      lines.addAfter(p, cur.pLine);
+        
+      /// everything after the cursor is inserted in next line
+      p->text= s->d+ ipos;
+
+      /// everything after cursor is deleted from current line
+      s->del(s->nrUnicodes- ipos, ipos);
+
+      _updateWrapList(cur.pLine);
+      _updateWrapList(p);
+
+      /// cursor update, move to next line
+      cur.increaseUnicode();
+      cur.makeSureInBounds();
+      cur.makeSureVisible();
+
+      ret= true;
+      
+
+    // backspace
+    } else if(c== Kch_backSpace) {
+      if(readOnly) continue;
+
+      if(selPossible && sel) {
+        sel.delSelection();
+        ret= true;
+
+      } else if(*cpos> 0) {
+        /// all diacriticals will be erased, if a char is deleted, not a diacritical
+        bool wipeCombs= false;
+        if(isComb(s->d[*cpos- 1]))
+          wipeCombs= true;
+
+        s->del(1, (*cpos)- 1);
+        cur.decreaseUnicode();
+        nrUnicodes--;
+
+        if(wipeCombs && *cpos)
+          while(isComb(s->d[*cpos- 1])) {
+            s->del(1, (*cpos)- 1);
+            cur.decreaseUnicode();
+            nrUnicodes--;
+            if(!*cpos) { error.simple("ixEdit::update() - cursor position reached 0, shouldn't have"); break; }
+          }
+
+        _updateWrapList(cur.pLine);
+        cur.makeSureInBounds();
+        cur.makeSureVisible();
+        ret= true;
+
+      /// delete a \n
+      } else if((*cpos== 0) && (cur.line> 0)) {
+        cur.decreaseUnicode();
+        cur.makeSureVisible();   /// asures _view is not on the deleted line
+        ixTxtData::Line *p1= (ixTxtData::Line *)cur.pLine;
+        ixTxtData::Line *p2= (ixTxtData::Line *)cur.pLine->next;
+        _delWrapForLine(p2);
+
+        // delete '\n' if there is one
+        if(p1->text.nrUnicodes)
+          if(p1->text.d[p1->text.nrUnicodes- 1]== '\n') {
+            //text.cur.decreaseUnicode(); first decrease unicode already does this
+            p1->text.del();
+            nrUnicodes--;
+          }
+        // copy line 2 to line 1's end
+        p1->text+= p2->text;
+
+        lines.del(p2);     /// delete the second line
+
+        _updateWrapList(p1);
+        cur.makeSureInBounds();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_delete) {
+      if(readOnly) continue;
+
+      if(selPossible && sel) {
+        sel.delSelection();
+        ret= true;
+
+      } else if(s->d[*cpos]== '\n') {
+        ixTxtData::Line *p1= cur.pLine;
+        ixTxtData::Line *p2= (ixTxtData::Line *)p1->next;
+
+        s->del(1, *cpos);
+        nrUnicodes--;
+
+        if(p2) {
+          cur.makeSureInBounds();
+          cur.makeSureVisible();   /// asure _view is not on the deleted line
+          _delWrapForLine(p2);
+          p1->text+= p2->text;
+          lines.del(p2);
+        }
+
+        _updateWrapList(p1);
+        cur.makeSureInBounds();
+        cur.makeSureVisible();
+        ret= true;
+
+      } else if(s->d[*cpos]!= 0) {
+        /// check if to wipe diacriticals. when deleting a char, all it's diacriticals are deleted
+        bool wipeCombs= false;
+        if(!isComb(s->d[*cpos]))
+          wipeCombs= true;
+
+        s->del(1, *cpos);
+        nrUnicodes--;
+
+        if(wipeCombs)
+          if(*cpos> 0)
+            while(isComb(s->d[(*cpos)- 1])) {
+              s->del(1, (*cpos)- 1);
+              nrUnicodes--;
+              cur.decreaseUnicode();
+              if(*cpos== 0) break;
+            }
+
+        _updateWrapList(cur.pLine);
+        cur.makeSureInBounds();
+        cur.makeSureVisible();
+        ret= true;
+      }
+      
+    } else if(c== Kch_cut) {
+      if(selPossible)
+        if(sel) {
+          str32 s32;
+          sel.copy(&s32);
+          osi.setClipboard(s32.convert8());
+          if(!readOnly)
+            sel.delSelection();
+          ret= true;
+        }
+
+    } else if(c== Kch_copy) {
+      if(selPossible)
+        if(sel) {
+          str32 s32;
+          sel.copy(&s32);
+          osi.setClipboard(s32.convert8());
+          ret= true;
+        }
+
+    } else if(c== Kch_paste) {
+      if(readOnly) continue;
+      str8 s8;
+      osi.getClipboard(&s8.d);
+      s8.updateLen();
+      str32 s32(s8);
+      sel.paste(&s32);
+      cur.makeSureVisible();
+      ret= true;
+
+    } else if(c== Kch_left) {
+      if(selPossible) if(sel) { sel.delData(); ret= true; }
+      if(cursorUsable) {
+        cur.left();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_right) {
+      if(selPossible) if(sel) { sel.delData(); ret= true; }
+      if(cursorUsable) {
+        cur.right();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_up) {
+      if(selPossible) if(sel) { sel.delData(); ret= true; }
+      if(cursorUsable) {
+        cur.up();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_down) {
+      if(selPossible) if(sel) { sel.delData(); ret= true; }
+      if(cursorUsable) {
+        cur.down();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_home) {
+      if(selPossible) if(sel) { sel.delData(); ret= true; }
+      if(cursorUsable) {
+        cur.home();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_end) {
+      if(selPossible) if(sel) { sel.delData(); ret= true; }
+      if(cursorUsable) {
+        cur.end();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_pgUp) {
+      if(selPossible) if(sel) { sel.delData(); ret= true; }
+      if(cursorUsable) {
+        cur.pgUp();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_pgDown) {
+      if(selPossible) if(sel) { sel.delData(); ret= true; }
+      if(cursorUsable) {
+        cur.pgDown();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_selLeft) {
+      if(selPossible) {
+        sel.addLeft();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_selRight) {
+      if(selPossible) {
+        sel.addRight();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_selUp) {
+      if(selPossible) {
+        sel.addUp();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_selDown) {
+      if(selPossible) {
+        sel.addDown();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_selHome) {
+      if(selPossible) {
+        sel.addHome();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_selEnd) {
+      if(selPossible) {
+        sel.addEnd();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_selPgUp) {
+      if(selPossible) {
+        sel.addPgUp();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    } else if(c== Kch_selPgDown) {
+      if(selPossible) {
+        sel.addPgDown();
+        cur.makeSureVisible();
+        ret= true;
+      }
+
+    // unicode character
+    } else {
+
+      // ONELINES MUST BE FAST, A SPECIAL BRANCH SHOULD BE DONE FOR THEM
+      if(selPossible)
+        if(sel) {
+          sel.delSelection();
+          s= &cur.pLine->text;
+          ret= true;
+        }
+
+      if(checkLimits(c) && !readOnly) {
+        s->insert(c, *cpos);
+        nrUnicodes++;
+      
+        _updateWrapList(cur.pLine);
+        cur.increaseUnicode();
+        cur.makeSureInBounds();
+        cur.makeSureVisible();
+        ret= true;
+      }
+    }
+  } /// process all manip chars
+
+  /// any action is done with keyboard at this point
+  if(ret)
+    Ix::wsys().flags.setUp((uint32)ixeWSflags::keyboardUsed);
+
+
+  // MOUSE events
+
+  //static int32 imx, imy;        /// these will hold where the initial click happened
+  //static int32 iUnicode, iLine; /// the line and unicode when the mouse was initially clicked
+
+  recti r; _parent->getVDcoordsRecti(&r);
+
+  // no event currently happening
+  if(!Ix::wsys()._op.win && in_mIn) {
+    /// a r-click event starts - can be a SELECTION DRAG or a CURSOR POS CHANGE
+    if(in.m.but[0].down && r.inside(in.m.x, in.m.y)) {
+      Ix::wsys()._op.win= _parent;
+      Ix::wsys()._op.mRclick= true;
+      if(selPossible) sel.delData();
+
+      Ix::wsys().bringToFront(_parent);
+      Ix::wsys().focus= _parent;
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
+      return true;
+    }
+  }
+
+
+  // if there are problems with small fonts, and selecting while you don't want selecting,
+  //   selection could happen only if mouse is being hold more than 1 second for example
+
+  /// an event is happening with this window involved
+  if(Ix::wsys()._op.win== _parent) {
+
+    // R-Click event
+    if(Ix::wsys()._op.mRclick) {
+      static int32 lx= -1, ly= -1;
+
+      // R-Click is being hold down - update cursor & selection
+      if(in.m.but[0].down) {
+
+        /// mouse moved while clicked
+        if(in.m.x!= lx || in.m.y!= ly) {
+          /// text coord y is from top to bottom, like a page of text
+          //text.cur._setLineAndPosInPixels(in.m.x- (r.x0+ _viewArea.x0)+ hscroll->position, (r.y0+ _viewArea.ye)- in.m.y+ vscroll->position);
+
+          if(cursorUsable)
+            cur._setLineAndPosInPixels(in.m.x- (r.x0+ _parent->_viewArea.x0)+ _parent->hscroll->position, in.m.y- (r.y0+ _parent->_viewArea.y0)+ _parent->vscroll->position);
+          if(selPossible) {
+            if(!sel)
+              sel._startSelection();
+            sel._updateEndFromCursor();
+          }
+          lx= in.m.x, ly= in.m.y;
+        }
+        Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
+        return true;
+
+      // R-Click end - final cursor and selection positions
+      } else if(!in.m.but[0].down) {     /// mouse r-button released
+        
+        /// text coord y is from top to bottom, like a page of text
+        //text.cur._setLineAndPosInPixels(imx- (r.x0+ _viewArea.x0), (r.y0+ _viewArea.ye)- imy);
+        //text.cur._setLineAndPosInPixels(in.m.x- (r.x0+ _viewArea.x0)+ hscroll->position, (r.y0+ _viewArea.ye)- in.m.y+ vscroll->position);
+        if(cursorUsable)
+          cur._setLineAndPosInPixels(in.m.x- (r.x0+ _parent->_viewArea.x0)+ _parent->hscroll->position, in.m.y- (r.y0+ _parent->_viewArea.y0)+ _parent->vscroll->position);
+
+        if(selPossible)
+          if(sel.start== sel.end && sel.startLine== sel.endLine)
+            sel.delData();
+
+        Ix::wsys()._op.delData();
+        lx= ly= -1;
+        Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
+        return true;
+      }
+    } /// r-click event
+  } /// an event happening with this window
+
+  return ret;
+}
 
 
 

@@ -6,7 +6,7 @@
 ///========================///
 
 ixDropList::ixDropList(): ixBaseWindow() {
-  _type= _IX_DROPLIST;
+  _type= ixeWinType::dropList;
 
   buttonDx= buttonDy= 0;
   selNr= -1;
@@ -21,7 +21,7 @@ ixDropList::ixDropList(): ixBaseWindow() {
   _scr->target= null;
   _scr->orientation= 1;
   _scr->setVisible(false);
-  _scr->hook.set(this, 4, 4);
+  _scr->hook.set(this, ixEBorder::topLeft, ixEBorder::topLeft);
   _scr->_applyColorsFromStyle();
   _scr->setDragboxFixed(false);
 
@@ -243,6 +243,7 @@ bool ixDropList::_update(bool in_mIn, bool updateChildren) {
           is.expanded= !is.expanded;
           _computeRects();
           Ix::wsys()._op.delData();
+          Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
           return true;
 
         // click on one of the options in the list
@@ -261,6 +262,7 @@ bool ixDropList::_update(bool in_mIn, bool updateChildren) {
               is.expanded= 0;
               _computeRects();
               Ix::wsys()._op.delData();
+              Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
               return true;
             }
             b.moveD(0, buttonDy);
@@ -279,6 +281,7 @@ bool ixDropList::_update(bool in_mIn, bool updateChildren) {
         Ix::wsys()._op.mLclick= true;
         Ix::wsys()._op.win= this;
         Ix::wsys().bringToFront(this);
+        Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
         return true;
       }
     } /// left mouse button is being pressed

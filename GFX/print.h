@@ -39,7 +39,7 @@ public:
   vec4 color1;          // main text color, default white (1, 1, 1, 1)
   vec4 color2;          // shadow/outline color, default black (0, 0, 0, 1)
 
-  int16 drawMode;       // [bit 0]= outline, [bit 1]= background shadow, [bit 2]= solid background
+  ixFlags8 drawMode;    // [bit 0]= outline, [bit 1]= background shadow, [bit 2]= solid background
   vec2 shadowPos;       // shadow position when (drawmode& 0x0002)
   int outlineSize;      // [1-5] outline pixels, maximum 5 pixels when (drawmode& 0x0001)
 

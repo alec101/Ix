@@ -13,7 +13,7 @@
 
 ixButton::ixButton() {
   ixBaseWindow();
-  _type= _IX_BUTTON;
+  _type= ixeWinType::button;
   textX= textY= 0;
   //font= null;
 }
@@ -150,6 +150,8 @@ bool ixButton::_update(bool in_mIn, bool in_updateChildren) {
       else
         is.pressed= !is.activated; //(is.activated? true: false);
 
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
+
       // the left mouse button is depressed -> action is needed
       if(!in.m.but[0].down) {
 
@@ -162,8 +164,9 @@ bool ixButton::_update(bool in_mIn, bool in_updateChildren) {
             is.activated= !is.activated; //(is.activated? false: true);
             Ix::wsys()._op.delData();
             // AN ACTION WAS PERFORMED -> THIS MUST BE SENT SOMEWHERE
+            
             return true;
-
+            
           // normal button activation
           } else {
             is.activated= true;           // MUST STAY ACTIVATED ONLY UNTIL THE ACTION WAS PROCESSED
@@ -180,8 +183,13 @@ bool ixButton::_update(bool in_mIn, bool in_updateChildren) {
         } else {
           is.pressed= is.activated; //(is.activated? false: true);
           Ix::wsys()._op.delData();
+
+          /// still the mouse was used with this window, in this case
+          return true;
         }
       } /// mouse button depressed
+
+      return true;  /// mouse button hold
     } /// an mouse left click operation is in progress
 
 
@@ -196,6 +204,8 @@ bool ixButton::_update(bool in_mIn, bool in_updateChildren) {
         Ix::wsys()._op.mLclick= true;
         Ix::wsys()._op.win= this;
         Ix::wsys().bringToFront(this);
+
+        Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
         return true;
       }
     } /// left mouse button is being pressed

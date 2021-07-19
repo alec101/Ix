@@ -14,6 +14,9 @@ public:
     unsigned fixedBuffer: 1;    // SPECIAL kind of editor: it works ONLY in conjunction with oneLine, it has a fixed number of unicodes - use setOneLineFixed()
     unsigned acceptCombs: 1;    // accepts combining diactriticals
     unsigned onlyNumbers: 1;    // accepts only numbers - special type of edit, manipulates a number - to be expanded for floats??? maybe it's too much
+    unsigned hasCursor: 1;      // text has a cursor that is movable
+    unsigned selection: 1;      // text can be selected - all selection functions avaible
+    unsigned readOnly: 1;       // text is read only or not
 
     //funcs that manipulate if the edit is number - only (increase / decrease / set number / set max - min / etc)
     
@@ -35,7 +38,10 @@ public:
     void blackListDel(int32 from= -1, int32 to= -1);  // removes the whole list if no params are passed, or searches for the unicode or unicodes to remove from the list
 
     Usage() { _parent= null; delData(); }
-    void delData() { ixBaseWindow::Usage(); oneLine= onlyNumbers= acceptCombs= fixedBuffer= 0; /*limitUnicodesPerLine= limitLines= 0;*/ limitUnicodes= 0; numberMin= INT64_MIN; numberMax= INT64_MAX; }
+    void delData() { ixBaseWindow::Usage(); oneLine= onlyNumbers= acceptCombs= fixedBuffer= 0; 
+                                            hasCursor= selection= readOnly= 1;
+                                            /*limitUnicodesPerLine= limitLines= 0;*/
+                                            limitUnicodes= 0; numberMin= INT64_MIN; numberMax= INT64_MAX; }
 
   protected:
     ixEdit *_parent;

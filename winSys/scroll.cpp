@@ -14,7 +14,7 @@
 
 ixScroll::ixScroll() {
   ixBaseWindow();
-  _type= _IX_SCROLLBAR;
+  _type= ixeWinType::scrollBar;
   target= null;
 
   colorArrows.set (0.1f, 0.1f, 0.1f, 1.0f);
@@ -153,9 +153,9 @@ void ixScroll::drag(int32 in_dx, int32 in_dy) {
     if(_scrLength> (int32)((orientation== 0)? (target->_childArea.dx- target->_viewArea.dx): (target->_childArea.dy- target->_viewArea.dy)))
       _scroll= position;
 
-    if(target->_type== _IX_STATIC_TEXT)
+    if(target->_type== ixeWinType::staticText)
       ((ixStaticText *)target)->text._view.moveToScrollPosition();
-    if( target->_type== _IX_EDIT)
+    if( target->_type== ixeWinType::edit)
       ((ixEdit *)target)->text._view.moveToScrollPosition();
 
     target->hook.updateHooks(false);
@@ -173,9 +173,9 @@ void ixScroll::setPosition(int32 in_p) {
   //_computeDrgRect();
   //_computeScrLength();
   if(target) {
-    if(target->_type== _IX_STATIC_TEXT)
+    if(target->_type== ixeWinType::staticText)
       ((ixStaticText *)target)->text._view.moveToScrollPosition();
-    if(target->_type== _IX_EDIT)
+    if(target->_type== ixeWinType::edit)
       ((ixEdit *)target)->text._view.moveToScrollPosition();
     target->hook.updateHooks(false);
   }
@@ -188,9 +188,9 @@ void ixScroll::setPositionD(int32 in_delta) {
   _scroll= _getScrollFromPosition();
   //_computeDragbox();
   if(target) {
-    if(target->_type== _IX_STATIC_TEXT)
+    if(target->_type== ixeWinType::staticText)
       ((ixStaticText *)target)->text._view.moveToScrollPosition();
-    if(target->_type== _IX_EDIT)
+    if(target->_type== ixeWinType::edit)
       ((ixEdit *)target)->text._view.moveToScrollPosition();
     target->hook.updateHooks(false);
   }
@@ -203,9 +203,9 @@ void ixScroll::setPositionMin() {
   _scroll= _getScrollFromPosition();
   //_computeDragbox();
   if(target) {
-    if(target->_type== _IX_STATIC_TEXT)
+    if(target->_type== ixeWinType::staticText)
       ((ixStaticText *)target)->text._view.moveToScrollPosition();
-    if( target->_type== _IX_EDIT)
+    if( target->_type== ixeWinType::edit)
       ((ixEdit *)target)->text._view.moveToScrollPosition();
   }
 }
@@ -217,9 +217,9 @@ void ixScroll::setPositionMax() {
   _scroll= _getScrollFromPosition();
   //_computeDragbox();
   if(target) {
-    if(target->_type== _IX_STATIC_TEXT)
+    if(target->_type== ixeWinType::staticText)
       ((ixStaticText *)target)->text._view.moveToScrollPosition();
-    if( target->_type== _IX_EDIT)
+    if( target->_type== ixeWinType::edit)
       ((ixEdit *)target)->text._view.moveToScrollPosition();
   }
 }
@@ -1360,6 +1360,11 @@ bool ixScroll::_update(bool in_mIn, bool in_updateChildren) {
   if(is.disabled)
     return false;
 
+  // NO KEYBOARD/GP/JOY INTERACTION DONE AT ALL
+
+
+  // MOUSE interaction
+
   int32 mx= in.m.x- hook.pos.x;
   int32 my= in.m.y- hook.pos.y;
 
@@ -1374,13 +1379,14 @@ bool ixScroll::_update(bool in_mIn, bool in_updateChildren) {
     /// button released - the action stopped
     if(!in.m.but[0].down) {
       Ix::wsys()._op.delData();
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
       return true;
     }
 
     /// a window drag is in progress
     if(Ix::wsys()._op.scrDragbox) {
       drag(in.m.dx, in.m.dy);
-      
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
       return true;
     }
 
@@ -1392,6 +1398,7 @@ bool ixScroll::_update(bool in_mIn, bool in_updateChildren) {
           setPositionD(-arrowScroll);
         }
       }
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
       return true;
     }
 
@@ -1403,7 +1410,7 @@ bool ixScroll::_update(bool in_mIn, bool in_updateChildren) {
           setPositionD(arrowScroll);
         }
       }
-      
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
       return true;
     }
 
@@ -1413,6 +1420,7 @@ bool ixScroll::_update(bool in_mIn, bool in_updateChildren) {
       _scroll= (orientation== 0? mx- _barRect.x0: my- _barRect.y0);
       _asureScrollInBounds();
       setPosition(_getPositionFromScroll());
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
       return true;
     }
 
@@ -1428,6 +1436,7 @@ bool ixScroll::_update(bool in_mIn, bool in_updateChildren) {
         Ix::wsys()._op.win= this;
         Ix::wsys()._op.time= osi.present;
         if(target) Ix::wsys().bringToFront(target);
+        Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
         return true;
       }
 
@@ -1437,6 +1446,7 @@ bool ixScroll::_update(bool in_mIn, bool in_updateChildren) {
         Ix::wsys()._op.win= this;
         Ix::wsys()._op.time= osi.present;
         if(target) Ix::wsys().bringToFront(target);
+        Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
         return true;
       }
 
@@ -1445,6 +1455,7 @@ bool ixScroll::_update(bool in_mIn, bool in_updateChildren) {
         Ix::wsys()._op.scrDragbox= 1;
         Ix::wsys()._op.win= this;
         if(target) Ix::wsys().bringToFront(target);
+        Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
         return true;
       }
       /// bar click
@@ -1452,6 +1463,7 @@ bool ixScroll::_update(bool in_mIn, bool in_updateChildren) {
         Ix::wsys()._op.scrBar= 1;
         Ix::wsys()._op.win= this;
         if(target) Ix::wsys().bringToFront(target);
+        Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
         return true;
       }
     } /// mouse button down
