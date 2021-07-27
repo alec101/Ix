@@ -8,8 +8,9 @@ public:
 
   struct ButtonUsage: public ixBaseWindow::Usage {
     unsigned toggleable: 1;     // toggled button: when pressed, it stays pressed / on second press it depresses
+    //unsigned manualOff: 1;      // toggled button: when pressed again, can it be toggled off, or it will stay on
 
-    ButtonUsage() { delData(); }
+    ButtonUsage(ixBaseWindow *in_p): Usage(in_p) { delData(); }
     void delData() { Usage::delData(); toggleable= 0; }
   } usage;
 
@@ -35,9 +36,18 @@ public:
 
   // funcs
 
+  void setActivate(bool);
+
+
+  // setup a function to be called when the button is pressed
+  inline void setOnActivateFunc(void (*in_func)(ixButton *in_this)) { onActivate= in_func; }
+  void (*onActivate)(ixButton *in_this);
+
+
   //void setText(cchar *s);
   void setTextCentered(cchar *in_text);
-  
+
+
 
   //void draw(Ix *in_ix, ixWSsubStyleBase *dummy);   /// draws the window
   //void draw();
@@ -51,6 +61,9 @@ public:
 
 private:
   bool _update(bool mouseInside, bool updateChildren= true); /// updates the window
+
+  uint16 _specialAction;
+  void _doSpecialAction();
 
   #ifdef IX_USE_OPENGL
   virtual void _glDraw(Ix *in_ix, ixWSsubStyleBase *in_style= null);  // the drue draw func, init stuff, pass it to this

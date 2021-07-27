@@ -25,6 +25,21 @@ void main() {
   if((p.flags& 0x0004)> 0) {
     vec4 shadow= vec4(p.color2.rgb, 0);
 
+
+    //  font outline:
+    //  distance from font, can diminish
+    //    so you have full alpha from point x, but depending how far you are from it, it's diminished
+    //    atm i think i only have direct alpha on current fragment
+
+    // mk2: average alpha of all 9 surounding points... maybe
+
+    //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    // also, texture func could work, i think i overthinked this - textureOffset might not be the good answer <<<< texture(sampler, coord... i mean, why use offset?!)
+    //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+
     // i know this is retarded, but textureOffset accepts only compile-time constant as the offset -.-
     if(p.outline== 1) {
       shadow.a= max(shadow.a, textureOffset(texSampler, in_UV, ivec2(-1, -1)).r);

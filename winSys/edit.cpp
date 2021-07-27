@@ -24,14 +24,11 @@ void ixEdit::_setClickLimits(int32 in_delta) {
 
 
 
-ixEdit::ixEdit(): text(this) {
-  ixBaseWindow();
+ixEdit::ixEdit(): usage(this), text(this), ixBaseWindow(&is, &usage) {
   _type= ixeWinType::edit;
   
   enterPressed= false;
   
-  usage._parent= this;
-
   //text._parent= this;
 }
 
@@ -58,21 +55,21 @@ void ixEdit::delData() {
 // sets the editor in a special one-line, fixed buffer mode. the buffer is UTF-32 format (int32 per unicode value)
 bool ixEdit::Usage::setOneLineFixed(int32 in_size) {
   if(in_size<= 0) return false;
-  if(_parent->text.nrUnicodes) _parent->delData();
+  if(((ixEdit *)_win)->text.nrUnicodes) ((ixEdit *)_win)->delData();
 
   /// set the vars
   oneLine= 1;
   fixedBuffer= 1;
   limitUnicodes= in_size;
-  _parent->text._fixedBuffer= (char32 *)new uint32[limitUnicodes+ 1];
+  ((ixEdit *)_win)->text._fixedBuffer= (char32 *)new uint32[limitUnicodes+ 1];
   
   // create the line in the text data
   ixTxtData::Line *p= new ixTxtData::Line;
-  p->text.wrap(_parent->text._fixedBuffer, limitUnicodes+ 1);
-  _parent->text.lines.add(p);
-  _parent->text._updateWrapList();
-  _parent->text.cur.updateWline();
-  _parent->text.findTextDy();
+  p->text.wrap(((ixEdit *)_win)->text._fixedBuffer, limitUnicodes+ 1);
+  ((ixEdit *)_win)->text.lines.add(p);
+  ((ixEdit *)_win)->text._updateWrapList();
+  ((ixEdit *)_win)->text.cur.updateWline();
+  ((ixEdit *)_win)->text.findTextDy();
 
   return true;
 }
@@ -268,6 +265,7 @@ well... a trimming of bad chars can happen before paste, so only insert line by 
 
 
 bool ixEdit::_update(bool in_mIn, bool updateChildren) {
+  if(!is.visible) return false;
 
   recti r; getVDcoordsRecti(&r);
   bool sendMIn= (in_mIn? r.inside(in.m.x, in.m.y): false);
@@ -759,7 +757,7 @@ void ixEdit::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_sty
   text._vkDraw(in_cmd, in_ix, r, scr);
 
   /// scrollbars draw
-  if(usage.scrollbars || usage.autoScrollbars) {
+  if(usage._scrollbars || usage._autoScrollbars) {
     if(hscroll) hscroll->_vkDraw(in_cmd, in_ix);
     if(vscroll) vscroll->_vkDraw(in_cmd, in_ix);
   }

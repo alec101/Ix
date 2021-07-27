@@ -12,8 +12,7 @@
 
 // constructor / destructor ===============--------------------
 
-ixScroll::ixScroll() {
-  ixBaseWindow();
+ixScroll::ixScroll(): usage(this), ixBaseWindow(&is, &usage) {
   _type= ixeWinType::scrollBar;
   target= null;
 
@@ -1350,14 +1349,15 @@ void ixScroll::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_s
 ///=====================================================///
 
 bool ixScroll::_update(bool in_mIn, bool in_updateChildren) {
+  if(!is.visible) return false;
+
   recti r; getVDcoordsRecti(&r);
   // this window should not have childrens, right?
   if(in_updateChildren)
     if(_updateChildren(in_mIn? r.inside(in.m.x, in.m.y): false))
       return true;
 
-
-  if(is.disabled)
+  if(is.disabled|| !is.visible)
     return false;
 
   // NO KEYBOARD/GP/JOY INTERACTION DONE AT ALL

@@ -73,6 +73,21 @@ public:
   vec4 colorFocus;    // main background color of the window when it has focus
   vec4 colorBRDfocus; // borders color when it has focus
   vec4 colorHover;    // color when the window is hovered (the cursor/pointer is over it, and it don't have current focus)
+  
+  inline void setColors(vec4 *in_col1= null, vec4 *in_colHover= null, vec4 *in_colBRD= null, vec4 *in_colFocus= null, vec4 *in_colBRDfocus= null) {
+    if(in_col1)        color= *in_col1;
+    if(in_colHover)    colorHover= *in_colHover;
+    if(in_colBRD)      colorBRD= *in_colBRD;
+    if(in_colFocus)    colorFocus= *in_colFocus;
+    if(in_colBRDfocus) colorBRDfocus= *in_colBRDfocus;
+  }
+  inline void setColors8(rgba *in_col1= null, rgba *in_colHover= null, rgba *in_colBRD= null, rgba *in_colFocus= null, rgba *in_colBRDfocus= null) {
+    if(in_col1)        color.setColoru8v(*in_col1);
+    if(in_colHover)    colorHover.setColoru8v(*in_colHover);
+    if(in_colBRD)      colorBRD.setColoru8v(*in_colBRD);
+    if(in_colFocus)    colorFocus.setColoru8v(*in_colFocus);
+    if(in_colBRDfocus) colorBRDfocus.setColoru8v(*in_colBRDfocus);
+  }
 
   vec4 *_colorToUse;
   vec4 *_colorBRDtoUse;
@@ -81,8 +96,28 @@ public:
                         //INITIALLY CUSTOMTEX IS NULL, IF SO, USE THE STYLE.
 
 
+  chainList staticPrintList;
+  class StaticPrint: public chainData {
+  public:
+    str8 text;
+    vec3i pos;
+    ixFontStyle fntStyle;
+    bool visible;
+  };
 
+  // prints a static text on the window
+  // using current font style if <in_style> is left null
+  // returns a pointer/_handle_ for the created static text, that can be used to further modify the text with other funcs
+  // return value of null, marks an error
+  void *printStatic(cchar *in_text, vec3i *in_pos, ixFontStyle *in_style= null);
 
+  // in_handle, the _handle_ of the static text to be modified
+  // any parameter left null, will be unchanged
+  void printStaticModify(void *in_handle, cchar *in_newText= null, vec3i *in_newPos= null, ixFontStyle *in_newStyle= null);
+
+  // shows/hides the text
+  // <in_visible> [true: show text], [false: hide text]
+  void printStaticSetVisible(void *in_handle, bool in_visible= true);
 
   // behavior flags
 
@@ -92,7 +127,9 @@ public:
   //^^^
 
   struct Usage {
-
+  protected:
+    ixBaseWindow *_win;
+  public:
     // ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
     // THIS SHOULD BE THE DEFINING RULE OF ANY Usage CLASS OF ALL WINDOWS
     // ANY VARIABLE THAT REQUIRES MORE CHANGES INTERNALLY FOR THINGS TO CHANGE, MUST BE PRIVATE, AND FUNCTIONS TO CHANGE IT, MUST BE ADDED
@@ -103,18 +140,21 @@ public:
     unsigned movable:1;       // it is possible to move the object
     unsigned minimizable:1;   // it is possible to minimize this object
 
+    
     // scrollbars
 
-    unsigned scrollbars: 1;     // has scrollbars (buttons and such small windows will ignore any scrollbar cfg, and probly never will use them)
-    unsigned autoScrollbars: 1; // window will have scrollbars that are visible only when there is something to scroll
+    unsigned _scrollbars: 1;     // [USE FUNC TO SET] has scrollbars (buttons and such small windows will ignore any scrollbar cfg, and probly never will use them)
+    unsigned _autoScrollbars: 1; // [USE FUNC TO SET] window will have scrollbars that are visible only when there is something to scroll
+    void autoScrollbars(bool);
+    void scrollbars(bool);
 
-    Usage() { delData(); }
+    Usage(ixBaseWindow *in_p): _win(in_p) { delData(); }
     virtual void delData() { 
       resizeable= movable= minimizable= 0;
-      scrollbars= 0;
-      autoScrollbars= 1;
+      _scrollbars= 0;
+      _autoScrollbars= 1;
     }
-  } usage;
+  };
 
   // functional flags
 
@@ -133,7 +173,7 @@ public:
     //Is() { visible= 1; minimized= disabled= opening= closing= 0; }
     Is() { delData(); }
     virtual void delData() { visible= 1; minimized= 0; disabled= 0; opening= closing= 0; /*MOUSEfocus= KBfocus= GPfocus= JOYfocus= 0;*/ }
-  } is;
+  };
 
   ixWinHook hook;       // window hooking - hook a window to another window with this
   recti pos;            // window position, origin is based on the hook
@@ -173,8 +213,8 @@ public:
   virtual int32 getMinDx() { return 15; }           // returns the minimum dx of the window, in pixels
   virtual int32 getMinDy() { return 15; }           // returns the minimum dy of the window, in pixels
 
-  void setDisable(bool in_b) { is.disabled= (in_b? 1: 0); }
-  void setVisible(bool in_b) { is.visible= (in_b? 1: 0); }
+  void setDisable(bool in_b) { _is->disabled= (in_b? 1: 0); }
+  void setVisible(bool in_b) { _is->visible= (in_b? 1: 0); }
 
   void changeParent(ixBaseWindow *);
   void removeParent();
@@ -184,7 +224,7 @@ public:
 
   // constructor / destructor
 
-  ixBaseWindow();
+  ixBaseWindow(Is *i, Usage *u);
   ~ixBaseWindow();
   virtual void delData();
 
@@ -243,6 +283,9 @@ protected:
 
   void _createScrollbars();
 
+  Is *_is;
+  Usage *_usage;
+
   friend class ixScroll;
   friend class ixWinSys;
   friend class ixTxtData;
@@ -253,14 +296,6 @@ protected:
   friend class ixWindow;
   friend class ixMenu;
 };
-
-
-
-
-
-
-
-
 
 
 

@@ -14,10 +14,9 @@
 
 
 
-ixRadioButton::ixRadioButton(): ixBaseWindow() {
+ixRadioButton::ixRadioButton(): usage(this), ixBaseWindow(&is, &usage) {
   _type= ixeWinType::radioButton;
 
-  usage._parent= this;
   usage.setTextHeading(RIGHT);
   usage.setListHeading(DOWN);
   usage.setRadioCircle(true);
@@ -51,7 +50,7 @@ void ixRadioButton::Usage::setTextHeading(ixOrientation in_ori) {
   if(in_ori== HORIZONTAL) in_ori= RIGHT;
   if(in_ori== VERTICAL) in_ori= DOWN;
   textHeading= in_ori;
-  _parent->font.orientation= in_ori;
+  ((ixRadioButton *)_win)->font.orientation= in_ori;
 }
 
 
@@ -60,11 +59,11 @@ void ixRadioButton::Usage::setListHeading(ixOrientation in_ori) {
   if(in_ori== VERTICAL) in_ori= DOWN;
 
   int32 ix, iy;
-  _parent->_computeInitialX0Y0(&ix, &iy);
+  ((ixRadioButton *)_win)->_computeInitialX0Y0(&ix, &iy);
 
   listHeading= in_ori;
   
-  _parent->_computeRects(ix, iy);
+  ((ixRadioButton *)_win)->_computeRects(ix, iy);
 }
 
 
@@ -237,6 +236,8 @@ void ixRadioButton::_computeRects(int32 in_initialX0, int32 in_initialY0) {
 //    ####      ##          ######      ##    ##       ##       ########
 
 bool ixRadioButton::_update(bool in_mIn,bool updateChildren) {
+  if(!is.visible) return false;
+
   recti r; getVDcoordsRecti(&r);
   // update it's children first
   if(updateChildren)

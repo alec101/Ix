@@ -47,7 +47,8 @@ public:
   ixBaseWindow *root;       // it can be a bar it originates from, or another menu.
 
   //maybe instead of these 2, a *root base window
-
+  Usage usage;
+  Is is;
 
   ixFontStyle font;
 
@@ -152,6 +153,9 @@ public:
 
   ixFontStyle font;       // font of the menu bar
   chainList items;        // all the menu bar menus / items
+
+  Usage usage;
+  Is is;
 
   // funcs
 

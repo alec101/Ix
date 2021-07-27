@@ -30,21 +30,20 @@ public:
     int32 limitUnicodes;        // limit total number of unicodes the text can have / this is the width of the fixed buffer if used
 
     bool setOneLineFixed(int32 nrUnicodes); // sets the editor in a special one-line, fixed buffer mode. the buffer is UTF-32 format (int32 per unicode value)
-    char32 *getOneLineFixedBuffer() { return _parent->text._fixedBuffer; } // if using the special fixed buffer, returns a pointer to it to be easily accessed
+    char32 *getOneLineFixedBuffer() { return ((ixEdit *)_win)->text._fixedBuffer; } // if using the special fixed buffer, returns a pointer to it to be easily accessed
 
     void whiteList(int32 from, int32 to= -1);         // whiteLists an unicode or a sequence of unicodes
     void whiteListDel(int32 from= -1, int32 to= -1);  // removes the whole list if no params are passed, or searches for the unicode or unicodes to remove from the list
     void blackList(int32 from, int32 to= -1);         // blackLists an unicode or a sequence of unicodes
     void blackListDel(int32 from= -1, int32 to= -1);  // removes the whole list if no params are passed, or searches for the unicode or unicodes to remove from the list
 
-    Usage() { _parent= null; delData(); }
-    void delData() { ixBaseWindow::Usage(); oneLine= onlyNumbers= acceptCombs= fixedBuffer= 0; 
-                                            hasCursor= selection= readOnly= 1;
-                                            /*limitUnicodesPerLine= limitLines= 0;*/
-                                            limitUnicodes= 0; numberMin= INT64_MIN; numberMax= INT64_MAX; }
+    Usage(ixBaseWindow *in_p): ixBaseWindow::Usage(in_p) { delData(); }
+    void delData() { oneLine= onlyNumbers= acceptCombs= fixedBuffer= 0; 
+                     hasCursor= selection= readOnly= 1;
+                     /*limitUnicodesPerLine= limitLines= 0;*/
+                     limitUnicodes= 0; numberMin= INT64_MIN; numberMax= INT64_MAX; }
 
   protected:
-    ixEdit *_parent;
     friend class ixEdit;
 
     class _List: public chainData {
@@ -55,6 +54,7 @@ public:
 
   } usage;
 
+  Is is;
 
   // funcs
 

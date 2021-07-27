@@ -12,9 +12,7 @@
 
 
 
-ixStaticText::ixStaticText(): text(this), usage(this) {
-  //ixBaseWindow::ixBaseWindow();
-  ixBaseWindow();
+ixStaticText::ixStaticText(): text(this), usage(this), ixBaseWindow(&is, &usage) {
   _type= ixeWinType::staticText;
 
   this->_createScrollbars();
@@ -253,7 +251,7 @@ void ixStaticText::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *
   text._vkDraw(in_cmd, in_ix, r, scr);
     
   /// scrollbars draw
-  if(usage.scrollbars || usage.autoScrollbars) {
+  if(usage._scrollbars || usage._autoScrollbars) {
     if(hscroll) hscroll->_vkDraw(in_cmd, in_ix);
     if(vscroll) vscroll->_vkDraw(in_cmd, in_ix);
   }
@@ -278,6 +276,7 @@ void ixStaticText::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *
 //    ####      ##          ######      ##    ##       ##       ########
 
 bool ixStaticText::_update(bool in_mIn, bool updateChildren) {
+  if(!is.visible) return false;
 
   if(text._update(in_mIn))
     return true;

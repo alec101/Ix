@@ -3,9 +3,8 @@
 
 
 
-ixProgressBar::ixProgressBar(): ixBaseWindow() {
+ixProgressBar::ixProgressBar(): usage(this), ixBaseWindow(&is, &usage) {
   _type= ixeWinType::progressBar;
-  usage._parent= this;
   position= 0;
   usage.setPercentageBar(0, 100);
 }
@@ -31,7 +30,7 @@ void ixProgressBar::Usage::setPercentageBar(int32 in_val1, int32 in_val2, ixOrie
   value1= in_val1;
   value2= in_val2;
   orientation= in_o;
-  _parent->resetPosition();
+  ((ixProgressBar *)_win)->resetPosition();
 }
 
 
@@ -40,7 +39,7 @@ void ixProgressBar::Usage::setCustomAmountBar(int32 in_val1, int32 in_val2, ixOr
   value1= in_val1;
   value2= in_val2;
   orientation= in_o;
-  _parent->resetPosition();
+  ((ixProgressBar *)_win)->resetPosition();
 }
 
 
@@ -49,7 +48,7 @@ void ixProgressBar::Usage::setTimeBar(int32 in_val1, int32 in_val2, ixOrientatio
   value1= in_val1;
   value2= in_val2;
   orientation= in_o;
-  _parent->resetPosition();
+  ((ixProgressBar *)_win)->resetPosition();
 }
 
 
@@ -172,6 +171,8 @@ void ixProgressBar::_computeFillingRect() {
 //    ####      ##          ######      ##    ##       ##       ########
 
 bool ixProgressBar::_update(bool in_mIn,bool updateChildren) {
+  if(!is.visible) return false;
+
   recti r; getVDcoordsRecti(&r);
   // update it's children first
   if(updateChildren)

@@ -42,10 +42,14 @@ public:
     // might just work:
     inline void setRadioCircle(bool in_circle) { radio= in_circle; }  // <<<<< ???? IS THIS SUFFICE?
     
+    Usage(ixBaseWindow *in_p): ixBaseWindow::Usage(in_p) {}
+
   private:
-    ixRadioButton *_parent;
+    
     friend class ixRadioButton;
   } usage;
+
+  Is is;
 
   chainList buttonList;     // list with all the radio buttons
   int32 selNr;              // selected button number

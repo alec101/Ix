@@ -86,8 +86,7 @@ and if this flag is set to true, no _computeChildArea() happens...
 
 using namespace mlib;
 
-
-ixBaseWindow::ixBaseWindow(): hook(this), pos(0) {
+ixBaseWindow::ixBaseWindow(Is *i, Usage *u): hook(this), pos(0), _is(i), _usage(u) {
   _type= ixeWinType::baseWindow;
   parent= null;
   style= null;
@@ -116,8 +115,8 @@ ixBaseWindow::~ixBaseWindow() {
 
 void ixBaseWindow::delData() {
 
-  usage.delData();
-  is.delData();
+  //usage.delData();
+  //is.delData();
 
   //setHookAnchor();    // defaults to border 7 - virtual desktop (bottom left) - CAUSES CRASH ON DESTRUCTOR
 
@@ -487,6 +486,103 @@ void ixBaseWindow::removeParent() {
 
 
 
+void ixBaseWindow::Usage::autoScrollbars(bool in_b) {
+  _autoScrollbars= in_b;
+  //if(_win->hscroll) _win->hscroll->setDisable(in_b);
+  //if(_win->vscroll) _win->vscroll->setDisable(in_b);
+}
+
+void ixBaseWindow::Usage::scrollbars(bool in_b) {
+  _scrollbars= in_b;
+  if(_win->hscroll) _win->hscroll->setVisible(in_b);
+  if(_win->vscroll) _win->vscroll->setVisible(in_b);
+
+
+
+  //_win->_computeChildArea();
+  //_win->_computeViewArea();
+  _win->_computeAll();
+
+
+}
+
+
+
+
+
+
+///==============================================
+// Small printing system that any window can use ===============
+///==============================================
+
+
+void *ixBaseWindow::printStatic(cchar *in_text, vec3i *in_pos, ixFontStyle *in_style) {
+  if(in_text== null) { error.detail("<in_text> is null", __FUNCTION__, __LINE__); return null; }
+  
+  StaticPrint *p= new StaticPrint;
+  p->text= in_text;
+  p->pos= *in_pos;
+  if(in_style) p->fntStyle= *in_style;
+  else         p->fntStyle= *Ix::getMain()->pr.style;
+  p->visible= true;
+
+  staticPrintList.add(p);
+
+  return p;
+}
+
+
+void ixBaseWindow::printStaticModify(void *in_handle, cchar *in_newText, vec3i *in_newPos, ixFontStyle *in_newStyle) {
+  if(in_handle== null) return;
+  if(in_newText) ((StaticPrint *)in_handle)->text= in_newText;
+  if(in_newPos) ((StaticPrint *)in_handle)->pos= *in_newPos;
+  if(in_newStyle) ((StaticPrint *)in_handle)->fntStyle= *in_newStyle;
+}
+
+
+void ixBaseWindow::printStaticSetVisible(void *in_handle, bool in_visible) {
+  if(in_handle== null) return;
+  ((StaticPrint *)in_handle)->visible= in_visible;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -532,7 +628,7 @@ inline void ixWinHook::_compute() {
     else {
       dx= ixWin->_childArea.dx, dy= ixWin->_childArea.dy;
 
-      //if(ixWin->hscroll)          //            BOTTOM ORIGIN <<<<<
+      //if(ixWin->_)          //            BOTTOM ORIGIN <<<<<
       //  if(ixWin->hscroll->is.visible)
       //    pos.y-= ixWin->hscroll->pos.dy;
     }
@@ -1560,7 +1656,7 @@ void ixBaseWindow::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *
   in_ix->vki.cmdScissor(in_cmd, &_clip);
 
   in_ix->vki.draw.quad.cmdTexture(in_cmd, t);
-  in_ix->vki.draw.quad.flagDisabled(is.disabled);
+  in_ix->vki.draw.quad.flagDisabled(_is->disabled);
   in_ix->vki.draw.quad.cmdPushAll(in_cmd);
 
   // WINDOW BACKGROUND =========-----------
@@ -1951,6 +2047,18 @@ void ixBaseWindow::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *
     in_ix->vki.draw.quad.push.hollow= -1.0f;
     in_ix->vki.draw.quad.cmdPushHollow(in_cmd);
   }
+
+
+  // print all the static text
+  if(staticPrintList.nrNodes) {
+    ixFontStyle *saveStyle= in_ix->pr.style;
+    for(StaticPrint *p= (StaticPrint *)staticPrintList.first; p; p= (StaticPrint *)p->next) {
+      if(!p->visible) continue;
+      in_ix->pr.style= &p->fntStyle;
+      in_ix->pr.txt3i(_x+ p->pos.x, _y+ p->pos.y, p->pos.z, p->text);
+    }
+    in_ix->pr.style= saveStyle;
+  }
 }
 
 
@@ -2012,19 +2120,21 @@ bool ixBaseWindow::_update(bool in_mouseInside, bool in_updateChildren) {
     i think the mouse bool, passed to all updates might be the key
     */
 
+  if(!_is->visible) return false;
+
   recti r; getVDcoordsRecti(&r);
   if(in_updateChildren)
     if(_updateChildren(in_mouseInside? r.inside(in.m.x, in.m.y): false))
       return true;
 
-  if(is.disabled) return false;
+  if(_is->disabled) return false;
     
 
 
   // these can be in one variable... if(currentAction== _RESIZE_BOTTOM) ... currentAction can be 0, meaning no active stuff is happening.
   // for many windows, this must be changed i think. problems can happen, must further test with many buttons/windows
 
-
+  ixWinSys::_Op *dbg= &Ix::wsys()._op;
   // if an action is in progress
   if(Ix::wsys()._op.win) {
     if(Ix::wsys()._op.win!= this)      /// if the action is not done on this window, any update is ceased. (one action on one window only)
@@ -2085,7 +2195,7 @@ bool ixBaseWindow::_update(bool in_mouseInside, bool in_updateChildren) {
         //int32 x= hook.pos.x+ pos.x0, y= hook.pos.y+ pos.y0;
 
         /// check if user wants to drag the window
-        if(usage.movable) {
+        if(_usage->movable) {
         
           /// if window has no title, moving is done by dragging anywhere inside the window
           //if(mPos(x+ 1, y+ 1, pos.dx- 2, pos.dy- 2)) {      /// 5 pixels ok?
@@ -2101,7 +2211,7 @@ bool ixBaseWindow::_update(bool in_mouseInside, bool in_updateChildren) {
         } /// useMovable
 
         /// check if user wants to resize the window
-        if(usage.resizeable) {
+        if(_usage->resizeable) {
           /// left resize
           if(mPos(r.x0- 10, r.y0, 10, (int32)pos.dy)) {
             Ix::wsys()._op.resizeLeft= true;
@@ -2135,7 +2245,7 @@ bool ixBaseWindow::_update(bool in_mouseInside, bool in_updateChildren) {
         //if(mPos(r.x0, y, pos.dx, pos.dy)) {
         if(r.inside(in.m.x, in.m.y)) {
           Ix::wsys().focus= this;
-          Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
+          Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed); 
           return true;
         }
 

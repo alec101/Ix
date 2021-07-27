@@ -1,6 +1,25 @@
 #include "ix/ix.h"
 #include <stdarg.h>
 
+
+
+
+
+
+
+// maybe just altering the glyph abit, the outline could happen way easier...
+// https://blog.mapbox.com/drawing-text-with-signed-distance-fields-in-mapbox-gl-b0933af6f817
+// for certain tex offset might not be any use (the func in the shader), you can just use texture func, i think, will see... it could be faster
+
+
+
+
+
+
+
+
+
+
 // VULKAN conversion:
 /*
  -vertex shader can compute everything about the character, write in a buffer

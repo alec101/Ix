@@ -17,11 +17,11 @@ public:
   // ▀▀▀▀▀▀▀▀▀
   struct Usage: public ixBaseWindow::Usage {
 
-
     void setListMaxLength(int32 in_len);  // sets the list maximum drop down length. if options don't fit, a scroll appears
     
   private:
-    ixDropList *_parent;
+    Usage(ixBaseWindow *in_p): ixBaseWindow::Usage(in_p) {}
+    //ixDropList *_parent;
     int32 _maxLength;       // list maximum length. if the options don't fit, the scroll shows up. 
     friend class ixDropList;
   } usage;
@@ -33,6 +33,7 @@ public:
     unsigned expanded: 1;   // window is droped down / expanded down / unfolded
     Is(): ixBaseWindow::Is() { expanded= 0; }
   } is;
+  
 
   chainList optionList;     // list with all the list options
   int32 selNr;              // selected button number

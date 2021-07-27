@@ -28,10 +28,10 @@
 //#define OSI_USE_OPENGL_EXOTIC_EXT 1
 #include "osi/include/osinteraction.h"
 
-
 #include "osi/include/util/typeShortcuts.h"
 #include "osi/include/util/str8.h"
 #include "osi/include/util/mlib.hpp"
+#include "osi/include/util/rgb.hpp"
 #include "osi/include/util/chainList.hpp"
 #include "osi/include/util/circleList.hpp"
 #include "ix/util/onewayList.hpp"

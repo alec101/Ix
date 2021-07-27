@@ -21,7 +21,7 @@ public:
   struct ScrollUsage: public Usage {
     unsigned fixedDragbox: 1;      // [def:0] the drag button will have a fixed size, the scrollbar minimum size will take that into account
 
-    ScrollUsage() { delData(); }
+    ScrollUsage(ixBaseWindow *in_p): Usage(in_p) { delData(); }
     void delData() { Usage::delData(); fixedDragbox= 0; }
   } usage;
 

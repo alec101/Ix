@@ -21,7 +21,7 @@
 
 // constructors / destructors
 
-ixMenu::ixMenu(): ixBaseWindow() {
+ixMenu::ixMenu(): ixBaseWindow(&is, &usage), usage(this) {
   _type= ixeWinType::menu;
 
   _customPos= false;
@@ -730,8 +730,8 @@ void ixMenu::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_sty
 
 // constructor / destructor
 
-ixMenuBar::ixMenuBar() {
-  ixBaseWindow();
+ixMenuBar::ixMenuBar(): ixBaseWindow(&is, &usage), usage(this) {
+  
   _type= ixeWinType::menuBar;
 
   _hovered= _selected= null;

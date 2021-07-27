@@ -5,7 +5,7 @@
 // constructor / destructor //
 ///========================///
 
-ixDropList::ixDropList(): ixBaseWindow() {
+ixDropList::ixDropList(): usage(this), ixBaseWindow(&is, &usage) {
   _type= ixeWinType::dropList;
 
   buttonDx= buttonDy= 0;
@@ -27,7 +27,6 @@ ixDropList::ixDropList(): ixBaseWindow() {
 
   //_scr->_computePos();
   //_scr->_computeButtons();
-  usage._parent= this;
   _dropped= false;
 
 }
@@ -56,7 +55,7 @@ void ixDropList::Usage::setListMaxLength(int32 in_len) {
   if(in_len< 0) in_len= 0;
   _maxLength= in_len;
   if(in_len== 0)
-    _parent->_scr->setVisible(false);
+    ((ixDropList *)_win)->_scr->setVisible(false);
 }
 
 
@@ -214,6 +213,8 @@ void ixDropList::_computeScr() {
 //    ####      ##          ######      ##    ##       ##       ########
 
 bool ixDropList::_update(bool in_mIn, bool updateChildren) {
+  if(!is.visible) return false;
+
   recti r; getVDcoordsRecti(&r);
   bool insideThis= r.inside(in.m.x, in.m.y);
 

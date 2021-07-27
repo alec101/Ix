@@ -2069,23 +2069,24 @@ bool ixTxtData::_update(bool in_mIn) {
     } else {
 
       // ONELINES MUST BE FAST, A SPECIAL BRANCH SHOULD BE DONE FOR THEM
-      if(selPossible)
-        if(sel) {
+      if(!readOnly) {
+        if(selPossible && sel) {
           sel.delSelection();
           s= &cur.pLine->text;
           ret= true;
         }
 
-      if(checkLimits(c) && !readOnly) {
-        s->insert(c, *cpos);
-        nrUnicodes++;
+        if(checkLimits(c)) {
+          s->insert(c, *cpos);
+          nrUnicodes++;
       
-        _updateWrapList(cur.pLine);
-        cur.increaseUnicode();
-        cur.makeSureInBounds();
-        cur.makeSureVisible();
-        ret= true;
-      }
+          _updateWrapList(cur.pLine);
+          cur.increaseUnicode();
+          cur.makeSureInBounds();
+          cur.makeSureVisible();
+          ret= true;
+        }
+      } /// !readOnly
     }
   } /// process all manip chars
 

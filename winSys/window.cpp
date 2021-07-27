@@ -4,8 +4,7 @@
 
 
 
-ixWindow::ixWindow() {
-  ixBaseWindow();
+ixWindow::ixWindow(): usage(this), ixBaseWindow(&is, &usage) {
   _type= ixeWinType::window;
   title= null;
 }
@@ -180,7 +179,7 @@ void ixWindow::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_s
   if(useTitle && title)
     title->_vkDraw(in_cmd, in_ix);            /// draw the window title
 
-  if(usage.scrollbars || usage.autoScrollbars) {
+  if(usage._scrollbars || usage._autoScrollbars) {
     if(hscroll) hscroll->_vkDraw(in_cmd, in_ix);
     if(vscroll) vscroll->_vkDraw(in_cmd, in_ix);
   }
@@ -213,6 +212,7 @@ void ixWindow::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_s
 // window UPDATE =====------------------------------------------------
 
 bool ixWindow::_update(bool in_mouseInside, bool in_updateChildren) {
+  if(!is.visible) return false;
   if(ixBaseWindow::_update(in_mouseInside, in_updateChildren)) return true;
 
   // an operation is in progress

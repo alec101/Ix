@@ -6,7 +6,8 @@ public:
   
   // window cfg
 
-
+  Usage usage;
+  Is is;
 
   // window title cfg
 

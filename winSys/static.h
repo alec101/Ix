@@ -14,14 +14,15 @@ public:
     unsigned selection: 1;      // [def: 1] text can be selected - all selection functions avaible
     
 
-    Usage(ixStaticText *in_parent): _parent(in_parent) { delData(); }
-    void delData() { ixBaseWindow::Usage(); oneLine= 0; hasCursor= selection= 1; }
+    Usage(ixBaseWindow *in_p): ixBaseWindow::Usage(in_p) { delData(); }
+    void delData() { oneLine= 0; hasCursor= selection= 1; }
 
   protected:
-    ixStaticText *_parent;
+    //ixStaticText *_parent;
     friend class ixStaticText;
   } usage;
 
+  Is is;
 
   // funcs
 

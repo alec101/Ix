@@ -29,22 +29,22 @@ public:
     void setCustomAmountBar(int32 firstAmount, int32 secondAmount, ixOrientation in_o= RIGHT);
     void setTimeBar(int32 startingSecond, int32 endingSecond, ixOrientation in_o= RIGHT);
     
-    void setOrientation(ixOrientation in_o) { orientation= in_o; _parent->resetPosition(); }
+    void setOrientation(ixOrientation in_o) { orientation= in_o; ((ixProgressBar *)_win)->resetPosition(); }
     
 
 
-    Usage(): ixBaseWindow::Usage() { barType= value1= value2= -1; txtShowValue= true, txtPosition= 0; }
+    Usage(ixBaseWindow *in_p): ixBaseWindow::Usage(in_p) { barType= value1= value2= -1; txtShowValue= true, txtPosition= 0; }
 
   private:
-    
-    ixProgressBar *_parent;
     friend class ixProgressBar;
   } usage;
+
+  Is is;
 
   int32 position;             // [def:0]   current bar position / current percentage
   ixFontStyle font;           // font that will be used for the text on the bar
 
-
+  
 
   // funcs
 

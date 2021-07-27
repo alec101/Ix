@@ -11,10 +11,11 @@
 
 
 
-ixButton::ixButton() {
-  ixBaseWindow();
+ixButton::ixButton(): usage(this), ixBaseWindow(&is, &usage) {
   _type= ixeWinType::button;
   textX= textY= 0;
+  _specialAction= 0;
+
   //font= null;
 }
 
@@ -109,20 +110,29 @@ void ixButton::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *dumm
 #define _SPECIAL_NONE         0x0000  
 #define _SPECIAL_ACTIVATE_OFF 0x0001  // normal button -> reset activate next update() - a normal button stays activated one time, after the update is called
 //#define _SPECIAL_BLABLA       0x0002
-uint16 _specialAction= 0;
 
-void _doSpecialAction(ixButton *out_but) {
+
+void ixButton::_doSpecialAction() {
   if(_specialAction== _SPECIAL_NONE) return;
 
   if(_specialAction== _SPECIAL_ACTIVATE_OFF) {
-    out_but->is.activated= false;
+    is.activated= false;
     _specialAction= _SPECIAL_NONE;
     return;
   }
 }
 
+
+void ixButton::setActivate(bool in_b) {
+  is.activated= in_b;
+  is.pressed= in_b;
+  //_update(false, false);
+}
+
+
 bool ixButton::_update(bool in_mIn, bool in_updateChildren) {
-  _doSpecialAction(this);
+  _doSpecialAction();
+  if(!is.visible) return false;
 
   recti r; getVDcoordsRecti(&r);
   bool inside= r.inside(in.m.x, in.m.y);
@@ -164,13 +174,20 @@ bool ixButton::_update(bool in_mIn, bool in_updateChildren) {
             is.activated= !is.activated; //(is.activated? false: true);
             Ix::wsys()._op.delData();
             // AN ACTION WAS PERFORMED -> THIS MUST BE SENT SOMEWHERE
-            
+
+            if(onActivate&& is.activated) 
+              onActivate(this);
+
             return true;
             
           // normal button activation
           } else {
             is.activated= true;           // MUST STAY ACTIVATED ONLY UNTIL THE ACTION WAS PROCESSED
             is.pressed= false;
+
+            if(onActivate&& is.activated) 
+              onActivate(this);
+
             Ix::wsys()._op.delData();
             _specialAction= _SPECIAL_ACTIVATE_OFF;
             // AN ACTION WAS PERFORMED -> THIS MUST BE SENT SOMEWHERE
