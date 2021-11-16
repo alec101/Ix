@@ -48,7 +48,7 @@ public:
   void addOption(cchar *in_text);
   void addOptionAfter(cchar *in_text, ixDropListData *in_after);
   void addOptionAftern(cchar *in_text, int32 in_after);
-
+  void delAllOptions();
 
   //void draw(Ix *in_ix, ixWSsubStyleBase *in_style= null); // draws the window; can pass another style to use - ATM this is a simple but not elegant way draw the window in another state
 

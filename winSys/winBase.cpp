@@ -1629,7 +1629,10 @@ void ixBaseWindow::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *
   /// tmp vars
   bool _debug= false;
   ixWSgenericStyle *s= (ixWSgenericStyle *)(in_style? in_style: style);
+
   ixTexture *t= s->parent->getTexture(in_ix);
+  if(s->useTexture== null) t= null;
+
   recti clp;                  /// will be used for further clip-in-clip
   int nrS, nrT;               /// these will hold the number of times the texture will repeat on S and T axis
   int32 _x, _y;
@@ -2034,10 +2037,10 @@ void ixBaseWindow::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *
     in_ix->vki.draw.quad.cmdDraw(in_cmd);
   }
   
-  // border untextured - 3 pixels width
+  // border untextured - nonTexturedBorderWidth pixels width
   if(!s->useTexture) {
     in_ix->vki.draw.quad.flagTexture(false);
-    in_ix->vki.draw.quad.push.hollow= 3.0f;
+    in_ix->vki.draw.quad.push.hollow= s->nonTexturedBorderWidth;
     in_ix->vki.draw.quad.push.color= *_colorBRDtoUse;
     in_ix->vki.draw.quad.setPosDi(_x, _y, 0, pos.dx, pos.dy);
 

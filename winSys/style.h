@@ -43,6 +43,8 @@ public:
   vec4 colorBRD;          // border color of the window
   vec4 colorBRDfocus;     // border color of the window when it has focus (currently selected / focused window)
 
+  float nonTexturedBorderWidth; // [def:1] 
+
   // texture cfg
 
   // 4 0 5

@@ -872,6 +872,7 @@ void ixWSsubStyleBase::delData() {
 ///===================================================///
 
 ixWSgenericStyle::ixWSgenericStyle(): ixWSsubStyleBase() {
+  delData();
 }
 
 
@@ -884,6 +885,8 @@ void ixWSgenericStyle::delData() {
 
   colorBRD.set(1.0f, 1.0f, 1.0f, 1.0f);
   colorBRDfocus.set(0.7f, 0.5f, 0.7f, 0.55f);
+  nonTexturedBorderWidth= 1.0f;
+
 
   /// background vars
   bTexBG= 0;
@@ -958,6 +961,7 @@ void ixWSwindowStyle::delData() {
 
 
 ixWSscrollStyle::ixWSscrollStyle(): ixWSsubStyleBase() {
+  delData();
 }
 
 

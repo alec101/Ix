@@ -1014,6 +1014,7 @@ void ixScroll::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_s
   
   ixWSscrollStyle *s= (ixWSscrollStyle *)(in_style? in_style: style); /// s will be the style
   ixTexture *t= s->parent->getTexture(in_ix);
+  //if(s->useTexture== null) t= null;
 
   bool _debug= false;
 
@@ -1060,17 +1061,16 @@ void ixScroll::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_s
     in_ix->vki.draw.quad.cmdDraw(in_cmd);
   }
 
-  /// useColorOnTexture usage flag - use color for current texture
-  if(s->useTexture) {
-    in_ix->vki.draw.quad.flagTexture(s->useTexture);
-    in_ix->vki.draw.quad.cmdPushFlags(in_cmd);
 
-    if(!s->useColorOnTexture) {
-      in_ix->vki.draw.quad.push.color.set(1.0f, 1.0f, 1.0f, 1.0f);
-      in_ix->vki.draw.quad.cmdPushColor(in_cmd);
-    }
-  }
-  
+  /// useColorOnTexture usage flag - use color for current texture
+  if(s->useColorOnTexture) in_ix->vki.draw.quad.push.color= *_colorToUse;
+  else                     in_ix->vki.draw.quad.push.color.set(1.0f, 1.0f, 1.0f, 1.0f);;
+  in_ix->vki.draw.quad.cmdPushColor(in_cmd);
+
+  in_ix->vki.draw.quad.flagTexture(s->useTexture);
+  in_ix->vki.draw.quad.cmdPushFlags(in_cmd);
+
+
   // BACKGROUND texturing ========---------
   
   if(s->useTexture && s->bTexScrollBack) {
@@ -1284,18 +1284,24 @@ void ixScroll::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_s
   /// triangle sl bind
   
   if((!s->useTexture) || (!s->bTexArrows)) { /// not textured
-    in_ix->vk.CmdBindPipeline(in_cmd, VK_PIPELINE_BIND_POINT_COMPUTE, in_ix->vki.draw.triangle.sl->vk->pipeline);
+    in_ix->vk.CmdBindPipeline(in_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, in_ix->vki.draw.triangle.sl->vk->pipeline);
+    in_ix->vk.CmdBindDescriptorSets(in_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, in_ix->vki.draw.triangle.sl->vk->pipelineLayout, 0, 1, &in_ix->vki.glb[in_ix->vki.fi]->set->set, 0, nullptr);
+    in_ix->vki.draw.triangle.cmdTexture(in_cmd, t);
     in_ix->vki.cmdScissor(in_cmd, &_clip);
+
     in_ix->vki.draw.triangle.flagDisabled(is.disabled);
     in_ix->vki.draw.triangle.flagTexture(false);
+
     in_ix->vki.draw.triangle.push.color= colorArrows;
+    //in_ix->vki.draw.triangle.push.color.set(1.0f, 1.0f, 1.0f, 1.0f);
+
     in_ix->vki.draw.triangle.cmdPushFlags(in_cmd);
     in_ix->vki.draw.triangle.cmdPushColor(in_cmd);
     
     if(orientation== 0) {
       /// left arrow
       r= _arrRect[0]; r.moveD(hook.pos.x, hook.pos.y);
-      in_ix->vki.draw.triangle.setPos(0, (float)(r.x0+ 1), (float)(r.y0+ (r.dy/ 2)+ (r.dy% 2)));
+      in_ix->vki.draw.triangle.setPos(0, (float)(r.x0+ 1), ((float)r.y0+ ((float)r.dy/ 2.0f)));   // + (r.dy% 2) why not direct exact float /2 ???
       in_ix->vki.draw.triangle.setPos(1, (float)(r.xe- 1), (float)(r.ye- 1));
       in_ix->vki.draw.triangle.setPos(2, (float)(r.xe- 1), (float)(r.y0+ 1));
       in_ix->vki.draw.triangle.cmdPushPos(in_cmd);
@@ -1305,7 +1311,7 @@ void ixScroll::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_s
       r= _arrRect[1]; r.moveD(hook.pos.x, hook.pos.y);
       in_ix->vki.draw.triangle.setPos(0, (float)(r.x0+ 1), (float)(r.y0+ 1));
       in_ix->vki.draw.triangle.setPos(1, (float)(r.x0+ 1), (float)(r.ye- 1));
-      in_ix->vki.draw.triangle.setPos(2, (float)(r.xe- 1), (float)(r.y0+ (r.dy/ 2)+ (r.dy% 2)));
+      in_ix->vki.draw.triangle.setPos(2, (float)(r.xe- 1), ((float)r.y0+ ((float)r.dy/ 2.0f)));   // + (r.dy% 2) why not direct exact float /2 ???
       in_ix->vki.draw.triangle.cmdPushPos(in_cmd);
       in_ix->vki.draw.triangle.cmdDraw(in_cmd);
 
@@ -1313,17 +1319,19 @@ void ixScroll::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_s
 
       /// up arrow
       r= _arrRect[0]; r.moveD(hook.pos.x, hook.pos.y);
-      in_ix->vki.draw.triangle.setPos(0, (float)(r.x0+ (r.dx/ 2)+ (r.dx% 2)), (float)(r.y0+ 1));
-      in_ix->vki.draw.triangle.setPos(1, (float)(r.xe- 1), (float)(r.ye- 1));
-      in_ix->vki.draw.triangle.setPos(2, (float)(r.x0+ 1), (float)(r.ye- 1));
+      in_ix->vki.draw.triangle.setPos(0, ((float)r.x0+ ((float)r.dx/ 2.0f)), (float)(r.y0+ 1));
+      in_ix->vki.draw.triangle.setPos(1, (float)(r.x0+ 1),                   (float)(r.ye- 1));
+      in_ix->vki.draw.triangle.setPos(2, (float)(r.xe- 1),                   (float)(r.ye- 1));
+      
       in_ix->vki.draw.triangle.cmdPushPos(in_cmd);
       in_ix->vki.draw.triangle.cmdDraw(in_cmd);
 
       /// down arrow
       r= _arrRect[1]; r.moveD(hook.pos.x, hook.pos.y);
-      in_ix->vki.draw.triangle.setPos(0, (float)(r.x0+ (r.dx/ 2)+ (r.dx% 2)), (float)(r.ye- 1));
-      in_ix->vki.draw.triangle.setPos(1, (float)(r.x0+ 1), (float)(r.y0+ 1));
-      in_ix->vki.draw.triangle.setPos(2, (float)(r.xe- 1), (float)(r.y0+ 1));
+      in_ix->vki.draw.triangle.setPos(0, ((float)r.x0+ ((float)r.dx/ 2.0f)), (float)(r.ye- 1));
+      in_ix->vki.draw.triangle.setPos(1, (float)(r.xe- 1),                   (float)(r.y0+ 1));
+      in_ix->vki.draw.triangle.setPos(2, (float)(r.x0+ 1),                   (float)(r.y0+ 1));
+      
       in_ix->vki.draw.triangle.cmdPushPos(in_cmd);
       in_ix->vki.draw.triangle.cmdDraw(in_cmd);
     }

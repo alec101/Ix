@@ -158,7 +158,7 @@ void ixWindow::_glDraw(Ix *in_ix, ixWSsubStyleBase *in_style) {
   if(useTitle && title)
     title->_glDraw(in_ix);            /// draw the window title
 
-  if(usage.scrollbars || usage.autoScrollbars) {
+  if(usage._scrollbars || usage._autoScrollbars) {
     if(hscroll) hscroll->_glDraw(in_ix);
     if(vscroll) vscroll->_glDraw(in_ix);
   }

@@ -130,6 +130,11 @@ void ixDropList::addOptionAftern(cchar *in_text, int32 in_after) {
 }
 
 
+void ixDropList::delAllOptions() {
+  optionList.delData();
+  _computeRects();
+}
+
 
 
 void ixDropList::_computeRects() {
@@ -363,7 +368,10 @@ void ixDropList::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in
   
   in_ix->vki.draw.triangle.setPos(0, (float)(_x+ buttonDx- 4),               (float)(_y+ 4));
   in_ix->vki.draw.triangle.setPos(1, (float)(_x+ (buttonDx- buttonDy)+ 4),   (float)(_y+ 4));
-  in_ix->vki.draw.triangle.setPos(2, (float)(_x+ (buttonDx- (buttonDy/ 2))), (float)(_y+ buttonDy- 4));
+  //in_ix->vki.draw.triangle.setPos(2, (float)(_x+ (buttonDx- (buttonDy/ 2))), (float)(_y+ buttonDy- 4));
+  in_ix->vki.draw.triangle.setPos(2, (float)_x+ ((float)buttonDx- ((float)buttonDy/ 2.0f)), (float)(_y+ buttonDy- 4));
+
+
 
   in_ix->vki.draw.triangle.cmdPushAll(in_cmd);
   in_ix->vki.draw.triangle.cmdDraw(in_cmd);

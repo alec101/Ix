@@ -214,7 +214,7 @@ void ixStaticText::_glDraw(Ix *in_ix, ixWSsubStyleBase *in_style) {
   text._glDraw(in_ix, r, scr);
     
   /// scrollbars draw
-  if(usage.scrollbars || usage.autoScrollbars) {
+  if(usage._scrollbars || usage._autoScrollbars) {
     if(hscroll) hscroll->_glDraw(in_ix);
     if(vscroll) vscroll->_glDraw(in_ix);
   }
