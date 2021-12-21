@@ -330,6 +330,12 @@ class ixVulkan {
 public:
   uint32 fi;            // IX FRAME INDEX - 0 or 1 render::endDrawing updates it
 
+  // clearValues[0] background color; clearValues[1] is depth and stencil
+  // def: clearValue[0].color= {0.0f, 0.0f, 0.0f, 1.0f};
+  //      clearValue[1].depthStencil.depth= 1.0f
+  //      clearValue[1].depthStencil.stencil= 0;
+  VkClearValue clearValues[2];
+
   VkoQueue *q1, *q2;    // primary/secondary queues that will be used for rendering
   VkoQueue *qTool;      // tool queue, used for single time commands, texture building, etc (q2 if none avaible)
   VkoQueue *qTransfer;  // transfer queue (fallback is an universal queue #4, then q2, then q1)
@@ -526,10 +532,17 @@ public:
     
     // derive from this struct (add to it) then pass to ix.cfg.vk.derivedData & fill in the size too (ix.cfg.vk.derivedDataSize)
     struct Data {
-      mat4 cameraPersp;       // perspective camera matrix
-      mat4 cameraOrtho;       // orthographic camera matrix
-      vec2 vp;                // viewport position on the virtual desktop
-      vec2 vs;                // viewport size
+      alignas(64) mat4 cameraPersp;       // perspective camera matrix
+      alignas(64) mat4 cameraOrtho;       // orthographic camera matrix
+      alignas(16) vec3 cameraPos;
+      alignas(8)  vec2 vp;                // viewport position on the virtual desktop
+      alignas(8)  vec2 vs;                // viewport size
+
+      // sun
+      alignas(16) vec3 sunPos;
+      alignas(16) vec3 sunColor;
+      alignas(4)  float sunAmbientStr;
+      alignas(4)  float sunSpecularStr;   // THIS SHOULD BE PART OF THE MATERIAL, SAME AS SHININESS
     } *data;
     uint32 dataSize;          // size of data, includes the user-derived
 

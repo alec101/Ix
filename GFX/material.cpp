@@ -18,9 +18,10 @@ namespace _ixMat {
 };
 
 
+// should be used only privately, for arrayAlloc
 ixMaterial::ixMaterial(): ixClass(ixClassT::MATERIAL), _ix(null), set(null), _fileID(0) {
   map[0]= map[1]= map[2]= map[3]= null;
-
+  //_ix->vki.noTexture;
   ///_ix->res.mat.setPool->addSet(&set); <<<<
 }
 

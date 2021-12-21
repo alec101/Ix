@@ -9,6 +9,7 @@ layout(location= 1) out vec4 out_vert[2];
 layout(set= 0, binding= 0) uniform GlobalUniforms {
   mat4 cameraPersp;         // perspective camera matrix
   mat4 cameraOrtho;         // orthographic camera matrix
+  vec3 cameraPos;
   vec2 vp;                  // viewport position on the virtual desktop
   vec2 vs;                  // viewport size
 } glb;

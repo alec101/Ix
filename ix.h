@@ -422,7 +422,8 @@ inline bool ixTexture::download() { return _ix->res.tex.download(this); }
 inline bool ixTexture::unload()   { return _ix->res.tex.unload(this); }
 
 
-inline bool ixMesh::load(cchar *in_f) { return _ix->res.mesh.load(in_f, this); }
+inline bool ixMesh::load(cchar *in_f, ixFlags32 in_flags) { return _ix->res.mesh.load(in_f, this, in_flags); }
+inline bool ixMesh::save(cchar *in_f) { return _ix->res.mesh.save(in_f, this); }
 inline bool ixMesh::upload()   { return _ix->res.mesh.upload(this); }
 inline bool ixMesh::download() { return _ix->res.mesh.download(this); }
 inline bool ixMesh::unload()   { return _ix->res.mesh.unload(this); }

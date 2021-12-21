@@ -327,6 +327,16 @@ float ixUtil::randfnorm(uint32 *inout_seed) {
 
 
 
+void ixUtil::changePathSeparator(char *out_str) {
+  for(char *p= out_str; *p; p++)
+    if(*p== '\\')
+      *p= '/';
+}
 
 
+void ixUtil::changePathSeparator(str8 *out_str) {
+  for(char *p= out_str->d; *p; p++)
+    if(*p== '\\')
+      *p= '/';
+}
 

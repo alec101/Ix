@@ -82,6 +82,8 @@ MESHES
 ///======================================///
 
 ixMesh::ixMesh(Ix *in_ix): ixClass(ixClassT::MESH), _ix(in_ix) {
+  name[0]= 0;
+
   nrVert= 0;
   fileIndex= 0;
   dataType= 1;
@@ -89,6 +91,7 @@ ixMesh::ixMesh(Ix *in_ix): ixClass(ixClassT::MESH), _ix(in_ix) {
   size= 0;
 
   affinity= 0;
+  
 
   mat= null;
   buf= null;
@@ -129,7 +132,59 @@ void ixMesh::setDataType(uint32 in_t) {
 }
 
 
+bool ixMesh::changeDataType(uint32 in_newType) {
+  const char *err= null;
+  int32 errL;
+  uint8 *newData= null;
 
+  if(data== null) IXERR("host data is null");
+  if(in_newType== dataType) return true;
+
+  // all convert posibilities
+  /// current is data0
+  if(in_newType== 0) {
+
+    if(dataType== 1) {                /// data1 -> data0
+      newData= new uint8[Data0::size()* nrVert];
+      Data1i src(this);
+      Data0  dst(newData, nrVert);
+
+      for(uint32 a= 0; a< nrVert; a++)
+        dst.pos[a]=  src.vert[a].pos,
+        dst.nrm[a]=  src.vert[a].nrm,
+        dst.tex1[a]= src.vert[a].tex1;
+
+      delete[] data;
+      data= newData;
+    }
+
+
+  /// current is data1
+  } else if(in_newType== 1) {
+    
+    if(dataType== 0) {                ///data0 -> data1
+      newData= new uint8[Data1i::size()* nrVert];
+      Data0  src(this);
+      Data1i dst(newData);
+
+      for(uint32 a= 0; a< nrVert; a++)
+        dst.vert[a].pos=  src.pos[a],
+        dst.vert[a].nrm=  src.nrm[a],
+        dst.vert[a].tex1= src.tex1[a];
+
+      delete[] data;
+      data= newData;
+    }
+
+  }
+
+Exit:
+  if(err) {
+    error.detail(str8(fileName)+ "["+ name+ "]"+ " "+ err, __FUNCTION__, errL);
+    return false;
+  }
+  return true;
+}
 
 
 
@@ -208,14 +263,14 @@ ixMesh *ixMeshSys::Add::staticUber() {
 
 
 
-bool ixMeshSys::load(cchar *in_file, ixMesh *out_m) {
+bool ixMeshSys::load(cchar *in_file, ixMesh *out_m, ixFlags32 in_flags) {
   str8 ext= pointFileExt(in_file);
   ext.lower();
 
   out_m->fileName= in_file;
 
   if(ext== "i3d")
-    return out_m->_loadI3D(in_file);  
+    return out_m->_loadI3D(in_file, in_flags);
   else if(ext== "obj")
     return loadOBJ(in_file, 1, &out_m, &out_m->fileIndex);
 
@@ -223,7 +278,17 @@ bool ixMeshSys::load(cchar *in_file, ixMesh *out_m) {
 }
 
 
+bool ixMeshSys::save(cchar *in_file, ixMesh *out_m) {
+  str8 ext= pointFileExt(in_file);
+  ext.lower();
 
+  out_m->fileName= in_file;
+
+  if(ext== "i3d")
+    return out_m->_saveI3D(in_file);
+  else
+    return false;
+}
 
 
 bool ixMeshSys::upload(ixMesh *in_mesh) {

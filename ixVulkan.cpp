@@ -107,6 +107,13 @@ ixVulkan::ixVulkan(Ix *in_ix): ix(in_ix), fi(0), draw(in_ix), swap(in_ix), rende
 
   noTexture= null;
 
+  // def: clearValue[0]= { {0.0f, 0.0f, 0.0f, 1.0f}, {0.0f} };
+  //      clearValue[1].depthStencil.depth= 1.0f
+  //      clearValue[1].depthStencil.stencil= 0;
+  clearValues[0].color= {0.0f, 0.0f, 0.0f, 1.0f};
+  clearValues[1].depthStencil.depth= 1.0f;
+  clearValues[1].depthStencil.stencil= 0;
+
   /*
   screw barriers. there's semaphores delimiting things. i overthinked.
     barriers are lowest and fastest of sincronizations... but _sincronization_ . once you have a semaphore, there's nothing to sincronize anymore.
@@ -715,12 +722,20 @@ bool ixVulkan::RenderPass::startRender() {
   
   // global buffer update/upload
 
-  _ix->vki.glb[fi]->data->cameraOrtho= _ix->cameraOrtho.cameraMat;
-  _ix->vki.glb[fi]->data->cameraPersp= _ix->cameraPersp.cameraMat;
+  _ix->vki.glb[fi]->data->cameraOrtho= _ix->cameraOrtho.camMat;
+  _ix->vki.glb[fi]->data->cameraPersp= _ix->cameraPersp.camMat;
   _ix->vki.glb[fi]->data->vp.x= (float)_ix->win->x0;
   _ix->vki.glb[fi]->data->vp.y= (float)_ix->win->y0;
   _ix->vki.glb[fi]->data->vs.x= (float)_ix->win->dx;
   _ix->vki.glb[fi]->data->vs.y= (float)_ix->win->dy;
+
+  //vec3 sunPos;
+  //vec3 sunColor;
+  //float ambientStr;
+
+  _ix->vki.glb[fi]->data->vs.y= (float)_ix->win->dy;
+
+
   _ix->vki.glb[fi]->upload(_ix->vki.glb[fi]->data, 0, _ix->vki.glb[fi]->dataSize);
 
 
@@ -758,11 +773,15 @@ bool ixVulkan::RenderPass::startRender() {
     rpInfo.renderPass= *handle;
     rpInfo.framebuffer= *_ix->vki.swap.framebuffer[_ix->vki.swap.handle->currentIndex];
     rpInfo.renderArea= {{ 0, 0 }, { _ix->vki.swap.handle->dx, _ix->vki.swap.handle->dy }};
-    VkClearValue rpColor[2] = { {0.3f, 0.2f, 0.6f, 1.0f}, {0.0f} };
-    rpColor[1].depthStencil.depth= 1.0f;
-    rpColor[1].depthStencil.stencil= 0;
+
+    //VkClearValue rpColor[2] = { {0.0f, 0.0f, 0.0f, 1.0f}, {0.0f} };
+    //rpColor[1].depthStencil.depth= 1.0f;
+    //rpColor[1].depthStencil.stencil= 0;
+    //rpInfo.clearValueCount= 2;
+    //rpInfo.pClearValues= rpColor;
+
     rpInfo.clearValueCount= 2;
-    rpInfo.pClearValues= rpColor;
+    rpInfo.pClearValues= _ix->vki.clearValues;
     
   _ix->vk.CmdBeginRenderPass(*cmdMain[fi], &rpInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 

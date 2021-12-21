@@ -132,6 +132,9 @@ void ixDropList::addOptionAftern(cchar *in_text, int32 in_after) {
 
 void ixDropList::delAllOptions() {
   optionList.delData();
+  sel= null;
+  selNr= 0;
+
   _computeRects();
 }
 
@@ -200,7 +203,13 @@ void ixDropList::_computeScr() {
 }
 
 
+void ixDropList::select(int32 in_n) {
+  /// out of bounds check
+  if((in_n< 0) || (in_n>= (int32)optionList.nrNodes)) return;
 
+  sel= (ixDropListData *)optionList.get(in_n);
+  selNr= in_n;
+}
 
 
 
@@ -336,6 +345,7 @@ void ixDropList::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in
   in_ix->vki.cmdScissor(in_cmd, &_clip);
 
   
+
   // background
   in_ix->vk.CmdBindPipeline(in_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, in_ix->vki.draw.quad.sl->vk->pipeline);
   in_ix->vk.CmdBindDescriptorSets(in_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, in_ix->vki.draw.quad.sl->vk->pipelineLayout, 0, 1, &in_ix->vki.glb[in_ix->vki.fi]->set->set, 0, null);

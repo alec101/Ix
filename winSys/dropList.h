@@ -50,6 +50,8 @@ public:
   void addOptionAftern(cchar *in_text, int32 in_after);
   void delAllOptions();
 
+  void select(int32);   // select an option from the list, directly
+
   //void draw(Ix *in_ix, ixWSsubStyleBase *in_style= null); // draws the window; can pass another style to use - ATM this is a simple but not elegant way draw the window in another state
 
   // constructor / destructor

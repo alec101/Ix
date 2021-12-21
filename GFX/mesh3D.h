@@ -2,6 +2,7 @@
 
 
 
+#define IX_MESH_NAME_LEN 64
 
 // maybe more types of meshes... this might be the best solution
 // a generic mesh would be slow, filled with conditionals to be able to work in any condition
@@ -24,8 +25,10 @@ public:
     vec3 *nrm;        // array[nr vertices]
     vec2 *tex1;       // array[nr vertices]
     inline static uint64 size() { return (sizeof(vec3)+ sizeof(vec3)+ sizeof(vec2)); }
-    inline void linkToMesh(const ixMesh *in_m) { pos= (vec3 *)in_m->data; nrm= pos+ in_m->nrVert; tex1= (vec2 *)(nrm+ in_m->nrVert); }
-    Data0(const ixMesh *in_m) { linkToMesh(in_m); }
+    inline void linkToMesh(const ixMesh *in_m)            { pos= (vec3 *)in_m->data; nrm= pos+ in_m->nrVert; tex1= (vec2 *)(nrm+ in_m->nrVert); }
+    inline void linkToData(cvoid *in_d, uint32 in_nrVert) { pos= (vec3 *)in_d;       nrm= pos+ in_nrVert;    tex1= (vec2 *)(nrm+ in_nrVert); }
+    Data0(const ixMesh *in_m)            { linkToMesh(in_m); }
+    Data0(cvoid *in_d, uint32 in_nrVert) { linkToData(in_d, in_nrVert); }
   };
   
   struct Data1i { /// dataType 1 - interweaved
@@ -36,11 +39,14 @@ public:
     } *vert;
     inline static uint64 size() { return (sizeof(vec3)+ sizeof(vec3)+ sizeof(vec2)); }
     Data1i(const ixMesh *in_m): vert((Vert *)in_m->data) {}
+    Data1i(cvoid *in_d):        vert((Vert *)in_d) {}
   };
 
   // vertex data
   
-  str8 fileName;      // [def:null] filename of the mesh, used for reloads
+  str8 fileName;      // [def:""] filename of the mesh, used for reloads
+  str8 fileInputName; // [def:""] import file name (.dae .blend .3ds .obj) - used for fast updates from source
+  char name[IX_MESH_NAME_LEN]; // [def:""] name of the object (same as in the input file)
   uint32 fileIndex;   // [def:0] mesh number in the <fileName> to load
   uint32 nrVert;      // number of vertices in mesh
   uint32 dataType;    // [def:1] internal data format (Data1 struct, Data1i struct, etc)
@@ -66,12 +72,15 @@ public:
   void setDataType(uint32 in_type); // [def:1] internal data format (Data0 struct, Data1i struct, etc)
 
   // useful inlines, ix.res.mesh has the real funcs
-  inline bool load(cchar *);
+  inline bool load(cchar *, ixFlags32 in_flags= 0);
+  inline bool save(cchar *);
   inline bool loadOBJ(cchar *in_f, uint32 *in_OBJmeshNr= null, const char **in_OBJmeshNames= null);
   inline bool upload();
   inline bool download();
   inline bool unload();
   
+  bool changeDataType(uint32 in_newType);
+
 
   ixMesh(Ix *in_ix);
   ~ixMesh();
@@ -84,9 +93,14 @@ private:
 
   //bool _load(cchar *in_fileName);
 
-  bool _loadI3D(cchar *in_fname);
-  bool _saveI3D(cchar *in_fname);
-  bool _loadI3DdataV0_0_1(FILE *in_f);
+  // flags:
+  // 0x0001 - load the input filename that this mesh is based on (.dao .blend .3ds etc)
+  // IT MIGHT BE THE fileName CAN BE IGNORED TOO, IF NEEDED, IT CAN BE ANOTHER OPTIMIZATION...
+  bool _loadI3D(cchar *in_fname, ixFlags32 in_flags= 0);
+
+  // flags unused atm
+  bool _saveI3D(cchar *in_fname, ixFlags32 in_flags= 0);
+  bool _loadI3DdataV0_0_1(FILE *in_f, ixFlags32 in_flags);
   
   friend class ixMaterial;
   friend class ixMeshSys;
@@ -133,9 +147,10 @@ public:
 
   // loading / saving funcs
 
-  bool load(cchar *in_fileName, ixMesh *out_mesh);
+  bool load(cchar *in_fileName, ixMesh *out_mesh, ixFlags32 in_flags= 0);
+  bool save(cchar *in_fileName, ixMesh *in_mesh);
 
-  bool loadI3D(cchar *in_fname, ixMesh *out_mesh);
+  bool loadI3D(cchar *in_fname, ixMesh *out_mesh, ixFlags32 in_flags= 0);
   bool saveI3D(cchar *in_fname, ixMesh *in_mesh);
 
 

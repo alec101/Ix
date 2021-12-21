@@ -529,6 +529,7 @@ void Ix::shutdown() {
   res.tex.delData(); //  <<<<<<<  texSys must unload everything before vulkan systems shutdown
   res.mesh.delData();
   res.shader.delData();
+  res.mat.delData();
 
   delData();
 
@@ -754,7 +755,7 @@ bool Ix::startPerspective() {
   if(!win) return false;
   if(!win->isCreated) return false;
 
-  cameraPersp.setPerspective(vec3(0.0f), vec3(0.0f, 0.0f, 1.0f), 80.0f, (float)win->dx/ (float)(win->dy? win->dy: 1), 0, 1200);
+  //cameraPersp.setPerspective(vec3(0.0f), vec3(0.0f, 0.0f, 1.0f), 80.0f, (float)win->dx/ (float)(win->dy? win->dy: 1), 0, 1200);
   camera= &cameraPersp;
 
   #ifdef IX_USE_VULKAN

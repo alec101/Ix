@@ -205,7 +205,9 @@ ixRadioButton *ixWinSys::createRadioButton(ixBaseWindow *in_parent, int32 in_x0,
   b->parent= in_parent;
 
   /// default vars
-  //b->style= selStyle->MAKEME
+  b->style= &selStyle->button;
+  b->_applyColorsFromStyle();
+  
   b->font= *Ix::getMain()->pr.style;
   b->is.visible= true;
 
@@ -237,7 +239,9 @@ ixDropList *ixWinSys::createDropList(ixBaseWindow *in_parent, int32 in_x0, int32
   d->parent= in_parent;
 
   /// default vars
-  //d->style= selStyle->MAKEME
+  d->style= &selStyle->window;      // <<< NO STYLE FOR THIS
+  d->_applyColorsFromStyle();
+
   d->font= *Ix::getMain()->pr.style;
   d->is.visible= true;
 
@@ -268,7 +272,9 @@ ixProgressBar *ixWinSys::createProgressBar(ixBaseWindow *in_parent, int32 in_x0,
   p->parent= in_parent;
 
   /// default vars
-  //p->style= selStyle->MAKEME
+  p->style= &selStyle->window;      // NO STYLE FOR THIS<<<<<<<<<<<<<<<<<<<<
+  p->_applyColorsFromStyle();
+
   p->font= *Ix::getMain()->pr.style;
   p->is.visible= true;
   
@@ -296,7 +302,9 @@ ixMenu *ixWinSys::createMenu(ixBaseWindow *in_parent) {
 
 
   /// default vars
-  //m->style= selStyle->MAKEME
+  m->style= &selStyle->window;      // NO STYLE FOR THIS<<<<<<<<<<<<<<<<<<<<
+  m->_applyColorsFromStyle();
+
   m->font= *Ix::getMain()->pr.style;
   m->setVisible(false); // ?
   
@@ -323,7 +331,8 @@ ixMenuBar *ixWinSys::createMenuBar(ixBaseWindow *in_parent) {
 
 
   /// default vars
-  //m->style= selStyle->MAKEME
+  m->style= &selStyle->window;        // NO STYLE FOR THIS <<<<<<<<<<<<<<<
+  m->_applyColorsFromStyle();
   m->font= *Ix::getMain()->pr.style;
   m->is.visible= true;
   m->setVisible(true);
