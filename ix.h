@@ -40,7 +40,7 @@ inline void ixMemcpy(void *dst, const void *src, uint64_t n) { return Str::memcp
 
 
 enum class ixClassT: uint16 {
-  IX, MATERIAL, MESH, RESOURCE, SHADER, TEXSTREAM, TEXTURE, VKCLUSTER, VKCLUSTERSEGMENT, VKRESOURCE, VKBUFFER, VKIMAGE
+  IX, MATERIAL, MESH, SKELETON, BONE, ANIM_MK1, RESOURCE, SHADER, TEXSTREAM, TEXTURE, VKCLUSTER, VKCLUSTERSEGMENT, VKRESOURCE, VKBUFFER, VKIMAGE
 };
 
 // base class for all ix objects
@@ -55,6 +55,12 @@ public:
   //ixClass(ixClassT in_t, Ix *in_ix): classT(in_t), _ix(in_ix) {}
 };
 
+// way simpler class, if tight space is needed, not in a chainlist
+class ixClass2 {
+public:
+  ixClassT classT;
+  ixClass2(ixClassT in_t): classT(in_t) {}
+};
 
 
 #include "util/common.hpp"
@@ -69,7 +75,10 @@ public:
 #include "GFX/texStream.h"
 #include "GFX/material.h"
 #include "GFX/mesh3D.h"
+#include "GFX/skeleton.h"
+
 #include "GFX/object.h"
+
 
 #ifdef IX_USE_OPENGL
 #include "GFX/glo/gloShader.h"
@@ -293,7 +302,7 @@ public:
   #endif
 
 
-  ixCamera cameraPersp, cameraOrtho;
+  ixCamera cameraPersp, cameraUI;
   ixCamera *camera;                     // currently active camera class
   const osiRenderer *ren;               // osi renderer tied to this ix engine (Stimpy would be proud)
   const osiGPU *gpu;

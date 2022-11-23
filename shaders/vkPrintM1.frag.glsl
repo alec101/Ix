@@ -12,6 +12,7 @@ layout(push_constant) uniform PConst {
   vec4 color2;            // outline color
   int flags;              // each byte meaning: 0= persp camera, 1= ortho camera, 2= outline, 3= solid background
   int outline;            // 0= no outline, [1-5]= outline distance
+  float scale;
 } p;
 
 
@@ -37,7 +38,8 @@ void main() {
     // also, texture func could work, i think i overthinked this - textureOffset might not be the good answer <<<< texture(sampler, coord... i mean, why use offset?!)
     //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-
+    // FNT can make the glypth bigger, to encase a bigger outline
+    // OR not, make the quad bigger from shader vert - this maaaaaaaaybe be possible from here
 
 
     // i know this is retarded, but textureOffset accepts only compile-time constant as the offset -.-

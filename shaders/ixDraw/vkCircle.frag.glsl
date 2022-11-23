@@ -8,11 +8,17 @@ layout(location= 0) out vec4 out_color;
 // sets
 
 layout(set= 0, binding= 0) uniform GlobalUniforms {
-  mat4 cameraPersp;         // perspective camera matrix
-  mat4 cameraOrtho;         // orthographic camera matrix
-  vec3 cameraPos;
-  vec2 vp;                  // viewport position on the virtual desktop
-  vec2 vs;                  // viewport size
+  mat4 cameraPersp;       // perspective camera matrix
+  mat4 cameraUI;          // UI orthographic camera matrix
+  vec3 cameraPos;         // camera position (eye) in the world
+  vec2 vp;                // [scaled] UI viewport position on the virtual desktop
+  vec2 vs;                // [scaled] UI viewport size
+  float UIscale;
+
+  vec3 sunPos;
+  vec3 sunColor;
+  float sunAmbientStr;
+  float sunSpecularStr;
 } glb;
 
 layout(set= 1, binding= 0) uniform sampler2D texSampler;
@@ -26,7 +32,7 @@ layout(push_constant) uniform PConsts {
   float tx0, ty0, tDepth;       // tex coords start (z= depth)
   float txe, tye;               // tex coords end
   float hollow;                 // negative= no hollowing;
-  int flags;                    // each byte meaning: 1= persp camera, 2= ortho camera, 3= enable texture, 4= disabled color (greyscale)
+  int flags;                    // each byte meaning: 1= persp camera, 2= UI camera, 3= enable texture, 4= disabled color (greyscale)
 } p;
 
 

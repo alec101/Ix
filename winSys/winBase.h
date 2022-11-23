@@ -1,7 +1,8 @@
 #pragma once
 
-//class ixWSshader;
 class ixBaseWindow;
+class ixScroll;
+
 
 // the hooking class of any window
 class ixWinHook {
@@ -17,7 +18,7 @@ public:
   //  - if this is top window (no parent), hooked window has to be top object also
 
   ixEBorder border;       // corner that is being hooked to [0-7] (same wheel used)
-  vec3i pos;              // hooked point position in virtual desktop.
+  vec3 pos;               // hooked point position in virtual desktop.
   ixBaseWindow *ixWin;    // ix base window hooked to
   osiWindow *osiWin;      // osiWindow hooked to
   osiMonitor *osiMon;     // osiMonitor hooked to
@@ -35,7 +36,7 @@ public:
 
   //void setHookDefault();    // sets the hook to virtual desktop - 0, 0 bottom left border
   virtual void updateHooks(bool updateThis= true);       // !!! after a window is moved, the hook and all the children's hooks _must_ be updated !!!
-  virtual void updateHooksDelta(int32 dx, int32 dy, bool updateThis= true); // this should be faster than updateHooks(), if delta changes per coords are known
+  virtual void updateHooksDelta(float dx, float dy, bool updateThis= true); // this should be faster than updateHooks(), if delta changes per coords are known
 
   // constructor / destructor
 
@@ -47,9 +48,9 @@ private:
   bool _anchorToEdge;               // if true, the hooking happens to an edge of a window. if not, the hooking happens to the childArea. this has to be set on each hook switch or init
 
   void _compute();
-  void _computeDelta(int32 in_dx, int32 in_dy);
+  void _computeDelta(float in_dx, float in_dy);
   void _computeParentHooks();                               // updates hooked windows that are tied to this window
-  void _computeParentHooksDelta(int32 in_dx, int32 in_dy);  // updates hooked windows that are tied to this window
+  void _computeParentHooksDelta(float in_dx, float in_dy);  // updates hooked windows that are tied to this window
   void _adjustHookPosWithScroll();
   void _setWinPosBorderTo0(ixEBorder in_borderOfThis);
   bool _computeAnchorToEdgeVar(ixBaseWindow *in_window);    // calculates if the anchor will be a window edge or a childArea edge
@@ -60,12 +61,11 @@ private:
 
 
 
-class ixScroll;
+
 
 
 class ixBaseWindow: public chainData {
 public:
-
 
   // you can freely change these colors, will affect the window
   vec4 color;         // main background color of the window
@@ -100,7 +100,7 @@ public:
   class StaticPrint: public chainData {
   public:
     str8 text;
-    vec3i pos;
+    vec3 pos;
     ixFontStyle fntStyle;
     bool visible;
   };
@@ -109,22 +109,17 @@ public:
   // using current font style if <in_style> is left null
   // returns a pointer/_handle_ for the created static text, that can be used to further modify the text with other funcs
   // return value of null, marks an error
-  void *printStatic(cchar *in_text, vec3i *in_pos, ixFontStyle *in_style= null);
+  void *printStatic(cchar *in_text, vec3 *in_pos, ixFontStyle *in_style= null);
 
   // in_handle, the _handle_ of the static text to be modified
   // any parameter left null, will be unchanged
-  void printStaticModify(void *in_handle, cchar *in_newText= null, vec3i *in_newPos= null, ixFontStyle *in_newStyle= null);
+  void printStaticModify(void *in_handle, cchar *in_newText= null, vec3 *in_newPos= null, ixFontStyle *in_newStyle= null);
 
   // shows/hides the text
   // <in_visible> [true: show text], [false: hide text]
   void printStaticSetVisible(void *in_handle, bool in_visible= true);
 
   // behavior flags
-
-  //vvv
-  //ANY FLAG THAT CAN BE CHANGED SHOULD BE IN 'usage' IM THINKING
-  //'is' STRUCT IS MORE LIKE INFO STRUCT
-  //^^^
 
   struct Usage {
   protected:
@@ -156,7 +151,7 @@ public:
     }
   };
 
-  // functional flags
+  // informational flags
 
   struct Is {
     unsigned visible: 1;     // if it is currently visible
@@ -165,26 +160,31 @@ public:
     unsigned opening: 1;     // opening underway (animations)
     unsigned closing: 1;     // closing underway (animations)
   
-    //unsigned MOUSEfocus: 1;  // has mouse focus
-    //unsigned KBfocus: 1;     // has keyboard focus
-    //unsigned GPfocus: 1;     // has gamepad focus
-    //unsigned JOYfocus: 1;    // has joystick focus
-
-    //Is() { visible= 1; minimized= disabled= opening= closing= 0; }
     Is() { delData(); }
-    virtual void delData() { visible= 1; minimized= 0; disabled= 0; opening= closing= 0; /*MOUSEfocus= KBfocus= GPfocus= JOYfocus= 0;*/ }
+    virtual void delData() { visible= 1; minimized= 0; disabled= 0; opening= closing= 0; }
   };
 
   ixWinHook hook;       // window hooking - hook a window to another window with this
-  recti pos;            // window position, origin is based on the hook
-  
-  // returns window coordinates based on the hook, in the virtual dektop
-  inline void getVDcoords2f(float *out_x, float *out_y) { if(out_x) *out_x= (float)(hook.pos.x+ pos.x0); if(out_y) *out_y= (float)(hook.pos.y+ pos.y0); }
-  inline void getVDcoords2i(int32 *out_x, int32 *out_y) { if(out_x) *out_x= hook.pos.x+ pos.x0;          if(out_y) *out_y= hook.pos.y+ pos.y0; }
-  inline void getVDcoordsv3(vec3i *out) { if(out) out->set(hook.pos.x+ pos.x0, hook.pos.y+ pos.y0, 0); }
-  inline void getVDcoordsRecti(recti *out) { if(out) out->setD(hook.pos.x+ pos.x0, hook.pos.y+ pos.y0, pos.dx, pos.dy); }
+  rectf pos;            // window position - in parent's area, whatever that parent is, if there's one; [(hook+offset)] MUST call computePos() after parent is updated, to update the values
+  float &scaleUI;
+
+  //recti posVD;          // maybe
+  //inline void computePosVD() { posVD= pos; posVD.move(hook.pos.x, hook.pos.y); }
+
+  inline void getPosVD(float *out_x, float *out_y) const { if(out_x) *out_x= hook.pos.x+ pos.x0; if(out_y) *out_y= hook.pos.y+ pos.y0; }
+  //inline void getPosVD(int32 *out_x, int32 *out_y) const { if(out_x) *out_x= (int32)(hook.pos.x+ pos.x0);          if(out_y) *out_y= (int32)(hook.pos.y+ pos.y0); }
+  inline void getPosVD(vec3 *out) const  { out->set(hook.pos.x+ pos.x0, hook.pos.y+ pos.y0, out->z); }
+  inline void getPosVD(rectf *out) const { out->setD(hook.pos.x+ pos.x0, hook.pos.y+ pos.y0, pos.dx, pos.dy); }
+  //inline void getPosVD(recti *out) const { out->setD(hook.pos.x+ pos.x0, hook.pos.y+ pos.y0, pos.dx, pos.dy); }
+
+  inline void getPosVDnoScale(float *out_x, float *out_y) const { if(out_x) *out_x= _scaleMul(hook.pos.x+ pos.x0); if(out_y) *out_y= _scaleMul(hook.pos.y+ pos.y0); }
+  //inline void getPosVDnoScale(int32 *out_x, int32 *out_y) const { if(out_x) *out_x= _scaleMul(hook.pos.x+ pos.x0); if(out_y) *out_y= _scaleMul(hook.pos.y+ pos.y0); }
+  inline void getPosVDnoScale(rectf *out) const { out->setD(_scaleMul(hook.pos.x+ pos.x0), _scaleMul(hook.pos.y+ pos.y0), _scaleMul(pos.dx), _scaleMul(pos.dy)); }
+  //inline void getPosVDnoScale(recti *out) const { out->setD(_scaleMuli(hook.pos.x+ pos.x0), _scaleMuli(hook.pos.y+ pos.y0), _scaleMuli(pos.dx), _scaleMuli(pos.dy)); }
 
   ixWSsubStyleBase *style;       // object style: texture/ colors/ border props/ everything
+
+  ixFontStyle font;             // main font used for the window
 
   // link objects - parent + childrens
 
@@ -197,21 +197,22 @@ public:
 
   // funcs
 
-  //virtual void draw(Ix *in_ix, ixWSsubStyleBase *in_style= null); // draws the window; can pass another style to use - ATM this is a simple but not elegant way draw the window in another state
   void draw(Ix *in_ix); // draws the window - use wsys::draw() to draw all windows, instead of this. it will be faster, less inits
 
   // update the window - returns true if an action happened on this window or it's children
-  inline bool update(bool updateChildren= true) { if(parent) { recti r; parent->getVDcoordsRecti(&r); return _update(r.inside(in.m.x, in.m.y), updateChildren); } else return _update(true, updateChildren); }
+  inline bool update(bool updateChildren= true) { if(parent) { return _update(updateChildren); } else return _update(updateChildren); }
 
-  virtual void move(int32 x0, int32 y0);            // moves window and all children to specified coords
-  virtual void moveDelta(int32 dx, int32 dy);       // moves window and all children a delta distance (deltax, deltay)
-  virtual void resize(int32 dx, int32 dy);          // resizes window, this will move all children hooked on the right and bottom side
-  virtual void resizeDelta(int32 dx, int32 dy);     // resizes window (enlarges, shrinkens by specified amount), this will move all children hooked on the right and bottom side
-  virtual void setPos(int32 x0, int32 y0, int32 dx, int32 dy); // sets position and size of the window
+  virtual void move(float x0, float y0);            // moves window and all children to specified coords
+  virtual void moveDelta(float dx, float dy);       // moves window and all children a delta distance (deltax, deltay)
+  virtual void resize(float dx, float dy);          // resizes window, this will move all children hooked on the right and bottom side
+  virtual void resizeDelta(float dx, float dy);     // resizes window (enlarges, shrinkens by specified amount), this will move all children hooked on the right and bottom side
+  virtual void setPos(float x0, float y0, float dx, float dy); // sets position and size of the window
+  //virtual void setPosOrigin(float x0, float y0, float dx, float dy);  // the original position of the window. In case a scale is re-applied, this origin will be used
+  //virtual float applyScale();                       // sets position to [original* scale], scale is based on what wsys has defined to be target resolution and type of scaling; returns the actual scaling done
 
   /// these could include normal buttons to be able to be shown, the'x', minimize, restore, and maybe some window icon
-  virtual int32 getMinDx() { return 15; }           // returns the minimum dx of the window, in pixels
-  virtual int32 getMinDy() { return 15; }           // returns the minimum dy of the window, in pixels
+  virtual float getMinDx();                         // returns the minimum dx of the window, in pixels
+  virtual float getMinDy();                         // returns the minimum dy of the window, in pixels
 
   void setDisable(bool in_b) { _is->disabled= (in_b? 1: 0); }
   void setVisible(bool in_b) { _is->visible= (in_b? 1: 0); }
@@ -219,50 +220,30 @@ public:
   void changeParent(ixBaseWindow *);
   void removeParent();
 
-  //bool loadTex(cchar *file);        // loads a texture from the specified file; [tex] internal class will point to it
-  //bool loadDef();                   // loads the default window (defWinTex.tga)
-
   // constructor / destructor
 
   ixBaseWindow(Is *i, Usage *u);
   ~ixBaseWindow();
   virtual void delData();
 
-protected:
-
-  uint8 _getDisableColori(uint in_r, uint in_g, uint in_b) { return (uint8)((in_r+ in_g+ in_b)/ 3); }
-  float _getDisableColorf(float in_r, float in_g, float in_b) { return (in_r+ in_g+ in_b)/ 3.0f; }
-  vec4 _getDisableColor(vec4 in_c) { float n= (in_c.r+ in_c.g+ in_c.b)/ 3.0f;  return vec4(n, n, n, in_c.a); }
-
-  ixScroll *hscroll, *vscroll;
-
-  // child and view area
 public:
-  recti _viewArea;                  // the viewing area of the window. scrollbar heavily uses this in conjunction with _childArea
-  recti _childArea;                 // total child area
+  // child and view area
+  rectf _viewArea;                  // the viewing area of the window. scrollbar heavily uses this in conjunction with _childArea
+  rectf _childArea;                 // total child area
   bool _clipUsePrentsParent;        // special windows child windows (scrolls/title) will use window's parent for the clipping
-  recti _clip;                      // the clipping plane, for drawing
+  rectf _clip;                      // the clipping plane, for drawing
+
 protected:
-  
 
+  ixeWinType _type;                 // [constant] window type, this is set in constructor
+  Is *_is;
+  Usage *_usage;
+  ixScroll *hscroll, *vscroll;
+  //recti posOrigin;                  // created position; used to re-apply scale to it, or restore to original position
 
-  virtual void _computeAll();
-  virtual void _computeAllDelta(int32 dx, int32 dy);
+   
 
-  virtual void _computeViewArea();  // call after any window resize
-  virtual void _computeChildArea(); // computes the total child area - call after a child moves/resizes - depends on _viewArea, so call that first
-  inline void _getVDviewArea(recti *out_r) { out_r->setD(_viewArea.x0+ pos.x0+ hook.pos.x, _viewArea.y0+ pos.y0+ hook.pos.y, _viewArea.dx, _viewArea.dy); }
-
-  virtual void _computeScrollBars();
-  
-  //inline void _computeClipPlane() { if(parent) { parent->_getVDviewArea(&_clip); _clip.intersectRect(parent->_clip); } else _clip.setD(osi.display.vx0, osi.display.vy0, osi.display.vdx, osi.display.vdy); }
-  void _computeClipPlane();
-  void _computeClipPlaneDelta(int32 dx, int32 dy);
-
-  ixeWinType _type;                    // [constant] window type, this is set in constructor
-
-
-  virtual bool _update(bool mouseInside, bool updateChildren= true);  // the update func that every derived class will have to further build upon
+  virtual bool _update(bool updateChildren= true);  // the update func that every derived class will have to further build upon
   
   #ifdef IX_USE_OPENGL
   virtual void _glDraw(Ix *in_ix, ixWSsubStyleBase *in_style= null);  // the drue draw func, init stuff, pass it to this
@@ -276,15 +257,59 @@ protected:
   static void _vkDrawFinish(VkCommandBuffer in_cmd, Ix *in_ix);                     // call once after all windows draw, per ix
   #endif
 
-  bool _updateChildren(bool mouseInside);
+  bool _updateChildren();
   bool _inBounds(Ix *in_ix);      // returns if true if the window is in bounds of the monitors tied to the <in_ix> engine
 
+
   virtual void _applyColorsFromStyle() { color= style->color, colorFocus= style->colorFocus, colorHover= style->colorHover; }
+  
+  inline uint8 _getDisableColori(uint in_r, uint in_g, uint in_b)    const { return (uint8)((in_r+ in_g+ in_b)/ 3); }
+  inline float _getDisableColorf(float in_r, float in_g, float in_b) const { return (in_r+ in_g+ in_b)/ 3.0f; }
+  inline vec4 _getDisableColor(vec4 in_c)                            const { float n= (in_c.r+ in_c.g+ in_c.b)/ 3.0f;  return vec4(n, n, n, in_c.a); }
 
   void _createScrollbars();
 
-  Is *_is;
-  Usage *_usage;
+  virtual void _computeAll();
+  virtual void _computeAllDelta(float dx, float dy);
+
+  virtual void _computeViewArea();  // call after any window resize
+  virtual void _computeChildArea(); // computes the total child area - call after a child moves/resizes - depends on _viewArea, so call that first
+  inline void _getVDviewArea(rectf *out_r) { out_r->setD(hook.pos.x+ pos.x0+ _viewArea.x0, hook.pos.y+ pos.y0+ _viewArea.y0, _viewArea.dx, _viewArea.dy); }
+
+  virtual void _computeScrollBars();
+  
+  void _computeClipPlane();
+  void _computeClipPlaneDelta(float dx, float dy);
+
+  int32 _getUnit() const;                             // 720p[1] 1080p[2] 1620p[3] 2160p[4] etc for current window position
+  int32 _getThinUnit() const;                         // 720p[1] 1080p[1] 1620p[1] 2160p[2] etc, mediumUnit/ 2, minimum 1
+  inline int32 _getUnitMonitor(osiMonitor *in_m) const { return MAX(1, in_m->dy/ 540); }      // returns the scaled unit for specified monitor
+  inline int32 _getThinUnitMonitor(osiMonitor *in_m) { return MAX(1, _getUnitMonitor(in_m)/ 2); } // thin unit= unit / 2
+  int32 _getUnitCoords(float x, float y) const;       // returns the scaled unit(1080p[2], 2160p[4], etc) for the specified coords - checks what monitor has those coords inside
+
+  //static float _getScale(const osiMonitor *in_m);
+  //static float _getScale(int32 in_x, int32 in_y);
+
+  //float _scale;     // THIS COULD HAPPEN <<<<<<<<<<<<
+  
+  //inline int32 _scaleMuli(int32 in) const { return mlib::roundf((float)in* scaleUI); };
+  //inline int32 _scaleMuli(float in) const { return mlib::roundf(in* scaleUI); }
+  //inline float _scaleMulf(int32 in) const { return (float)in* scaleUI; };
+  //inline float _scaleMulf(float in) const { return in* scaleUI; }
+
+  //inline int32 _scaleDivi(int32 in) const { return mlib::roundf((float)in/ scaleUI); }
+  //inline int32 _scaleDivi(float in) const { return mlib::roundf(in/ scaleUI); }
+  //inline float _scaleDivf(int32 in) const { return (float)in/ scaleUI; }
+  //inline float _scaleDivf(float in) const { return in/ scaleUI; }
+
+  inline float _scaleMul(float in) const { return in* scaleUI; }
+  inline float _scaleMul(int32 in) const { return (float)in* scaleUI; }
+  inline float _scaleDiv(float in) const { return in/ scaleUI; }
+  inline float _scaleDiv(int32 in) const { return (float)in/ scaleUI; }
+  
+
+  inline void _scaleMulApply(rectf *out) const { out->set(out->x0* scaleUI, out->y0* scaleUI, out->xe* scaleUI, out->ye* scaleUI); }
+  //inline void _scaleMulApply(recti *out) const { out->set(_scaleMuli(out->x0), _scaleMuli(out->y0), _scaleMuli(out->xe), _scaleMuli(out->ye)); }
 
   friend class ixScroll;
   friend class ixWinSys;

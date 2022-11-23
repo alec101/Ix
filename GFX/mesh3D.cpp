@@ -4,6 +4,23 @@
 
 std::mutex ixMesh::mtx;     // no constructors loading no mesh, or this must be put in a inline func
 
+/* ALIGNMENT:
+ https://vulkan-tutorial.com/Uniform_buffers/Descriptor_pool_and_sets#page_Alignment-requirements
+  vec2:    8
+  vec3/4: 16
+  nested (inside structures): 16
+  float/int: 4
+  following struct will have garbage of 8 between a and b:
+  struct {
+    alignas(8)  vec2 a;
+    alignas(16) vec4 b;
+    float c, d;
+  }; 
+  therefore, careful with the positioning
+  c and d could be placed after a, and you would not have any garbage;
+*/
+
+
 /*
 * RESEARCH:
   - index buffers' main thing is the reusability of vertexes... if you can use indexes even with more mem, it's worth it
@@ -20,9 +37,12 @@ std::mutex ixMesh::mtx;     // no constructors loading no mesh, or this must be 
 
 */
   
+// skinning
+// https://webglfundamentals.org/webgl/lessons/webgl-skinning.html
 
 
 
+#define IX_VERTEX_DATA_ALIGNMENT 16
 
 
 
@@ -86,19 +106,20 @@ ixMesh::ixMesh(Ix *in_ix): ixClass(ixClassT::MESH), _ix(in_ix) {
 
   nrVert= 0;
   fileIndex= 0;
-  dataType= 1;
   data= null;
   size= 0;
 
   affinity= 0;
-  
 
   mat= null;
   buf= null;
   bufOffset= 0;
 
-  flags.setUp(0x01);    // interweaved data
-  flags.setUp(0x02);    // keep host data
+  boneRoot= null;
+  nrBones= 0;
+  
+  flags.setUp(0x0002);    // keep host data by default?????
+  format.flags.setUp(0x0001);   // interweaved data by default?????
 
   _matLink= null;
 
@@ -113,8 +134,44 @@ ixMesh::~ixMesh() {
 
 
 void ixMesh::delData() {
-  if(buf) _ix->res.mesh.unload(this);
   nrVert= 0;
+  size= 0;
+
+  if(data) { delete[] data; data= null; }
+  if(buf) { _ix->res.mesh.unload(this); buf= null; }
+}
+
+
+
+
+
+bool ixMesh::alloc_data(uint32 in_nrVert, const DataFormat *in_newFormat) {
+  const char *err= null;
+  int errL;
+
+  if(in_nrVert== 0) IXERR("<in_nrVert> is zero");
+  if(format.size== 0 && in_newFormat== null) IXERR("current data format is not setup prior to calling this func (format.size==0), new format not provided in <in_newFormat>");
+  if(in_newFormat)
+    if(in_newFormat->size== 0) IXERR("<in_newFormat->size> specified format's size is 0");
+
+  if(data) dealloc_data();
+
+  if(in_newFormat)
+    format= *in_newFormat;
+  nrVert= in_nrVert;
+  size= (format.size* 4)* nrVert;
+
+  data= new uint8[size];
+
+Exit:
+  if(err) {
+    error.detail(str8(fileName)+ "["+ name+ "]"+ " "+ err, __FUNCTION__, errL);
+    return false;
+  } else
+    return true;
+}
+
+void ixMesh::dealloc_data() {
   if(data) { delete[] data; data= null; }
   size= 0;
 }
@@ -123,68 +180,160 @@ void ixMesh::delData() {
 
 
 
-void ixMesh::setDataType(uint32 in_t) {
-  dataType= in_t;
-  if(in_t== 0)
-    flags.setDown(0x01);
-  else if(in_t== 1)
-    flags.setUp(0x01);
-}
 
 
-bool ixMesh::changeDataType(uint32 in_newType) {
-  const char *err= null;
-  int32 errL;
-  uint8 *newData= null;
+bool ixMesh::changeDataFormat(const DataFormat *in_newFormat) {
+  cchar *err= null; int errL;
+  uint8 *oldData= null;
+  uint32 *p1, *p2;
+  //DataFormat oldFormat;
+  uint64 offset1, offset2;
 
-  if(data== null) IXERR("host data is null");
-  if(in_newType== dataType) return true;
-
-  // all convert posibilities
-  /// current is data0
-  if(in_newType== 0) {
-
-    if(dataType== 1) {                /// data1 -> data0
-      newData= new uint8[Data0::size()* nrVert];
-      Data1i src(this);
-      Data0  dst(newData, nrVert);
-
-      for(uint32 a= 0; a< nrVert; a++)
-        dst.pos[a]=  src.vert[a].pos,
-        dst.nrm[a]=  src.vert[a].nrm,
-        dst.tex1[a]= src.vert[a].tex1;
-
-      delete[] data;
-      data= newData;
-    }
+  if(in_newFormat== null)    IXERR("<in_newType> is null");
+  if(in_newFormat->size== 0) IXERR("in_newType->size is 0 (populate it first?)");
+  if(nrVert== 0)             IXERR("current number of vertices is 0, so current data is bad/null; this func must change something already functional");
+  if(data== null)            IXERR("current data is null; this func must change something that is already functional");
+  if(format.size== 0)        IXERR("current format size is 0; something is wrong with current format setup; this func must act on something already functional");
 
 
-  /// current is data1
-  } else if(in_newType== 1) {
-    
-    if(dataType== 0) {                ///data0 -> data1
-      newData= new uint8[Data1i::size()* nrVert];
-      Data0  src(this);
-      Data1i dst(newData);
+  oldData= data;
+  
+  size= (in_newFormat->size* 4)* nrVert;
+  data= new uint8[size];
 
-      for(uint32 a= 0; a< nrVert; a++)
-        dst.vert[a].pos=  src.pos[a],
-        dst.vert[a].nrm=  src.nrm[a],
-        dst.vert[a].tex1= src.tex1[a];
+  for(uint a= 0; a< IXMESH_MAX_CHANNELS; a++) {
+    if(in_newFormat->ch[a].size== 0)
+      continue;
 
-      delete[] data;
-      data= newData;
-    }
+    p1= (uint32 *)data+ getChannel(in_newFormat, nrVert, a),
+    offset1= getChannelStride(in_newFormat, a);
 
-  }
+    if(format.ch[a].size> 0)
+      p2= (uint32 *)oldData+ getChannel(&format, nrVert, a),
+      offset2= getChannelStride(&format, a);
+    else
+      p2= null, offset2= 0;
+
+    for(uint v= 0; v< nrVert; v++) {                     /// for each vertex
+      for(uint d= 0; d< in_newFormat->ch[a].size; d++)   /// for each component
+        if(d< format.ch[a].size&& offset2)
+          p1[d]= p2[d];                                   // copy from old data
+        else
+          *((uint32*)p1)= 0;                              // fill in zeroes if old data has no such channel OR channel is smaller
+
+      if(offset2)
+        p2+= offset2;
+      p1+= offset1;
+    } /// for each vertex
+  } /// for each channel
+
+  format= *in_newFormat;    /// new format adoption
+  delete[] oldData;         /// old data buffer delete
 
 Exit:
   if(err) {
+
+
     error.detail(str8(fileName)+ "["+ name+ "]"+ " "+ err, __FUNCTION__, errL);
     return false;
-  }
-  return true;
+  } else return true;
 }
+
+
+uint64 ixMesh::getChannel(const DataFormat *in_f, uint64 in_totalVert, uint32 in_chan) {
+  if(in_f->flags.isUp(0x0001)) return (uint64)in_f->ch[in_chan].loc;
+  else                         return (uint64)in_f->ch[in_chan].loc* in_totalVert* (uint64)in_f->size;
+}
+
+
+uint64 ixMesh::getChannelStride(const DataFormat *in_f, uint32 in_chan) {
+  if(in_f->flags.isUp(0x0001)) return (uint64)in_f->size;
+  else                         return (uint64)in_f->ch[in_chan].size;
+}
+
+
+uint32 *ixMesh::getVertexData(uint8 *in_data, const DataFormat *in_f, uint64 in_totalVert, uint64 in_vert, uint32 in_chan) {
+  if(in_f->flags.isUp(0x0001))
+    return (uint32 *)in_data+ (uint64)in_f->ch[in_chan].loc+    // channel loc start
+           (in_vert* (uint64)in_f->size);                       // vertex number
+  else 
+    return (uint32 *)in_data+ (uint64)in_f->ch[in_chan].loc* in_totalVert* (uint64)in_f->size+ // channel location start
+           (in_vert* (uint64)in_f->ch[in_chan].size);
+}
+
+
+
+
+
+
+
+
+
+// mesh data format - SETUP funcs
+
+void ixMesh::DataFormat::setupChannel(channelType in_type, uint8 in_size) {
+  ch[(int)in_type].size= in_size;
+  compute_locations();
+  compute_size();
+}
+
+void ixMesh::DataFormat::setupChannelNr(uint32 in_nr, uint8 in_size) {
+  ch[in_nr].size= in_size;
+  compute_locations();
+  compute_size();
+}
+
+void ixMesh::DataFormat::setupAll(const DataFormat *in_format) {
+  for(uint a= 0; a< IXMESH_MAX_CHANNELS; a++)
+    ch[a]= in_format->ch[a];
+  compute_locations();
+  compute_size();
+}
+
+uint32 ixMesh::DataFormat::nrInUse() const {
+  uint32 ret= 0;
+  for(uint a= 0; a< IXMESH_MAX_CHANNELS; a++)
+    if(ch[a].size> 0)
+      ret++;
+  return ret;
+}
+
+void ixMesh::DataFormat::compute_locations() {
+  uint8 currentLoc= 0;
+  for(uint a= 0; a< IXMESH_MAX_CHANNELS; a++) {
+    ch[a].loc= currentLoc;
+    currentLoc+= ch[a].size;
+  }
+}
+
+uint32 ixMesh::DataFormat::compute_size() {
+  size= 0;
+  for(uint a= 0; a< IXMESH_MAX_CHANNELS; a++)
+    size+= ch[a].size;
+  return size;
+}
+
+void ixMesh::DataFormat::clear() {
+  for(uint a= 0; a< IXMESH_MAX_CHANNELS; a++)
+    ch[a].loc= 0,
+    ch[a].size= 0;
+  size= 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -310,10 +459,8 @@ bool ixMeshSys::upload(ixMesh *in_mesh) {
       else if(in_mesh->affinity== 1) in_mesh->buf= new ixvkBuffer(_ix->vki.clusterHost);
       else IXERR("unknown mesh affinity");
 
-      /// usage setup based on data type
-      if(in_mesh->dataType< 2) in_mesh->buf->handle->cfgUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT| VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-      else 
-        IXERR("unknown data type - makeme"); // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ADD DATA TYPES HERE
+      /// usage setup based on data type - but i don't see other usage for a mesh
+      in_mesh->buf->handle->cfgUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT| VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
 
       in_mesh->buf->handle->cfgSize(in_mesh->size);
 

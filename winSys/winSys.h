@@ -61,14 +61,66 @@ enum class ixeWSflags: uint32 {
 
 
 
+enum class ixWinScale: int32 {
+  // this can be forced for any resolution; If using step system, 540 will always be the basic unit ([1080p= 540x2], [1620p= 540x3], [2160p= 540x4])
+  NO_SCALE= 0,
+  s720p=  720,  s1k= 720,   // special case, if using step system, it will be a special step
+  s1080p= 1080, s2k= 1080,
+  s1620p= 1620,
+  s2160p= 2160, s4k= 2160,
+  s4320p= 4320, s8k= 4320
+};
 
 
-//class ixWSshader;
 
-// core of the whole window system
+//enum class ixWinScaleSystem: int32 {
+//  NO_SCALING,             // no scaling will be done
+//  STEP_SCALING,           // [default] ixWinScale system will be used, with specific sizes for 720p / 1080p / 2160p range resolutions
+//  DIRECT_SCALING          // a target resolution will be used, everything different than that resolution, will be scaled
+//};
+
+enum class ixWinScaleSystem: int32 {
+  NO_SCALING,             // no scaling will be done; scaleTarget is ignored
+  OSI_WIN_DY,             // [default] based on the osiWindow's DY size (height) and scaleTarget
+  OSI_PRIMARY_MONITOR,     // based on primary osiMonitor (the one main IX is created on) and scaleTarget
+
+  OSI_WIN_DY_STEP,            // COULD BE<<<<<<<< it is implemented, maybe it has a use
+  OSI_PRIMARY_MONITOR_STEP    // COULD BE<<<<<<<< it is implemented, maybe it has a use
+};
+
+
+// core of the whole window system //
+///===============================///
 
 class ixWinSys {
 public:
+
+  // UI SCALING ******************************************************
+
+  ixWinScaleSystem scaleSys;      // [def:] see ixWinScaleSystem enum class; - use functions below to setup
+  ixWinScale scaleTarget;         // target resolution the UI is created upon; call computeScale() if manually changed
+  float scale;                    // global scale, main shader UI buffers use this
+  float scaleStep;                // default 270 or 360 or 540 or 720?
+
+  rectf uiVD;                     // Virtual Desktop with scale applied to it
+  
+  void setScaleSys(ixWinScaleSystem in_newSys, Ix *in_ix= null); // in_ix: if left null, main used
+  float computeScale(Ix *in_ix);  // must be called on res change
+
+
+  float unitAtCursor;             // a decent viewable unit @ cursor position
+
+  float scrollBarWidth;       // [def:14@1080p] default width of all scrollbars in PIXELS; depending on the scaling system, this will be multiplied by the scale or be fixed; each scrollbar can be fine-tuned for another width if needed
+
+  
+
+  //void setScalingNoScale();                             // set no scaling - ix window system will not touch the window sizes provided in any way- buid your own scaling
+  // [DEFAULT system] - set a step scaling system and provide the target resolution (step) the UI will be built upon;
+  // the base step (unit) is 540: [1080p= 540x2] [1620p= 540x3] [2160p= 540x4] etc; anything under 1080p considered the first unit(step), 720p is special step
+  // scalling (up or down) will be based only on this step system
+  //void setScalingStepScaling(ixWinScale in_targetScale= ixWinScale::s1080p);
+  //void setScalingDirect(int32 in_targetResDY= 1080);   // set a direct scaling system, and provide <in_targetResDY> what the target resolution is
+
 
   ixWSstyle *selStyle;      // current 'selected' style that will be used when creating a new object
 
@@ -79,35 +131,22 @@ public:
 
   ixFlags32 flags;          // [ixeWSflags: flag enum] 
 
-  // CAN YOU REALLY HAVE 2 FOCUSES? ... AS A HUMAN YOU CAN'T SO WHY SHOULD THERE BE MORE THAN ONE VARIABLE WITH THE FOCUS?
+  // All top windows are put here - windows that are directly placed on the virtual desktop.
+  //   -the drawing is done from last to first
+  //   -the updating is done from first to last
+  //   -when focus on a control is gained, that window moves to first
+  chainList topObjects;
 
-  //ixBaseWindow *kbFocus;    // WIP - window that has keyboard focus       SHOULD THIS EXIST?
-  //ixBaseWindow *joyFocus;   // WIP - window that has joystick/gpad focus  SHOUDL THIS EXIST?
-  //joyHover
-  //keyHover
-  //mouseHover
-
-
-
-
-  //this chainList must be more than a list.
-  //  the drawing is done from last to first
-  //  the updating is done from first to last
-  //  when focus on a control is gained, that window moves to first
-  //  and this should be the simplest way to do the ordering of windows
-    
-  chainList topObjects;          // all windows are put here
-
-  ixWindow *createWindow(cchar *name, ixBaseWindow *parent, int32 x, int32 y, int32 dx, int32 dy);
-  ixButton *createButton(cchar *text, ixBaseWindow *parent, int32 x, int32 y, int32 dx, int32 dy);
-  ixEdit *createEdit(ixBaseWindow *, int32 x0, int32 y0, int32 dx, int32 dy);
-  ixRadioButton *createRadioButton(ixBaseWindow *parent, int32 x, int32 y, int32 dx, int32 dy);
-  ixDropList *createDropList(ixBaseWindow *parent, int32 x, int32 y, int32 buttonDx, int32 buttonDy);
-  ixProgressBar *createProgressBar(ixBaseWindow *parent, int32 x, int32 y, int32 dx, int32 dy);
+  ixWindow *createWindow(cchar *name, ixBaseWindow *parent, float x, float y, float dx, float dy);
+  ixButton *createButton(cchar *text, ixBaseWindow *parent, float x, float y, float dx, float dy);
+  ixEdit *createEdit(ixBaseWindow *, float x0, float y0, float dx, float dy);
+  ixRadioButton *createRadioButton(ixBaseWindow *parent, float x, float y, float dx, float dy);
+  ixDropList *createDropList(ixBaseWindow *parent, float x, float y, float buttonDx, float buttonDy);
+  ixProgressBar *createProgressBar(ixBaseWindow *parent, float x, float y, float dx, float dy);
   ixMenu *createMenu(ixBaseWindow *parent);
   ixMenuBar *createMenuBar(ixBaseWindow *parent);
 
-  ixStaticText *createStaticText(ixBaseWindow *parent, int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy);
+  ixStaticText *createStaticText(ixBaseWindow *parent, float in_x0, float in_y0, float in_dx, float in_dy);
 
   void bringToFront(ixBaseWindow *);                // brings window to the top in the chainlist it's from (the parent chainlist); it will be drawn last, updated first
   void bringToBack(ixBaseWindow *);                 // brings window to bottom in the chainlist it's from (the parent chainlist); it will be drawn first, updated last
@@ -139,11 +178,17 @@ public:
 
 protected:
   
+  void init(Ix *in_ix);
+
   // there can be only one operation performed to only one window
   
   struct _Op {
-    ixBaseWindow *win;     // window that has an action being performed to. THIS IS NULL IF NO OP IS BEING MADE
+    ixBaseWindow *win;      // window that has an action being performed to. THIS IS NULL IF NO OP IS BEING MADE
     uint64 time;            // time started, mostly, but it's up for every message to handle the time as it sees fit
+    //float x, y;             // cursor position on operation start. Can be used to switch to a move operation only if movement is bigger than a delta
+    //float wx, wy;           // window position/size on op start
+    vec2 posOrg;
+    vec2 posWin;
 
     unsigned resizeLeft:1, resizeRight:1, resizeBottom:1;
     unsigned moving:1;
@@ -162,6 +207,14 @@ protected:
                      win= null, p= null; }
   } _op;  // operation in progress
 
+  
+  //float _getScaleMonitor(int32 in_x, int32 in_y);
+  //float _getScaleMonitor(const osiMonitor *in_m);
+  static osiMonitor *_getOsiMonitorForCoords(float x, float y);          // checks what monitor has the VD coords inside
+  static osiMonitor *_getClosestOsiMonitorForCoords(float x, float y);   // [slow] checks the closest monitor for the specified coords
+
+
+  friend class Ix;
   friend class ixBaseWindow;
   friend class ixWindow;
   friend class ixButton;

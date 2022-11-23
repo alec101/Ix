@@ -30,7 +30,7 @@ public:
 
 
 protected:
-  bool _update(bool in_mouseInside, bool in_updateChildren= true);  /// updates the window
+  bool _update(bool in_updateChildren= true);  /// updates the window
 
   #ifdef IX_USE_OPENGL
   void _glDraw(Ix *in_ix, ixWSsubStyleBase *in_style= null);  // the drue draw func, init stuff, pass it to this

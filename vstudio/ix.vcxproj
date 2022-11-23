@@ -37,7 +37,7 @@
   <ItemGroup>
     <ClCompile Include="..\draw\glDraw.cpp" />
     <ClCompile Include="..\draw\vkDraw.cpp" />
-    <ClCompile Include="..\GFX\bone.cpp" />
+    <ClCompile Include="..\GFX\skeleton.cpp" />
     <ClCompile Include="..\GFX\camera.cpp" />
     <ClCompile Include="..\GFX\glo\glObject.cpp" />
     <ClCompile Include="..\GFX\glo\gloShader.cpp" />
@@ -51,6 +51,8 @@
     <ClCompile Include="..\GFX\texStream.cpp" />
     <ClCompile Include="..\GFX\texSys.cpp" />
     <ClCompile Include="..\GFX\texture.cpp" />
+    <ClCompile Include="..\GFX\_glprint.cpp" />
+    <ClCompile Include="..\GFX\_vkprint.cpp" />
     <ClCompile Include="..\ix.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='vkDebug|Win32'">Create</PrecompiledHeader>
@@ -86,7 +88,7 @@
   <ItemGroup>
     <ClInclude Include="..\draw\glDraw.h" />
     <ClInclude Include="..\draw\vkDraw.h" />
-    <ClInclude Include="..\GFX\bone.h" />
+    <ClInclude Include="..\GFX\skeleton.h" />
     <ClInclude Include="..\GFX\camera.h" />
     <ClInclude Include="..\GFX\glo\glObject.h" />
     <ClInclude Include="..\GFX\glo\gloShader.h" />

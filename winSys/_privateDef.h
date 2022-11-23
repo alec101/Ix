@@ -1,41 +1,5 @@
 #pragma once
 
-/*
-// window types <_type> private var
-enum class ixeWinType: uint16 {
-  baseWindow= 0,  // ixBaseWindow
-  window,         // ixWindow
-  button,         // ixButton
-  staticText,     // ixStatic
-  edit,           // ixEdit
-  title,          // ixTitle
-  scrollBar,      // ixScroll
-  menu,           // ixMenu         "menu.h"
-  menuBar,        // ixMenuBar      "menu.h"
-  radioButton,    // ixRadioButton  
-  dropList,       // ixDropList     
-  progressBar,    // ixProgressBar  
-
-  endOfList
-};
-*/
-
-/*
-// window types <_type> private var
-#define _IX_BASE_WINDOW 0     // ixBaseWindow
-#define _IX_WINDOW      1     // ixWindow
-#define _IX_BUTTON      2     // ixButton
-#define _IX_STATIC_TEXT 3     // ixStatic
-#define _IX_EDIT        4     // ixEdit
-#define _IX_TITLE       5     // ixTitle
-#define _IX_SCROLLBAR   6     // ixScroll
-#define _IX_MENU        7     // ixMenu         "menu.h"
-#define _IX_MENUBAR     8     // ixMenuBar      "menu.h"
-#define _IX_RADIOBUTTON 9     // ixRadioButton  
-#define _IX_DROPLIST    10    // ixDropList     
-#define _IX_PROGRESSBAR 11    // ixProgressBar  
-*/
-
 // window borders
 #define _BRD_TOP          0
 #define _BRD_RIGHT        1
@@ -79,7 +43,7 @@ enum class ixeWinType: uint16 {
 #define _IX_SUBSTYLE_SCROLL        7
 
 
-
+#define _mINSIDE(_x, _y, _dx, _dy) ((mx>= (_x)) && (mx<= ((_x)+ (_dx))) && (my>= (_y)) && (my<= ((_y)+ (_dy))))
 
 
 

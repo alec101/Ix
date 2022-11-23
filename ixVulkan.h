@@ -518,7 +518,8 @@ public:
   void getToolCmdAndQueue(uint32 in_family, VkoQueue **out_queue, VkoCommandBuffer **out_cmd);   // returns the tool queue that has the same family as <in_queue>
   
   void cmdScissor(VkCommandBuffer in_cmd, recti *in_scissor);
-
+  void cmdScissor(VkCommandBuffer in_cmd, rectf *in_scissor);
+  void cmdScissorDefault(VkCommandBuffer in_cmd);               // restores scissor to full viewport
 
   // ix global uniform buffer, placed first, in cluster 1
 
@@ -531,18 +532,24 @@ public:
   struct GlbBuffer: public ixvkBuffer {
     
     // derive from this struct (add to it) then pass to ix.cfg.vk.derivedData & fill in the size too (ix.cfg.vk.derivedDataSize)
-    struct Data {
-      alignas(64) mat4 cameraPersp;       // perspective camera matrix
-      alignas(64) mat4 cameraOrtho;       // orthographic camera matrix
-      alignas(16) vec3 cameraPos;
+    struct Data { // alignas(64) SCREWES THE DERIVED BY A TON. 16 WILL BE FINE.
+      alignas(16) mat4 cameraPersp;       // perspective camera matrix
+      alignas(16) mat4 cameraUI;          // UI orthographic camera matrix 
+      alignas(16) vec3 cameraPos;         // camera position (eye) in the world
       alignas(8)  vec2 vp;                // viewport position on the virtual desktop
       alignas(8)  vec2 vs;                // viewport size
+      alignas(4) float UIscale;           // self explanatory
+      //alignas(16) mat4 cameraUI;
+      //alignas(8)  vec2 uiVP;              // UI viewport position; vp* uiScale
+      //alignas(8)  vec2 uiVS;              // UI viewport size;     vs* uiScale
+      //alignas(4)  float uiScale;          // UI scale
 
       // sun
       alignas(16) vec3 sunPos;
       alignas(16) vec3 sunColor;
       alignas(4)  float sunAmbientStr;
       alignas(4)  float sunSpecularStr;   // THIS SHOULD BE PART OF THE MATERIAL, SAME AS SHININESS
+      
     } *data;
     uint32 dataSize;          // size of data, includes the user-derived
 

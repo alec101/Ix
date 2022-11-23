@@ -19,11 +19,12 @@ ixRadioButton::ixRadioButton(): usage(this), ixBaseWindow(&is, &usage) {
 
   usage.setTextHeading(RIGHT);
   usage.setListHeading(DOWN);
-  usage.setRadioCircle(true);
+  usage.radio= 1;
 
+  _unit= 1.0f;
   selNr= -1;
   sel= null;
-  buttonDx= buttonDy= 0;
+  buttonDx= buttonDy= 0.0f;
 }
 
 
@@ -58,12 +59,12 @@ void ixRadioButton::Usage::setListHeading(ixOrientation in_ori) {
   if(in_ori== HORIZONTAL) in_ori= RIGHT;
   if(in_ori== VERTICAL) in_ori= DOWN;
 
-  int32 ix, iy;
+  float ix, iy;
   ((ixRadioButton *)_win)->_computeInitialX0Y0(&ix, &iy);
 
   listHeading= in_ori;
   
-  ((ixRadioButton *)_win)->_computeRects(ix, iy);
+  ((ixRadioButton *)_win)->_computeRects(&ix, &iy);
 }
 
 
@@ -175,50 +176,71 @@ void ixRadioButton::changeRadioButton(cchar *in_oldName, cchar *in_newName) {
 }
 
 
-void ixRadioButton::_computeInitialX0Y0(int32 *out_x0, int32 *out_y0) {
+
+
+
+void ixRadioButton::_computeAll() {
+  ixBaseWindow::_computeAll();
+  _computeRects();
+  _unit= (float)_getUnit();
+}
+
+void ixRadioButton::_computeAllDelta(float x, float y) {
+  ixBaseWindow::_computeAllDelta(x, y);
+  _computeRects();
+  _unit= (float)_getUnit();
+}
+
+
+void ixRadioButton::_computeInitialX0Y0(float *out_x0, float *out_y0) {
   if(usage.listHeading== DOWN) {
     if(out_x0) *out_x0= pos.x0;
     if(out_y0) *out_y0= pos.y0;
   } else if(usage.listHeading== UP) {
     if(out_x0) *out_x0= pos.x0;
-    if(out_y0) *out_y0= pos.ye;
+    if(out_y0) *out_y0= pos.y0+ pos.dy;
   } else if(usage.listHeading== RIGHT) {
     if(out_x0) *out_x0= pos.x0;
     if(out_y0) *out_y0= pos.y0;
   } else if(usage.listHeading== LEFT) {
-    if(out_x0) *out_x0= pos.xe;
+    if(out_x0) *out_x0= pos.x0+ pos.dx;
     if(out_y0) *out_y0= pos.y0;
   }
 }
 
 
-void ixRadioButton::_computeRects(int32 in_initialX0, int32 in_initialY0) {
-  if(in_initialX0== INT32_MIN && in_initialY0== INT32_MIN)
-    _computeInitialX0Y0(&in_initialX0, &in_initialY0);
+void ixRadioButton::_computeRects(float *in_initialX0, float *in_initialY0) {
+  float _x, _y;
+  rectf r;
+  if(in_initialX0== null && in_initialY0== null)
+    _computeInitialX0Y0(&_x, &_y);
+  else
+    _x= *in_initialX0, _y= *in_initialY0;
+
+  r.set(_x, _y, _x, _y);  /// start from zero size, expand it with every button
 
   ixWinRadioData *p= (ixWinRadioData *)buttonList.first;
-  pos.x0= pos.xe= in_initialX0, pos.y0= pos.ye= in_initialY0;
-
   for(; p; p= (ixWinRadioData *)p->next) {
     if(usage.listHeading== DOWN) {
-      pos.xe= pos.x0+ buttonDx;     // << useless for every iteration but i guess it fits here so i don't make another if/elseif
-      pos.ye+= buttonDy;
-      p->pos.set(pos.x0, pos.ye- buttonDy, pos.xe, pos.ye);
+      r.xe= r.x0+ buttonDx;     // << useless for every iteration but i guess it fits here so i don't make another if/elseif
+      r.ye+= buttonDy;
+      p->pos.set(r.x0, r.ye- buttonDy, r.xe, r.ye);
     } else if(usage.listHeading== UP) {
-      pos.xe= pos.x0+ buttonDx;
-      pos.y0-= buttonDy;
-      p->pos.set(pos.x0, pos.y0, pos.xe, pos.y0+ buttonDy);
+      r.xe= r.x0+ buttonDx;
+      r.y0-= buttonDy;
+      p->pos.set(r.x0, r.y0, r.xe, r.y0+ buttonDy);
     } else if(usage.listHeading== RIGHT) {
-      pos.xe+= buttonDx;
-      pos.ye= pos.y0+ buttonDy;
-      p->pos.set(pos.xe- buttonDx, pos.y0, pos.xe, pos.ye);
+      r.xe+= buttonDx;
+      r.ye= r.y0+ buttonDy;
+      p->pos.set(r.xe- buttonDx, r.y0, r.xe, r.ye);
     } else if(usage.listHeading== LEFT) {
-      pos.x0-= buttonDx;
-      pos.ye= pos.y0+ buttonDy;
-      p->pos.set(pos.x0, pos.y0, pos.x0+ buttonDx, pos.ye);
+      r.x0-= buttonDx;
+      r.ye= r.y0+ buttonDy;
+      p->pos.set(r.x0, r.y0, r.x0+ buttonDx, r.ye);
     } /// list heading
   } /// for each button in radio list
-  pos.compDeltas();
+
+  pos.setD(pos.x0, pos.y0, r.dx, r.dy);
 }
 
 
@@ -235,15 +257,21 @@ void ixRadioButton::_computeRects(int32 in_initialX0, int32 in_initialY0) {
 //  ##    ##    ##          ##    ##    ########       ##       ##
 //    ####      ##          ######      ##    ##       ##       ########
 
-bool ixRadioButton::_update(bool in_mIn,bool updateChildren) {
+bool ixRadioButton::_update(bool updateChildren) {
   if(!is.visible) return false;
 
-  recti r; getVDcoordsRecti(&r);
+  rectf posvd, b;
+  bool insideThis;
+  float mx, my;
   // update it's children first
   if(updateChildren)
-    if(_updateChildren((in_mIn? r.inside(in.m.x, in.m.y): false)))
+    if(_updateChildren())
       return true;
 
+  mx= _scaleDiv(in.m.x), my= _scaleDiv(in.m.y);
+  //mdx= _scaleDiv(in.m.dx), mdy= _scaleDiv(in.m.dy);
+  getPosVD(&posvd);
+  insideThis= posvd.inside(mx, my);
 
   // FUNCTION CORE
 
@@ -258,10 +286,10 @@ bool ixRadioButton::_update(bool in_mIn,bool updateChildren) {
       if(!in.m.but[0].down) {
         int a= 0;
         for(ixWinRadioData *p= (ixWinRadioData *)buttonList.first; p; p= (ixWinRadioData *)p->next, a++) {
-          recti b(p->pos);
+          b= p->pos;
           b.moveD(hook.pos.x, hook.pos.y);
 
-          if(b.inside(in.m.x, in.m.y)) {
+          if(b.inside(mx, my)) {
             sel= p;
             selNr= a;
             Ix::wsys()._op.delData();
@@ -274,9 +302,9 @@ bool ixRadioButton::_update(bool in_mIn,bool updateChildren) {
     } /// left click operation
 
   // no operation is in progress
-  } else if(in_mIn) {
+  } else if(insideThis) {
     if(in.m.but[0].down) {
-      if(r.inside(in.m.x, in.m.y)) {
+      //if(insideThis) {
         //is.pressed= !is.activated; //(is.activated? false: true);
 
         Ix::wsys()._op.mLclick= true;
@@ -284,13 +312,13 @@ bool ixRadioButton::_update(bool in_mIn,bool updateChildren) {
         Ix::wsys().bringToFront(this);
         Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
         return true;
-      }
+      //}
     } /// left mouse button is being pressed
   } /// operation in progress / no operation in progress
 
   
   // base window update, at this point - no childrens tho, those were updated first
-  return ixBaseWindow::_update(in_mIn, false);
+  return ixBaseWindow::_update(false);
 }
 
 
@@ -317,9 +345,10 @@ void ixRadioButton::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase 
   if(!_clip.exists()) return;
   if(!_inBounds(in_ix)) return;     // nothing to draw, the ix+gpu don't draw this window
 
+  rectf posvd; getPosVD(&posvd);
   in_ix->pr.style= &font;
-  int32 charDy= ixPrint::getCharDy(font.selFont);
-  int32 prx= 0, pry= 0;
+  float charDy= font.getCharDy();
+  float prx= 0, pry= 0;
   ixWinRadioData *p= (ixWinRadioData *)buttonList.first;
   ixWSgenericStyle *s= (ixWSgenericStyle *)(in_style? in_style: parent->style);
   ixTexture *t= s->parent->getTexture(in_ix);
@@ -333,36 +362,36 @@ void ixRadioButton::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase 
     in_ix->vki.draw.circle.flagDisabled(is.disabled);
     in_ix->vki.draw.circle.push.color= font.color1; // >>> (is.disabled? _getDisableColor(font.color): font.color);
 
-    int32 cDiameter= MIN(buttonDx, buttonDy)- 2;  /// circle diameter
-    recti c;                                      /// circle rectangle
+    float cDiameter= MIN(buttonDx, buttonDy)- _unit;  /// circle diameter
+    rectf c;                                      /// circle rectangle
 
     if(p) {
       if(usage.textHeading== DOWN) {
-        c.set(p->pos.x0+ 1,            p->pos.y0+ 1,            p->pos.xe- 1,            p->pos.y0+ 1+ cDiameter);
-        prx= (buttonDx- charDy)/ 2;
-        if(prx< 0) prx= 0;
+        c.set(p->pos.x0+ 1.0f,            p->pos.y0+ 1.0f,            p->pos.xe- 1.0f,            p->pos.y0+ 1.0f+ cDiameter);
+        prx= (buttonDx- charDy)/ 2.0f;
+        if(prx< 0.0f) prx= 0.0f;
         prx+= p->pos.x0;
-        pry= c.y0- 1;
+        pry= c.y0- 1.0f;
         
       } else if(usage.textHeading== UP) {
-        c.set(p->pos.x0+ 1,            p->pos.ye- 1- cDiameter, p->pos.xe- 1,            p->pos.ye- 1);
-        prx= (buttonDx- charDy)/ 2;
-        if(prx< 0) prx= 0;
+        c.set(p->pos.x0+ 1.0f,            p->pos.ye- 1.0f- cDiameter, p->pos.xe- 1.0f,            p->pos.ye- 1.0f);
+        prx= (buttonDx- charDy)/ 2.0f;
+        if(prx< 0.0f) prx= 0.0f;
         prx+= p->pos.x0;
-        pry= c.ye+ 1;
+        pry= c.ye+ 1.0f;
 
       } else if(usage.textHeading== LEFT) {
-        c.set(p->pos.xe- 1- cDiameter, p->pos.y0+ 1,            p->pos.xe- 1,            p->pos.ye- 1);
-        prx= c.x0- 1;
-        pry= (buttonDy- charDy)/ 2;
-        if(pry< 0) pry= 0;
+        c.set(p->pos.xe- 1.0f- cDiameter, p->pos.y0+ 1.0f,            p->pos.xe- 1.0f,            p->pos.ye- 1.0f);
+        prx= c.x0- 1.0f;
+        pry= (buttonDy- charDy)/ 2.0f;
+        if(pry< 0.0f) pry= 0.0f;
         pry+= p->pos.y0;
 
       } else if(usage.textHeading== RIGHT) {
-        c.set(p->pos.x0+ 1,            p->pos.y0+ 1,            p->pos.x0+ 1+ cDiameter, p->pos.ye- 1);
-        prx= c.xe+ 1;
-        pry= (buttonDy- charDy)/ 2;
-        if(pry< 0) pry= 0;
+        c.set(p->pos.x0+ 1.0f,            p->pos.y0+ 1.0f,            p->pos.x0+ 1.0f+ cDiameter, p->pos.ye- 1.0f);
+        prx= c.xe+ 1.0f;
+        pry= (buttonDy- charDy)/ 2.0f;
+        if(pry< 0.0f) pry= 0.0f;
         pry+= p->pos.y0;
 
       } else error.detail("Unknown text heading", __FUNCTION__, __LINE__);
@@ -375,8 +404,8 @@ void ixRadioButton::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase 
 
     while(p) {
       in_ix->vki.draw.circle.setPosR(c);
-      float cWidth= (float)c.dx/ 10;
-      if(cWidth< 1) cWidth= 1;
+      float cWidth= c.dx/ 10.0f;
+      if(cWidth< 1.0f) cWidth= 1.0f;
       in_ix->vki.draw.circle.push.hollow= (sel== p? -1.0f: cWidth);
 
       in_ix->vk.CmdBindPipeline(in_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, in_ix->vki.draw.circle.sl->vk->pipeline);
@@ -385,19 +414,19 @@ void ixRadioButton::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase 
       in_ix->vki.draw.circle.cmdPushAll(in_cmd);
       in_ix->vki.draw.circle.cmdDraw(in_cmd);
       
-      in_ix->pr.txt32_2i(prx, pry, p->text);
+      in_ix->pr.txt32_2f(prx, pry, p->text);
 
       if(usage.listHeading== DOWN) {
-        c.moveD(0, buttonDy);
+        c.moveD(0.0f, buttonDy);
         pry+= buttonDy;
       } else if(usage.listHeading== UP) {
-        c.moveD(0, -buttonDy);
+        c.moveD(0.0f, -buttonDy);
         pry-= buttonDy;
       } else if(usage.listHeading== LEFT) {
-        c.moveD(-buttonDx, 0);
+        c.moveD(-buttonDx, 0.0f);
         prx-= buttonDx;
       } else if(usage.listHeading== RIGHT) {
-        c.moveD(buttonDx, 0);
+        c.moveD(buttonDx, 0.0f);
         prx+= buttonDx;
       }
 
@@ -409,33 +438,33 @@ void ixRadioButton::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase 
 
     if(p) {
       if(usage.textHeading== DOWN) {
-        prx= (buttonDx- charDy)/ 2;
-        if(prx< 0) prx= 0;
+        prx= (buttonDx- charDy)/ 2.0f;
+        if(prx< 0.0f) prx= 0.0f;
         prx+= p->pos.x0;
         pry= p->pos.y0;
 
       } else if(usage.textHeading== UP) {
-        prx= (buttonDx- charDy)/ 2;
-        if(prx< 0) prx= 0;
+        prx= (buttonDx- charDy)/ 2.0f;
+        if(prx< 0.0f) prx= 0.0f;
         prx+= p->pos.x0;
         pry= p->pos.ye;
 
       } else if(usage.textHeading== LEFT) {
         prx= p->pos.xe;
-        pry= (buttonDy- charDy)/ 2;
-        if(pry< 0) pry= 0;
+        pry= (buttonDy- charDy)/ 2.0f;
+        if(pry< 0.0f) pry= 0.0f;
         pry+= p->pos.y0;
 
       } else if(usage.textHeading== RIGHT) {
         prx= p->pos.x0;
-        pry= (buttonDy- charDy)/ 2;
-        if(pry< 0) pry= 0;
+        pry= (buttonDy- charDy)/ 2.0f;
+        if(pry< 0.0f) pry= 0.0f;
         pry+= p->pos.y0;
       }
 
       
       while(p) {
-        in_ix->pr.txt32_2i(prx, pry, p->text);
+        in_ix->pr.txt32_2f(prx, pry, p->text);
 
         if(usage.listHeading== DOWN) {
           pry+= buttonDy;
@@ -455,147 +484,8 @@ void ixRadioButton::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase 
 
 
 #ifdef IX_USE_OPENGL
-
 void ixRadioButton::_glDraw(Ix *in_ix, ixWSsubStyleBase *in_style) {
-  /*
-  int32 charDy= ixPrint::getCharDy(font.selFont);
-  int32 prx, pry;
-  ixWinRadioData *p= (ixWinRadioData *)buttonList.first;
-
-  in_ix->pr.style= &font;
-  //in_ix->pr.setScissor(&_clip);
-
-  // radio control with circle
-  if(usage.radio) {
-    in_ix->glo.draw.circle.useProgram();
-    in_ix->glo.draw.circle.disableTexture();
-    in_ix->glo.draw.circle.delClipPlane();
-    in_ix->glo.draw.circle.setClipPlaneR(_clip);
-    //in_ix->glo.draw.circle.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-    in_ix->glo.draw.circle.setColorv(is.disabled? _getDisableColor(font.color1): font.color1);
-    
-
-    int32 cDiameter= MIN(buttonDx, buttonDy)- 2;  /// circle diameter
-    recti c;                                      /// circle rectangle
-
-    if(p) {
-      if(usage.textHeading== DOWN) {
-        c.set(p->x0+ 1, p->xe- 1, p->ye- 1- cDiameter, p->ye- 1);
-        prx= (buttonDx- charDy)/ 2;
-        if(prx< 0) prx= 0;
-        prx+= p->x0;
-        pry= c.y0- 1;
-        
-      } else if(usage.textHeading== UP) {
-        c.set(p->x0+ 1, p->xe- 1, p->y0+ 1, p->y0+ 1+ cDiameter);
-        prx= (buttonDx- charDy)/ 2;
-        if(prx< 0) prx= 0;
-        prx+= p->x0;
-        pry= c.ye+ 1;
-
-      } else if(usage.textHeading== LEFT) {
-        c.set(p->xe- 1- cDiameter, p->xe- 1, p->y0+ 1, p->ye- 1);
-        prx= c.x0- 1;
-        pry= (buttonDy- charDy)/ 2;
-        if(pry< 0) pry= 0;
-        pry+= p->y0;
-
-      } else if(usage.textHeading== RIGHT) {
-        c.set(p->x0+ 1, p->x0+ 1+ cDiameter, p->y0+ 1, p->ye- 1);
-        prx= c.xe+ 1;
-        pry= (buttonDy- charDy)/ 2;
-        if(pry< 0) pry= 0;
-        pry+= p->y0;
-
-      }
-      c.moveD(hook.pos.x, hook.pos.y);
-      //c.moveD(pos.x0, pos.y0);
-      prx+= hook.pos.x;
-      pry+= hook.pos.y;
-    }
-
-
-
-    while(p) {
-      
-      //glUseProgram(sl->id);
-      //sl->circle2(c.x0, c.y0, c.xe, c.ye, (sel== p? true: false));
-
-      in_ix->glo.draw.circle.useProgram();
-      in_ix->glo.draw.circle.setCoordsD((float)c.x0, (float)c.y0, (float)c.dx, (float)c.dy);
-      in_ix->glo.draw.circle.setFilled(sel== p);
-      in_ix->glo.draw.circle.render();
-      
-      in_ix->pr.txt32_2i(prx, pry, p->text);
-
-
-      if(usage.listHeading== DOWN) {
-        c.moveD(0, -buttonDy);
-        pry-= buttonDy;
-      } else if(usage.listHeading== UP) {
-        c.moveD(0, buttonDy);
-        pry+= buttonDy;
-      } else if(usage.listHeading== LEFT) {
-        c.moveD(-buttonDx, 0);
-        prx-= buttonDx;
-      } else if(usage.listHeading== RIGHT) {
-        c.moveD(buttonDx, 0);
-        prx+= buttonDx;
-      }
-
-
-      p= (ixWinRadioData *)p->next;
-    }
-
-  // radio control with whole buttons, no circles
-  } else {
-
-    //recti r;
-    if(p) {
-      if(usage.textHeading== DOWN) {
-        prx= (buttonDx- charDy)/ 2;
-        if(prx< 0) prx= 0;
-        prx+= p->x0;
-        pry= p->ye;
-
-      } else if(usage.textHeading== UP) {
-        prx= (buttonDx- charDy)/ 2;
-        if(prx< 0) prx= 0;
-        prx+= p->x0;
-        pry= p->y0;
-
-      } else if(usage.textHeading== LEFT) {
-        prx= p->xe;
-        pry= (buttonDy- charDy)/ 2;
-        if(pry< 0) pry= 0;
-        pry+= p->y0;
-
-      } else if(usage.textHeading== RIGHT) {
-        prx= p->x0;
-        pry= (buttonDy- charDy)/ 2;
-        if(pry< 0) pry= 0;
-        pry+= p->y0;
-
-      }
-    }
-
-    while(p) {
-      in_ix->pr.txt32_2i(prx, pry, p->text);
-      
-
-      if(usage.listHeading== DOWN) {
-        pry-= buttonDy;
-      } else if(usage.listHeading== UP) {
-        pry+= buttonDy;
-      } else if(usage.listHeading== LEFT) {
-        prx+= buttonDx;
-      } else if(usage.listHeading== RIGHT) {
-        prx-= buttonDx;
-      }
-      p= (ixWinRadioData *)p->next;
-    }
-  } /// radioCircle or not
-  */
+  error.makeme();
 }
 #endif /// IX_USE_OPENGL
 

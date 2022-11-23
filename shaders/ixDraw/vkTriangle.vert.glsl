@@ -6,9 +6,11 @@ layout(location= 0) out vec3 out_UV;
 // global uniform buffer
 layout(set= 0, binding= 0) uniform GlobalUniforms {
   mat4 cameraPersp;         // perspective camera matrix
-  mat4 cameraOrtho;         // orthographic camera matrix
+  mat4 cameraUI;            // UI orthographic camera matrix
   vec3 cameraPos;
   vec2 vp;                  // viewport position on the virtual desktop
+  vec2 vs;                  // [scaled] viewport size
+  float UIscale;            //
 } glb;
 
 // push constants
@@ -27,5 +29,5 @@ void main() {
   if((p.flags& 0x0001)> 0)
     gl_Position= glb.cameraPersp* p.vert[gl_VertexIndex];
   else
-    gl_Position= glb.cameraOrtho* p.vert[gl_VertexIndex];
+    gl_Position= glb.cameraUI* p.vert[gl_VertexIndex];
 }

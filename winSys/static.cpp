@@ -17,7 +17,7 @@ ixStaticText::ixStaticText(): text(this), usage(this), ixBaseWindow(&is, &usage)
 
   this->_createScrollbars();
   vscroll->is.visible= hscroll->is.visible= false;
-  textX= textY= 0;
+  textX= textY= 0.0f;
   
   /// always a line in the editor
   //ixTxtData::Line *p= new ixTxtData::Line;
@@ -46,12 +46,12 @@ void ixStaticText::delData() {
 void ixStaticText::updateSizeFromText() {
   
   bool horiz= text.orientation& IX_TXT_HORIZONTAL;    /// shortcut, less comp
-  int32 charDy= ixPrint::getCharDy(text.font.selFont);
-  int32 dx= 0, dy= 0;
-
+  float charDy= text.font.getCharDy();
+  float dx= 0, dy= 0;
+  
   // find out the text size, _not based on wlines_; text.textDx/Dy will not work
   for(ixTxtData::Line *p= (ixTxtData::Line *)text.lines.first; p; p= (ixTxtData::Line *)p->next) {
-    int32 l= ixPrint::getTextLen32(p->text, 0, text.font.selFont, 0.0f, text.orientation);
+    float l= text.font.getTextLen32(p->text, 0, 0.0f, text.orientation)+ 1;
     if(horiz)
       dx= (dx< l? l: dx),
       dy+= charDy;
@@ -88,40 +88,54 @@ void ixStaticText::setFont(const char *in_fname, const char *in_fnt, int in_size
   if(fnt== null)
     fnt= ix->pr.loadFont(_fontFileName, _fontSize);
   if(fnt== null)
-    error.window("ixStaticText::updateSizeFromText(): CRITICAL - could not find requested font/fontfile/fontsize", true);
+    error.window("ixStaticText::setFont(): CRITICAL - could not find requested font/fontfile/fontsize", true);
 
+  //text.font.scale= _scale;
   text.setFont(fnt);
 }
 
 void ixStaticText::setFont(const void *in_fnt) {
   _ixFSize *fnt= (_ixFSize *)in_fnt;
-  setFont(fnt->fileName, fnt->font->name, fnt->size);
+  setFont(fnt->font->fileName, fnt->font->name, fnt->size);
 }
 
 
-int32 ixStaticText::getMinDx() {
+float ixStaticText::getMinDx() {
   // these could include normal buttons to be able to be shown, the'x', minimize, restore, and maybe some window icon
   if(text.orientation& IX_TXT_HORIZONTAL) {
-    return 50;
+    return 50.0f;
   }else if(text.orientation& IX_TXT_VERTICAL) {
-    return 15;
+    return 15.0f;
   }
-  return 0;
+  return 0.0f;
 }
 
 
-int32 ixStaticText::getMinDy() {
+float ixStaticText::getMinDy() {
   // these could include normal buttons to be able to be shown, the'x', minimize, restore, and maybe some window icon
   if(text.orientation& IX_TXT_HORIZONTAL) {
-    return 15;
+    return 15.0f;
   }else if(text.orientation& IX_TXT_VERTICAL) {
-    return 50;
+    return 50.0f;
   }
-  return 0;
+  return 0.0f;
 }
 
 
-void ixStaticText::resize(int32 dx,int32 dy) {
+void ixStaticText::_computeAll() {
+  ixBaseWindow::_computeAll();
+  text._computeWrapLen();
+  text._updateWrapList();
+}
+
+void ixStaticText::_computeAllDelta(float x, float y) {
+  ixBaseWindow::_computeAllDelta(x, y);
+  text._computeWrapLen();
+  text._updateWrapList();
+}
+
+/*
+void ixStaticText::resize(float dx, float dy) {
   // identic func with ixEdit
   // any change here, must happen to the other one too
 
@@ -132,7 +146,7 @@ void ixStaticText::resize(int32 dx,int32 dy) {
 }
 
 
-void ixStaticText::resizeDelta(int32 dx,int32 dy) {
+void ixStaticText::resizeDelta(float dx, float dy) {
   // identic func with ixEdit
   // any change here, must happen to the other one too
 
@@ -142,7 +156,7 @@ void ixStaticText::resizeDelta(int32 dx,int32 dy) {
 }
 
 
-void ixStaticText::setPos(int32 x0,int32 y0,int32 dx,int32 dy) {
+void ixStaticText::setPos(float x0, float y0, float dx, float dy) {
   // identic func with ixEdit
   // any change here, must happen to the other one too
 
@@ -150,6 +164,10 @@ void ixStaticText::setPos(int32 x0,int32 y0,int32 dx,int32 dy) {
   text._computeWrapLen();
   text._updateWrapList();
 }
+*/
+
+
+
 
 
 void ixStaticText::_computeChildArea() {
@@ -195,34 +213,7 @@ bool ixStaticText::_checkLimits(char32 unicode) {
 
 #ifdef IX_USE_OPENGL
 void ixStaticText::_glDraw(Ix *in_ix, ixWSsubStyleBase *in_style) {
-  ixBaseWindow::_glDraw(in_ix, in_style);
-
-  /// vars init
-  //ixWinSys::ixWSshader *sl= Ix::wsys.getShader(in_ix);
-  //if(!sl) return;
-
-  recti r;
-  _getVDviewArea(&r);
-
-  vec3i scr;
-  scr.x= (hscroll? hscroll->position: 0);
-  scr.y= (vscroll? vscroll->position: 0);
-  scr.z= 0;
-
-  // text draw
-  
-  text._glDraw(in_ix, r, scr);
-    
-  /// scrollbars draw
-  if(usage._scrollbars || usage._autoScrollbars) {
-    if(hscroll) hscroll->_glDraw(in_ix);
-    if(vscroll) vscroll->_glDraw(in_ix);
-  }
-
-  /// childrens draw
-  for(ixBaseWindow *p= (ixBaseWindow *)childrens.last; p; p= (ixBaseWindow *)p->prev)
-    if(p!= hscroll && p!= vscroll)
-      p->_glDraw(in_ix);
+  error.makeme();
 }
 #endif /// IX_USE_OPENGL
 
@@ -233,17 +224,16 @@ void ixStaticText::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *
   if(!_clip.exists()) return;
   if(!is.visible) return;
 
-  recti r;
-  _getVDviewArea(&r);
+  rectf r; _getVDviewArea(&r);
 
 
   //in_ix->vki.cmdScissor(in_cmd, &_clip);
-  in_ix->vk.CmdSetScissor(in_cmd, 0, 1, &in_ix->vki.render.scissor);
+  in_ix->vki.cmdScissorDefault(in_cmd);
 
-  vec3i scr;
-  scr.x= (hscroll? hscroll->position: 0);
-  scr.y= (vscroll? vscroll->position: 0);
-  scr.z= 0;
+  vec3 scr;
+  scr.x= (hscroll? hscroll->position: 0.0f);
+  scr.y= (vscroll? vscroll->position: 0.0f);
+  scr.z= 0.0f;
 
   // text draw
 
@@ -275,13 +265,13 @@ void ixStaticText::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *
 //  ##    ##    ##          ##    ##    ########       ##       ##
 //    ####      ##          ######      ##    ##       ##       ########
 
-bool ixStaticText::_update(bool in_mIn, bool updateChildren) {
+bool ixStaticText::_update(bool updateChildren) {
   if(!is.visible) return false;
 
-  if(text._update(in_mIn))
+  if(text._update())
     return true;
 
-  return ixBaseWindow::_update(in_mIn, updateChildren);
+  return ixBaseWindow::_update(updateChildren);
 }
 
 

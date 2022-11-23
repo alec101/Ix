@@ -33,3 +33,5 @@
 
 vstudio/build/**
 netbeans/build/**
+*.idb
+*.pdb

@@ -4,15 +4,53 @@
 
 /*
 TODO:
- - focus handling funcs - when a window is destroyed, focus must not point to it anymore for example
- - usage class change: usage should be a pointer to the class, and allocated, once.
-                       before calling baseclass constructor, allocate it maybe. baseclass checks for null, if it is, allocates.
-                       or, make a func that handles it, checking _type, maybe, etc. <<<< MIGHT BE THE WINNER. (a static func, part of usage, private)
- - is class change: exactly like usage.
+
+ >>>   the scale can be put directly in the orho matrix; <<<
+
+ - PRINT SCALING A MUST <<<<<<<<<<<<<<<<<<<
+   you could have a target size, original, and scale based on that; 
+   the best way would be to have multiple font sizes too
+ - an UI schema? it would be a huge wrapper basically, maybe it's going too far. It seems that the position origin would solve the re-applying of the scale
+ - create menu/menubar don't have style / original position(this last one might not be needed)
+
+
+
+
+
+
+ SCALING SYSTEM:
+  -ON FULL SCREEN MODE (borderless, don't care), multiple monitors, ix on each monitor:
+   there can be a system that draws windows bigger or smaller, based on the current monitor and what the UI target is
+   i thout about it and it CAN be done, but this would work only in fullscreen;
+
+  -in windowed mode, that's a problem:
+   windows and other OS'es, use pixel by pixel stuff, a window moved to a diff monitor will retain it's size, and the fullscreen scaling will fail;
+
+   there can be the system based on the current window size, not monitor size, that would work also
+
+
+   so i see 4 modes:
+   1. full scale based on the current window size, you have your target and base the scaling with that;
+
+   well, fullscreen and windowed mode, actually can be the same thing, you scale your stuff based on the current window size, not monitor size...
+   you cannot base upon the current monitor cuz the window will remain the same
+
+   so there's 3 modes:
+   1. based on osiWindow size, with target
+   2. based on primaryWindow's monitor, with target, ONE scale value
+   3. no scaling at all, you do it by hand;
+
+
+   all 3 must be done, the more i think on it. ALL 3.
 */
 
 
 
+
+#define _IX_WSYS_SCRWIDTH540 7
+#define _IX_WSYS_DEF_SCALE_SYS ixWinScaleSystem::OSI_WIN_DY
+#define _IX_WSYS_DEF_SCALE_TGT ixWinScale::s1080p
+#define _IX_WSYS_DEF_SCALE_STEP 270
 
 ///===================================///
 // standard CONSTRUCTORS / DESTRUCTORS //
@@ -21,10 +59,18 @@ TODO:
 ixWinSys::ixWinSys() {
   selStyle= null;
   _op.delData();
-  //delShaders();
   focus= null;
   hover= null;
-  //kbFocus= joyFocus= null;
+
+  scrollBarWidth= 14; // 7@540p, 14@1080p
+
+
+  scale= 1.0f;
+  scaleSys= _IX_WSYS_DEF_SCALE_SYS;
+  scaleTarget= _IX_WSYS_DEF_SCALE_TGT;
+  scaleStep= _IX_WSYS_DEF_SCALE_STEP;
+
+  //setScalingStepScaling();
 }
 
 
@@ -40,19 +86,13 @@ void ixWinSys::delData() {
   _op.delData();
 }
 
-/*
-void ixWinSys::loadAssets(Ix *in_ix) {
-  #ifdef IX_USE_OPENGL
-  if(!in_ix->glIsActive()) { error.simple("ogl renderer not active"); return; }
-  #endif
-  loadShader(in_ix);
+
+
+
+void ixWinSys::init(Ix *in_ix) {
+  computeScale(in_ix);
+
 }
-*/
-
-
-
-
-
 
 
 
@@ -64,7 +104,7 @@ void ixWinSys::loadAssets(Ix *in_ix) {
 ///===============================///
 
 
-ixWindow *ixWinSys::createWindow(cchar *in_title, ixBaseWindow *in_parent, int32 in_x, int32 in_y, int32 in_dx, int32 in_dy) {
+ixWindow *ixWinSys::createWindow(cchar *in_title, ixBaseWindow *in_parent, float in_x, float in_y, float in_dx, float in_dy) {
   ixWindow *w= new ixWindow;
 
   /// parent / children chain
@@ -82,19 +122,13 @@ ixWindow *ixWinSys::createWindow(cchar *in_title, ixBaseWindow *in_parent, int32
   /// position and hook
   w->setPos(in_x, in_y, in_dx, in_dy);
   w->hook.setAnchor(in_parent);            /// sets parent + initial hook
-  
 
   /// window title
   if(((ixWSwindowStyle *)w->style)->useTitle) {
-    //w->title->text.font= *Ix::getMain()->pr.style;
-    //w->title->setFont(Ix::getMain()->pr.style->selFont);
-
     w->setTitle(in_title, &selStyle->title);
-    //w->title->pos.dx;
   }
 
-  /// scrollbars
-  w->_createScrollbars();
+  w->_createScrollbars();                 /// scrollbars
 
   if(in_parent) {
     in_parent->_computeChildArea();
@@ -105,7 +139,9 @@ ixWindow *ixWinSys::createWindow(cchar *in_title, ixBaseWindow *in_parent, int32
 }
 
 
-ixButton *ixWinSys::createButton(cchar *in_text, ixBaseWindow *in_parent, int32 in_x, int32 in_y, int32 in_dx, int32 in_dy) {
+
+
+ixButton *ixWinSys::createButton(cchar *in_text, ixBaseWindow *in_parent, float in_x, float in_y, float in_dx, float in_dy) {
   ixButton *b= new ixButton;
 
   /// parent / children chain
@@ -136,7 +172,7 @@ ixButton *ixWinSys::createButton(cchar *in_text, ixBaseWindow *in_parent, int32 
 }
 
 
-ixEdit *ixWinSys::createEdit(ixBaseWindow *in_parent, int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
+ixEdit *ixWinSys::createEdit(ixBaseWindow *in_parent, float in_x0, float in_y0, float in_dx, float in_dy) {
   ixEdit *e= new ixEdit;
 
   /// parent / children chain
@@ -164,7 +200,7 @@ ixEdit *ixWinSys::createEdit(ixBaseWindow *in_parent, int32 in_x0, int32 in_y0, 
 }
 
 
-ixStaticText *ixWinSys::createStaticText(ixBaseWindow *in_parent, int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
+ixStaticText *ixWinSys::createStaticText(ixBaseWindow *in_parent, float in_x0, float in_y0, float in_dx, float in_dy) {
   ixStaticText *t= new ixStaticText;
 
   /// parent / children chain
@@ -194,7 +230,7 @@ ixStaticText *ixWinSys::createStaticText(ixBaseWindow *in_parent, int32 in_x0, i
 }
 
 
-ixRadioButton *ixWinSys::createRadioButton(ixBaseWindow *in_parent, int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
+ixRadioButton *ixWinSys::createRadioButton(ixBaseWindow *in_parent, float in_x0, float in_y0, float in_dx, float in_dy) {
   ixRadioButton *b= new ixRadioButton;
 
   /// parent / children chain
@@ -211,13 +247,13 @@ ixRadioButton *ixWinSys::createRadioButton(ixBaseWindow *in_parent, int32 in_x0,
   b->font= *Ix::getMain()->pr.style;
   b->is.visible= true;
 
-  b->buttonDx= in_dx;
-  b->buttonDy= in_dy;
   
 
 
   /// position / hook
-  b->setPos(in_x0, in_y0, 0, 0);
+  b->buttonDx= in_dx;
+  b->buttonDy= in_dy;
+  b->setPos(in_x0, in_y0, b->buttonDx, b->buttonDy);
   b->hook.setAnchor(in_parent);            /// sets parent, initial hook
 
   if(in_parent)
@@ -227,7 +263,7 @@ ixRadioButton *ixWinSys::createRadioButton(ixBaseWindow *in_parent, int32 in_x0,
 }
 
 
-ixDropList *ixWinSys::createDropList(ixBaseWindow *in_parent, int32 in_x0, int32 in_y0, int32 in_buttonDx, int32 in_buttonDy) {
+ixDropList *ixWinSys::createDropList(ixBaseWindow *in_parent, float in_x0, float in_y0, float in_buttonDx, float in_buttonDy) {
 
   ixDropList *d= new ixDropList;
 
@@ -245,13 +281,10 @@ ixDropList *ixWinSys::createDropList(ixBaseWindow *in_parent, int32 in_x0, int32
   d->font= *Ix::getMain()->pr.style;
   d->is.visible= true;
 
+  /// position / hook
+  d->setPos(in_x0, in_y0, in_buttonDx, in_buttonDy);    // buttonDx,Dy origin are here
   d->buttonDx= in_buttonDx;
   d->buttonDy= in_buttonDy;
-  
-
-
-  /// position / hook
-  d->setPos(in_x0, in_y0, 0, 0);
   d->hook.setAnchor(in_parent);            /// sets parent, initial hook
 
   if(in_parent)
@@ -261,7 +294,7 @@ ixDropList *ixWinSys::createDropList(ixBaseWindow *in_parent, int32 in_x0, int32
 }
 
 
-ixProgressBar *ixWinSys::createProgressBar(ixBaseWindow *in_parent, int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
+ixProgressBar *ixWinSys::createProgressBar(ixBaseWindow *in_parent, float in_x0, float in_y0, float in_dx, float in_dy) {
   ixProgressBar *p= new ixProgressBar;
 
   /// parent / children chain
@@ -310,6 +343,7 @@ ixMenu *ixWinSys::createMenu(ixBaseWindow *in_parent) {
   
   /// position / hook
   //m->setPos(in_x0, in_y0, in_dx, in_dy);
+
   m->hook.setAnchor(in_parent);            /// sets parent, initial hook
 
   if(in_parent)
@@ -338,6 +372,10 @@ ixMenuBar *ixWinSys::createMenuBar(ixBaseWindow *in_parent) {
   m->setVisible(true);
   
   /// position / hook
+
+  //the menu bar must have a position; the menu, not so much, actually not at all;
+  //or is it the parent's coords always, i guess? but if you want a bar someplace else?
+    
   //m->setPos(in_x0, in_y0, in_dx, in_dy);
   m->hook.setAnchor(in_parent);            /// sets parent, initial hook
 
@@ -363,15 +401,171 @@ ixMenuBar *ixWinSys::createMenuBar(ixBaseWindow *in_parent) {
 // funcs //
 ///=====///
 
+void ixWinSys::setScaleSys(ixWinScaleSystem in_sys, Ix *in_ix) {
+  scaleSys= in_sys;
+  computeScale(in_ix== null? Ix::getMain(): in_ix);
+}
 
-/// draws all windows, on all engines
-void ixWinSys::draw() {
+
+
+
+
+float ixWinSys::computeScale(Ix *in_ix) {
+  int32 unit;
+  if(scaleSys== ixWinScaleSystem::NO_SCALING || scaleTarget== ixWinScale::NO_SCALE) {
+    scale= 1.0f;
+
+  } else if(scaleSys== ixWinScaleSystem::OSI_WIN_DY) {
+    scale= (float)in_ix->win->dy/ (float)scaleTarget;
+
+  } else if(scaleSys== ixWinScaleSystem::OSI_PRIMARY_MONITOR) {
+    scale= (float)in_ix->win->monitor->dy/ (float)scaleTarget;
+
+  } else if(scaleSys== ixWinScaleSystem::OSI_WIN_DY_STEP) {
+    unit= MAX(1, in_ix->win->dy/ mlib::roundf(scaleStep))* mlib::roundf(scaleStep);
+    scale= (float)unit/ (float)scaleTarget;
+
+  } else if(scaleSys== ixWinScaleSystem::OSI_PRIMARY_MONITOR_STEP) {
+    unit= MAX(1, in_ix->win->monitor->dy/ mlib::roundf(scaleStep))* mlib::roundf(scaleStep);
+    scale= (float)unit/ (float)scaleTarget;
+  }
+
+
+  uiVD.setD(0.0f, 0.0f, (float)osi.display.vdx/ scale, (float)osi.display.vdy/ scale);    // coords scaled
+
+
+  return scale;
+}
+
+
+/*
+float ixWinSys::_getScaleMonitor(const osiMonitor *in_m) {
+  int32 unit;
+  float scale= 1.0f;
+  if(in_m== null) return scale;
+
+  if(Ix::wsys().scaleSys== ixWinScaleSystem::NO_SCALING)
+    return scale;
+
+  else if(Ix::wsys().scaleSys== ixWinScaleSystem::STEP_SCALING) {
+    if(in_m->dy== 720)   // special case 720p, to be or not to be
+      unit= 720;
+    else
+      unit= MAX(1, in_m->dy/ 540)* 540;
+
+    scale= (float)unit/ (float)Ix::wsys().scaleTarget;
+
+  } else if(Ix::wsys().scaleSys== ixWinScaleSystem::DIRECT_SCALING) {
+    scale= (float)in_m->dy/ (float)Ix::wsys().scaleTarget;
+
+  } else {
+    error.detail("Unknown scaling system", __FUNCTION__, __LINE__);
+  }
+
+  return scale;
+}
+
+
+float ixWinSys::_getScaleMonitor(int32 in_x, int32 in_y) {
+  if(scaleSys== ixWinScaleSystem::NO_SCALING) return 1.0f;
+
+  osiMonitor *m= _getMonitorForCoords(in_x, in_y);
+  if(m== null)
+    m= _getClosestMonitorForCoords(in_x, in_y);
+  return _getScaleMonitor(m);
+}*/
+
+
+
+/*
+inline float ixWinSys::applyScale() {
+  int32 x, y;
+  osiMonitor *m;
+  font.scale= _scale= 1.0f;
   
+  if(Ix::wsys().scaleSys== ixWinScaleSystem::NO_SCALING)
+    return _scale;
+
+  getPosVD(&x, &y);
+  m= ixBaseWindow::_getMonitorForCoords(x, y);
+  if(m== null)
+    m= ixBaseWindow::_getClosestMonitorForCoords(x, y);
+
+  _scale= _getScale(m);
+  
+  pos.setD(mlib::roundf((float)posOrigin.x0* _scale),
+           mlib::roundf((float)posOrigin.y0* _scale),
+           mlib::roundf((float)posOrigin.dx* _scale),
+           mlib::roundf((float)posOrigin.dy* _scale));
+
+  font.scale= _scale;
+
+  return _scale;
+}
+*/
+
+
+osiMonitor *ixWinSys::_getOsiMonitorForCoords(float x, float y) {
+  int32 _x= mlib::roundf(x), _y= mlib::roundf(y);
+
+  for(int a= 0; a< osi.display.nrMonitors; a++) {
+    osiMonitor *m= &osi.display.monitor[a];
+    if(_x>= m->x0 && _x< (m->x0+ m->dx) && _y>= m->y0 && _y< (m->y0+ m->dy))
+      return m;
+  }
+  return null;
+}
+
+
+osiMonitor *ixWinSys::_getClosestOsiMonitorForCoords(float in_x, float in_y) {
+  int32 dist, x= mlib::roundf(in_x), y= mlib::roundf(in_y);
+  osiMonitor *ret= null;
+
+
+  for(int32 a= 0; a< osi.display.nrMonitors; a++) {
+    osiMonitor *m= &osi.display.monitor[a];
+    int32 xmiddle= (m->dx/ 2)+ m->x0;
+    int32 ymiddle= (m->dy/ 2)+ m->y0;
+    vec2i d(xmiddle- x, ymiddle- y);
+    int32 mdist= d.length();
+    if(a== 0)
+      dist= mdist, ret= m;
+    else
+      if(dist> mdist)
+        dist= mdist, ret= m;
+  }
+  return ret;
+}
+
+
+/*
+void ixWinSys::setScalingNoScale() {
+  scaleSys= ixWinScaleSystem::NO_SCALING;
+
+}
+
+void ixWinSys::setScalingStepScaling(ixWinScale in_targetScale) {
+  scaleSys= ixWinScaleSystem::STEP_SCALING;
+  scaleTarget= in_targetScale;
+}
+
+void ixWinSys::setScalingDirect(int32 in_targetResolutionDY) {
+  scaleSys= ixWinScaleSystem::DIRECT_SCALING;
+  scaleTarget= (ixWinScale)in_targetResolutionDY;
+}
+*/
+
+
+
+
+
+// draws all windows, on all engines ==========================--------------------
+
+void ixWinSys::draw() {
+
   for(Ix *i= (Ix *)Ix::ixList().first; i; i= (Ix *)i->next) {
     ixFontStyle *saveStyle= i->pr.style;
     i->pr.style= null;
-
-    //i->pr.saveStyle();
 
     #ifdef IX_USE_OPENGL
     if(i->renOpenGL()) {
@@ -385,6 +579,7 @@ void ixWinSys::draw() {
     #ifdef IX_USE_VULKAN
     if(i->renVulkan()) {
       VkCommandBuffer cmd= *i->vki.ortho.cmd[i->vki.fi];
+      
       ixBaseWindow::_vkDrawInit(cmd, i);
       for(ixBaseWindow *w= (ixBaseWindow *)topObjects.last; w; w= (ixBaseWindow *)w->prev)
         w->_vkDraw(cmd, i);
@@ -392,13 +587,13 @@ void ixWinSys::draw() {
     }
     #endif
     i->pr.style= saveStyle;
-    //i->pr.restoreStyle();
   }
 }
 
 
 /// draws all the top objects on specified Ix engine
 void ixWinSys::drawSpecific(Ix *in_ix) {
+  ixFontStyle *saveStyle= in_ix->pr.style;
   #ifdef IX_USE_OPENGL
   if(in_ix->renOpenGL()) {
     ixBaseWindow::_glDrawInit(in_ix);
@@ -418,6 +613,7 @@ void ixWinSys::drawSpecific(Ix *in_ix) {
     ixBaseWindow::_vkDrawFinish(cmd, in_ix);
   }
   #endif
+  in_ix->pr.style= saveStyle;
 }
 
 
@@ -425,16 +621,24 @@ void ixWinSys::drawSpecific(Ix *in_ix) {
 
 
 
-/// updates all windows
+// updates all windows =======================---------------------
+
 bool ixWinSys::update() {
-  flags= (uint32)ixeWSflags::none;      // set flags down
   bool ret= false;
+  
+  // compute unit @ cursor location
+  osiMonitor   *m= _getOsiMonitorForCoords((float)in.m.x, (float)in.m.y);
+  if(m== null)  m= _getClosestOsiMonitorForCoords((float)in.m.x, (float)in.m.y);
+  if(m== null) unitAtCursor= 1.0f;
+  else         unitAtCursor= MAX(1.0f, (float)(m->dy/ 540i32));          // 720p[1] 1080p[2] 1620p[3] 2160p[4] etc
+
+
+  flags= (uint32)ixeWSflags::none;      // set flags down
+
   if(osi.flags.windowMoved || osi.flags.windowResized)
     for(ixBaseWindow *p= (ixBaseWindow *)topObjects.first; p; p= (ixBaseWindow *)p->next) {
       p->hook.updateHooks();
       p->_computeAll();
-      //if(p->hscroll) { p->hscroll->_computePos(); p->hscroll->_computeButtons(); }
-      //if(p->vscroll) { p->vscroll->_computePos(); p->vscroll->_computeButtons(); }
       if(p->update()) ret= true;
     }
 
@@ -444,7 +648,7 @@ bool ixWinSys::update() {
 
   eventSys._update();
 
-  return true;
+  return ret;
 }
 
 
@@ -556,255 +760,17 @@ void ixWinSys::delWindow(ixBaseWindow *w) {
 }
 
 
+
+
 void ixWinSys::loadDef1Style() {
   Ix::glb.def1Style().loadStyle("defWinTex.txt");
-  /* OLD WAY (FIRST WAY) TO CREATE A STYLE
-  def1Style.loadTex("defWinTex.tga");
-
-  // WINDOW STYLE =============---------------
-  def1Style.window.useBackColor= true;
-  def1Style.window.bTexBG= false;
-    
-  /// borders
-  def1Style.window.setBRDcoords(0, 2,  15, 10, 9);
-  def1Style.window.setBRDcoords(1, 14, 14, 9,  10);
-  def1Style.window.setBRDcoords(2, 25, 15, 10, 9);
-  def1Style.window.setBRDcoords(3, 37, 14, 9,  10);
-
-  /// corners
-  def1Style.window.setBRDcoords(4, 2,  77, 49, 49);
-  def1Style.window.setBRDcoords(5, 53, 77, 49, 49);
-  def1Style.window.setBRDcoords(6, 2,  26, 49, 49);
-  def1Style.window.setBRDcoords(7, 53, 26, 49, 49);
-  def1Style.window.setBRDallWrap(2);                 /// repeat wrap
-
-  /// borders have a 1 pixel dist value
-  def1Style.window.setBRDdist(0, 1.0f);
-  def1Style.window.setBRDdist(1, 1.0f);
-  def1Style.window.setBRDdist(2, 1.0f);
-  def1Style.window.setBRDdist(3, 1.0f);
-
-  /// corners have a 4 pixel dist value
-  def1Style.window.setBRDdist(4, 5.0f);
-  def1Style.window.setBRDdist(5, 5.0f);
-  def1Style.window.setBRDdist(6, 5.0f);
-  def1Style.window.setBRDdist(7, 5.0f);
-
-
-  // TITLE STYLE =============---------------
-  def1Style.title.useTexture= true;
-  def1Style.title.useBackColor= true;
-  def1Style.title.bTexBG= false;
-
-  def1Style.title.setBRDcoords(0, 106, 57, 4, 5);
-  def1Style.title.setBRDcoords(1, 106, 64, 20, 30);
-  def1Style.title.setBRDcoords(2, 112, 57, 4, 5);
-  def1Style.title.setBRDcoords(3, 106, 96, 20, 30);
-
-  def1Style.title.setBRDallWrap(1);
-  def1Style.title.setBRDdist(1, 17);
-  def1Style.title.setBRDdist(3, 17);
-
-  // BUTTON STYLE ============----------------
-  def1Style.button.useTexture= true;
-  def1Style.button.useBackColor= true;
-  def1Style.button.bTexBG= false;
-  def1Style.button.colorBG.set(.3f, .3f, .3f, 1); /// opaque
-
-  def1Style.button.setBRDcoords(0, 49, 20, 2, 4);
-  def1Style.button.setBRDcoords(1, 54, 21, 4, 2);
-  def1Style.button.setBRDcoords(2, 55, 20, 2, 4);
-  def1Style.button.setBRDcoords(3, 48, 21, 4, 2);
-  def1Style.button.setBRDcoords(4, 60, 20, 4, 4);
-  def1Style.button.setBRDcoords(5, 66, 20, 4, 4);
-  def1Style.button.setBRDcoords(6, 72, 20, 4, 4);
-  def1Style.button.setBRDcoords(7, 78, 20, 4, 4);
-  def1Style.button.setBRDallDist(4);    // borders are on the outside... there should be an inside variant, but there has to be a wrap BETWEEN corners options on the baseObject
-  def1Style.button.setBRDallWrap(1);   /// stretch
-
-  // EDIT STYLE ==============----------------
-  def1Style.edit.useTexture= true;
-  def1Style.edit.useBackColor= true;
-  def1Style.edit.bTexBG= false;
-
-  def1Style.edit.setBRDcoords(0, 49, 15, 1, 3);
-  def1Style.edit.setBRDcoords(1, 53, 16, 3, 1);
-  def1Style.edit.setBRDcoords(2, 59, 15, 1, 3);
-  def1Style.edit.setBRDcoords(3, 63, 16, 3, 1);
-  def1Style.edit.setBRDcoords(4, 68, 15, 3, 3);
-  def1Style.edit.setBRDcoords(5, 73, 15, 3, 3);
-  def1Style.edit.setBRDcoords(6, 78, 15, 3, 3);
-  def1Style.edit.setBRDcoords(7, 83, 15, 3, 3);
-
-  // WRAP BETWEEN CORNERS NEEDED HERE TOO
-  def1Style.edit.setBRDallWrap(1);   /// stretch
-
-  // STATIC STYLE ===========-----------------
-  */
-
-
+  
   // set to def1Style as the active style
   selStyle= &Ix::glb.def1Style();
 }
 
 
 
-// style ASSETS ==========---------- //
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-
-///======================================================================///
-// Window System SHADER =======================-------------------------- //
-///======================================================================///
-
-ixWSshader::ixWSshader(Ix *in_ix): ixShader(in_ix) {
-  #ifdef IX_USE_OPENGL
-  u_camera= u_color= u_viewportPos= u_origin= u_useTexture= u_disabled= -1; 
-  u_customPos= u_customTex= u_quadPos0= u_quadPosE= u_quadTex0= u_quadTexE= -1;
-  #endif
-}
-
-#ifdef IX_USE_OPENGL
-void ixWSshader::glInitUniforms() {
-  glUseProgram(gl->id);
-  u_camera=       glGetUniformLocation(gl->id, "u_camera");
-  u_color=        glGetUniformLocation(gl->id, "u_color");
-  u_viewportPos=  glGetUniformLocation(gl->id, "u_viewportPos");
-  u_origin=       glGetUniformLocation(gl->id, "u_origin");
-  u_useTexture=   glGetUniformLocation(gl->id, "u_useTexture");
-  u_disabled=     glGetUniformLocation(gl->id, "u_disabled");
-  u_customPos=    glGetUniformLocation(gl->id, "u_customPos");
-  u_quadPos0=     glGetUniformLocation(gl->id, "u_quadPos0");
-  u_quadPosE=     glGetUniformLocation(gl->id, "u_quadPosE");
-  u_customTex=    glGetUniformLocation(gl->id, "u_customTex");
-  u_quadTex0=     glGetUniformLocation(gl->id, "u_quadTex0");
-  u_quadTexE=     glGetUniformLocation(gl->id, "u_quadTexE");
-
-  glUniform4f(u_color, 1.0f, 1.0f, 1.0f, 1.0f);
-  glUniform2f(u_viewportPos, 0.0f, 0.0f);
-}
-#endif
-
-
-#ifdef IX_USE_OPENGL
-void ixWSshader::glUpdateViewportPos() {
-  glUniform2f(u_viewportPos, (float)_ix->win->x0, (float)_ix->win->y0);
-}
-#endif /// IX_USE_OPENGL
-
-
-
-ixWSshader *ixWinSys::loadShader(Ix *in_ix) {
-  _SList *p= _getSList(in_ix);
-  if(p) { error.detail("Window shader already loaded", __FUNCTION__); return p->sl; }
-
-  p= new _SList;
-  p->ix= in_ix;
-
-  p->sl= new ixWSshader(in_ix);
-    
-  #ifdef IX_USE_OPENGL
-  if(in_ix->renOpenGL()) {
-    p->sl->gl->load(Ix::Config::shaderDIR+ "ixWindowsV.glsl", Ix::Config::shaderDIR+ "ixWindowsF.glsl");
-    p->sl->gl->build();
-
-    glUseProgram(p->sl->gl->id);
-    p->sl->glInitUniforms();
-    glUniform1i(p->sl->u_customPos, 0);   // default var
-    glUniform1i(p->sl->u_customTex, 0);   // default var
-    p->sl->glUpdateViewportPos(); //glUniform2f(p->sl->u_viewportPos, in_ix->win->x0, in_ix->win->y0);
-  }
-  #endif
-
-  #ifdef IX_USE_VULKAN
-  if(in_ix->renVulkan()) {
-      
-    p->sl->vk->loadModuleVert(Ix::Config::shaderDIR+ "ixWindows.vert.spv");
-    p->sl->vk->loadModuleFrag(Ix::Config::shaderDIR+ "ixWindows.frag.spv");
-
-    p->sl->vk->addDescriptorSetFromExisting(in_ix->vki.glb[in_ix->vki.fi]->layout); /// set 0, binding 0 - global buffer
-    p->sl->vk->addDescriptorSetFromExisting(in_ix->texSys.vkData.staticLayout);     /// set 1, binding 0 - texture
-  
-    p->sl->vk->setInputAssembly(VK_PRIMITIVE_TOPOLOGY_POINT_LIST, VK_FALSE);
-    p->sl->vk->setFrontFace(VK_FRONT_FACE_COUNTER_CLOCKWISE);
-    p->sl->vk->setCullModeFlags(VK_CULL_MODE_BACK_BIT);
-    //sl->vk->setCullModeFlags(VK_CULL_MODE_NONE);
-
-    p->sl->vk->addPushConsts(sizeof(ixWSshader::PConsts), 0, VK_SHADER_STAGE_ALL);
-    p->sl->vk->setRenderPass(*in_ix->vki.render.handle);
-    p->sl->vk->setDynamicViewports(1);
-
-    p->sl->vk->addColorBlendAttachement(true, VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, VK_BLEND_OP_ADD,
-                                              VK_BLEND_FACTOR_ONE,       VK_BLEND_FACTOR_ZERO,                VK_BLEND_OP_ADD,
-                                              VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT);
-
-    if(!p->sl->vk->build()) { error.window(in_ix->vk.errorText, __FUNCTION__); delete p; return null; }
-  }
-  #endif
-
-  _sList.add(p);
-  return p->sl;
-}
-
-
-
-
-ixWSshader *ixWinSys::getShader(Ix *in_ix) {
-  for(_SList *p= (_SList *)_sList.first; p; p= (_SList *)p->next)
-    if(p->ix== in_ix)
-      return p->sl;
-  return null;
-}
-
-
-void ixWinSys::delShader(Ix *in_ix) {
-  ixWSshader *p= getShader(in_ix);
-  if(!p) return;
-
-  in_ix->shaders.delShader(p);
-
-  _SList *s= _getSList(in_ix);
-  _sList.del(s);
-}
-
-
-void ixWinSys:: delShaders() {
-  while(_sList.first) {
-    _SList *p= (_SList *)_sList.first;
-    delShader(p->ix);
-    _sList.del(p);
-  }
-}
-
-
-
-
-
-
-
-
-ixWinSys::_SList *ixWinSys::_getSList(Ix *in_i) {
-  for(_SList *p= (_SList *)_sList.first; p; p= (_SList *)p->next)
-    if(p->ix== in_i) return p;
-
-  return null;
-}
-
-*/
 
 
 

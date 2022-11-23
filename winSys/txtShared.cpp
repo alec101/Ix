@@ -4,6 +4,15 @@
 using namespace ixUtil;
 
 /*
+Mouse drag:
+ THIS CAN BE A MOVEMENT BIGGER THAN A CERTAIN AMOUNT OF PIXELS, SCALED FOR 720p, 1080p, 2160p >>>
+ _ixEditClickDelta i already created this variable but never used it <<<<<<<<<<<<<<<<<<<<<<<<
+ ATM the mouse must be pixel perfect like last update or no drag
+ thinking on it, i think only very small fonts would have issues with this - NOT SURE IF REALLY NEEDED 
+*/
+
+
+/*
 WHEN A CHAR IS DELETED, ALL IT'S DIECRITICALS MUST BE DELETED!!!
 
   so there's 3 methods that i can think of
@@ -81,7 +90,9 @@ using namespace Str;
 ixTxtData::ixTxtData(ixBaseWindow *in_parent): _view(this) {
   _parent= in_parent;
   sel._parent= cur._parent= this;
-  textDx= textDy= nrUnicodes= 0;
+  textDx= textDy= 0.0f;
+  nrUnicodes= 0;
+
   _fixedBuffer= null;
   _wrapLen= 0;
 
@@ -117,7 +128,7 @@ void ixTxtData::delData() {
   _wrapLines.delData();
 
   if(_fixedBuffer) { delete[] _fixedBuffer; _fixedBuffer= null; }
-  textDx= textDy= 0;
+  textDx= textDy= 0.0f;
   nrUnicodes= 0;
   
   sel.delData();
@@ -127,7 +138,7 @@ void ixTxtData::delData() {
 
 
 void ixTxtData::findTextDx() {
-  textDx= 0;
+  textDx= 0.0f;
   if(orientation& IX_TXT_HORIZONTAL) {
     if(alignment& IX_TXT_ALN_FIXEDWIDTH)
       textDx= _wrapLen;
@@ -142,7 +153,7 @@ void ixTxtData::findTextDx() {
 
 
 void ixTxtData::findTextDy() {
-  textDy= 0;
+  textDy= 0.0f;
   if(orientation& IX_TXT_HORIZONTAL)
     for(Wline *p= (Wline *)_wrapLines.first; p; p= (Wline *)p->next)
       textDy+= p->dy;
@@ -159,7 +170,7 @@ void ixTxtData::findTextDy() {
 
 void ixTxtData::findTextDxDy() {
   /// there are extra loops for fewer instructions, in case text is very big
-  textDx= textDy= 0;
+  textDx= textDy= 0.0f;
   // horizontal text
   if(orientation& IX_TXT_HORIZONTAL) {
     if(alignment& IX_TXT_ALN_FIXEDWIDTH) {
@@ -233,9 +244,6 @@ void ixTxtData::setFont(void *in_fnt) {
   
   _view.moveToCursor();
   computeAndSetChildArea();
-
-
-
 }
 
 
@@ -274,7 +282,7 @@ void ixTxtData::clearText() {
 
 
 
-void ixTxtData::findUnicodeLineForCoords(int32 in_x, int32 in_y, int32 *out_unicode= null, int32 *out_line= null) {
+void ixTxtData::findUnicodeLineForCoords(float in_x, float in_y, int32 *out_unicode= null, int32 *out_line= null) {
   if(!lines.nrNodes) { if(out_unicode) *out_unicode= 0; if(out_line) *out_line= 0; return; }
   int32 line, unicode;
   Wline *p;
@@ -285,7 +293,7 @@ void ixTxtData::findUnicodeLineForCoords(int32 in_x, int32 in_y, int32 *out_unic
     if(in_y>= _view.pos) line= _view.line, p= _view.pWline;
     else                 line= 0,          p= (Wline *)_wrapLines.first;
 
-    for(int32 a= 0; p; p= (Wline *)p->next) {
+    for(float a= 0.0f; p; p= (Wline *)p->next) {
       if(in_y< a+ p->dy) break;   // found
 
       /// next iteration
@@ -299,7 +307,7 @@ void ixTxtData::findUnicodeLineForCoords(int32 in_x, int32 in_y, int32 *out_unic
     if(in_x>= _view.pos) line= _view.line, p= _view.pWline;
     else                 line= 0,          p= (Wline *)_wrapLines.first;
 
-    for(int32 a= 0; p; p= (Wline *)p->next) {
+    for(float a= 0.0f; p; p= (Wline *)p->next) {
       if(in_x< a+ p->dx) break;           // found
 
       /// next iteration
@@ -311,8 +319,8 @@ void ixTxtData::findUnicodeLineForCoords(int32 in_x, int32 in_y, int32 *out_unic
 
   // finding out the unicode nr
   if(out_unicode) {                     /// if it's smaller than 0, it's the first unicode anyway
-    int32 coord= (orientation& IX_TXT_HORIZONTAL? in_x: in_y)- _getWlineX0orY0InPixels(p);
-    unicode= ixPrint::getUnicodesMaxPixels32(p->line->text.d+ p->startUnicode, coord, font.selFont, p->spaceSize, orientation);
+    float coord= (orientation& IX_TXT_HORIZONTAL? in_x: in_y)- _getWlineX0orY0InPixels(p);
+    unicode= font.getUnicodesMaxPixels32(p->line->text.d+ p->startUnicode, (float)coord, p->spaceSize, orientation);
 
     // MAAAAAYBE if the click is like more than 75% into the next char you can consider it's the next char
     /// if this works fine as it is, complicating things won't help
@@ -456,28 +464,28 @@ void ixTxtData::_delWrapForLine(Line *in_line) {
 
 
 
-int32 ixTxtData::_getWlineX0orY0InPixels(Wline *in_w) {
+float ixTxtData::_getWlineX0orY0InPixels(Wline *in_w) {
   if(orientation& IX_TXT_RIGHT) {
-    if     (alignment& IX_TXT_ALN_START)  return 0;
+    if     (alignment& IX_TXT_ALN_START)  return 0.0f;
     else if(alignment& IX_TXT_ALN_END)    return textDx- in_w->dx;
-    else if(alignment& IX_TXT_ALN_CENTER) return (textDx- in_w->dx)/ 2;
+    else if(alignment& IX_TXT_ALN_CENTER) return (textDx- in_w->dx)/ 2.0f;
 
   } else if(orientation& IX_TXT_LEFT) {
     if     (alignment& IX_TXT_ALN_START)  return textDx- in_w->dx;
-    else if(alignment& IX_TXT_ALN_END)    return 0;
-    else if(alignment& IX_TXT_ALN_CENTER) return (textDx- in_w->dx)/ 2;
+    else if(alignment& IX_TXT_ALN_END)    return 0.0f;
+    else if(alignment& IX_TXT_ALN_CENTER) return (textDx- in_w->dx)/ 2.0f;
 
   } else if(orientation& IX_TXT_DOWN) {
-    if     (alignment& IX_TXT_ALN_START)  return 0;
+    if     (alignment& IX_TXT_ALN_START)  return 0.0f;
     else if(alignment& IX_TXT_ALN_END)    return textDy- in_w->dy;
-    else if(alignment& IX_TXT_ALN_CENTER) return (textDy- in_w->dy)/ 2;
+    else if(alignment& IX_TXT_ALN_CENTER) return (textDy- in_w->dy)/ 2.0f;
 
   } else if(orientation& IX_TXT_UP) {
     if     (alignment& IX_TXT_ALN_START)  return textDy- in_w->dy;
-    else if(alignment& IX_TXT_ALN_END)    return 0;
-    else if(alignment& IX_TXT_ALN_CENTER) return (textDy- in_w->dy)/ 2;
+    else if(alignment& IX_TXT_ALN_END)    return 0.0f;
+    else if(alignment& IX_TXT_ALN_CENTER) return (textDy- in_w->dy)/ 2.0f;
   } /// text orientation
-  return 0;
+  return 0.0f;
 }
 
 
@@ -506,15 +514,15 @@ without any word checks, nothing. watever unicode fits, it fits.
                       nrChars= 0;\
                       nrSpaces= 0;\
                       nrWords= 0;\
-                      lineLen= 0;
+                      lineLen= 0.0f;
 
 #define IXWLINE_END if(horiz) {\
                       if(wl->alignment& IX_TXT_ALN_JUSTIFIED)\
                         if((nrSpaces> 0) && (nrChars> 1) && (!newLineChar)) {\
                           if(endsInSpace) \
-                            wl->spaceSize= (float)(defSpaceSize)+ ((float)(_wrapLen- (lineLen- defSpaceSize))/ ((float)(nrSpaces- 1)));\
+                            wl->spaceSize= defSpaceSize+ ((_wrapLen- (lineLen- defSpaceSize))/ ((float)(nrSpaces- 1)));\
                           else\
-                            wl->spaceSize= (float)(defSpaceSize)+ ((float)(_wrapLen- lineLen)/ (float)nrSpaces);\
+                            wl->spaceSize= defSpaceSize+ ((_wrapLen- lineLen)/ (float)nrSpaces);\
                         }\
                       wl->dx= lineLen;\
                       wl->dy= charDy;\
@@ -545,7 +553,7 @@ void ixTxtData::_updateWrapList(Line *in_l, bool in_updateCur) {
         cur.decreaseLine(1, false);
   
   /// _view is placed at the start of the line, at end of func, will advance where it was, or close
-  int32 viewPos= _view.pos;
+  float viewPos= _view.pos;
   if((_view.pLine== in_l) && in_l)
     while(_view.pWline->prev? ((Wline *)_view.pWline->prev)->line== in_l: 0)
       _view.pWline= (Wline *)_view.pWline->prev,
@@ -594,11 +602,11 @@ void ixTxtData::_updateWrapList(Line *in_l, bool in_updateCur) {
         /// textDx/textDy
         if(horiz) {
           textDy-= w->dy;
-          if(w->dx== textDx)
+          if(w->dx== textDx)        // <<<< float equal check, but this should be safe
             recheckWidth= true;
         } else {
           textDx-= w->dx;
-          if(w->dy== textDy)
+          if(w->dy== textDy)        // <<<< float equal check, but this should be safe
             recheckWidth= true;
         }
 
@@ -619,15 +627,15 @@ void ixTxtData::_updateWrapList(Line *in_l, bool in_updateCur) {
   uint32 *s= (uint32 *)l->text.d;
   int32 u= 0;
   //int32 lineNr= 0;
-  int32 lineLen= 0;
+  float lineLen= 0.0f;
   int32 nrChars= 0;
   int32 nrSpaces= 0;
   int32 nrWords= 0;
   bool newLineChar= false;      /// signals that '\n' found. used for justify alignment, so the spacesize is not computed if newlinechar is present
   bool endsInSpace= false;
 
-  int32 charDy= ixPrint::getCharDy(font.selFont);
-  int32 defSpaceSize= horiz? ixPrint::getCharDx(' ', font.selFont): charDy;
+  float charDy= font.getCharDy();
+  float defSpaceSize= horiz? font.getCharDx(' '): charDy;
 
   IXWLINE_START
   l->wline= wl;
@@ -640,8 +648,8 @@ void ixTxtData::_updateWrapList(Line *in_l, bool in_updateCur) {
       /// this is another thing that will happen eventually
       /// it can happen at start, when text is empty
 
-      if(!lineLen)
-        lineLen= ixPrint::getTextLen32(wl->line->text.d+ wl->startUnicode, wl->nrUnicodes, font.selFont, wl->spaceSize);
+      if(lineLen== 0.0f)
+        lineLen= font.getTextLen32(wl->line->text.d+ wl->startUnicode, wl->nrUnicodes, wl->spaceSize);
 
       newLineChar= true;
       IXWLINE_END                   /// end current wline
@@ -750,8 +758,8 @@ void ixTxtData::_updateWrapList(Line *in_l, bool in_updateCur) {
           w.end= (char32 *)p;
 
           /// size of the word
-          int32 n;
-          if(horiz) n= ixPrint::getTextLen32(w.start, w.nrChars, font.selFont);
+          float n;
+          if(horiz) n= font.getTextLen32(w.start, w.nrChars);
           else      n= charDy* w.nrChars;
 
 
@@ -763,14 +771,14 @@ void ixTxtData::_updateWrapList(Line *in_l, bool in_updateCur) {
 
               /// maximum number of unicodes and chars that will fit
               if(horiz) {
-                wl->nrUnicodes= ixPrint::getUnicodesMaxPixels32(w.start, _wrapLen, font.selFont);
+                wl->nrUnicodes= font.getUnicodesMaxPixels32(w.start, _wrapLen);
                 if(wl->nrUnicodes< 1) wl->nrUnicodes= Str::getUnicodesInChar32(w.start); // at least 1 char, IT WILL EXCEED _wrapLen, THIS IS ONE OF THE SPECIAL CASES
-                lineLen= ixPrint::getTextLenu32(w.start, wl->nrUnicodes, font.selFont);
+                lineLen= font.getTextLenu32(w.start, wl->nrUnicodes);
 
               } else {
-                nrChars= MAX(_wrapLen/ charDy, 1);
+                nrChars= MAX((int32)(_wrapLen/ charDy), 1);
                 wl->nrUnicodes= Str::getUnicodesInChars32(w.start, nrChars);
-                lineLen= nrChars* charDy;
+                lineLen= (float)nrChars* charDy;
               } /// text orientation
 
               u+= wl->nrUnicodes;
@@ -922,7 +930,7 @@ void ixTxtData::Cursor::_glDraw(Ix *in_ix, const recti in_pos, const vec3i in_sc
   int32 x= in_pos.x0+ x0- in_scroll.x;
   int32 y= in_pos.ye- y0- pWline->dy+ in_scroll.y;
   int32 dx, dy;
-  int32 charDy= (pWline->dy? pWline->dy: ixPrint::getCharDy(_parent->font.selFont));
+  int32 charDy= (pWline->dy? pWline->dy: ixPrint::getCharDy(_parent->font.selFont)); <<<font.getChar
 
   /// cursor dimensions
   if(_parent->orientation& IX_TXT_HORIZONTAL)
@@ -959,7 +967,7 @@ void ixTxtData::Cursor::_glDraw(Ix *in_ix, const recti in_pos, const vec3i in_sc
 #endif
 
 #ifdef IX_USE_VULKAN
-void ixTxtData::Cursor::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, const vec3i in_scroll) {
+void ixTxtData::Cursor::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const rectf in_pos, const vec3 in_scroll) {
   // cursor blink, if it's in the non-drawing time, just return
   if(osi.present- _readTime> (blinkRate* 1000000))
     _readTime= osi.present,
@@ -968,10 +976,10 @@ void ixTxtData::Cursor::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti i
   if(!pWline) return;
   
   /// tmp vars
-  int32 x= in_pos.x0+ x0- in_scroll.x;
-  int32 y= in_pos.y0+ y0- in_scroll.y;
-  int32 dx, dy;
-  int32 charDy= (pWline->dy? pWline->dy: ixPrint::getCharDy(_parent->font.selFont));
+  float x= in_pos.x0+ x0- in_scroll.x;
+  float y= in_pos.y0+ y0- in_scroll.y;
+  float dx, dy;
+  float charDy= (pWline->dy? pWline->dy: _parent->font.getCharDy());
 
   /// cursor dimensions
   if(_parent->orientation& IX_TXT_HORIZONTAL)
@@ -987,7 +995,7 @@ void ixTxtData::Cursor::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti i
   in_ix->vki.draw.quad.flagTexture(false);
 
   in_ix->vki.draw.quad.push.color= color;
-  in_ix->vki.draw.quad.setPosDi(x, y, 0, dx, dy);
+  in_ix->vki.draw.quad.setPosD(x, y, 0.0f, dx, dy);
   in_ix->vki.draw.quad.cmdPushAll(in_cmd);
   in_ix->vki.draw.quad.cmdDraw(in_cmd);
 }
@@ -1005,7 +1013,7 @@ void ixTxtData::Sel::_glDraw(Ix *in_ix, const recti in_pos, const vec3i in_scrol
   int32 x0= in_pos.x0;
   int32 y0= in_pos.ye;
   int32 dx, dy;
-  int32 charDy= ixPrint::getCharDy(_parent->font.selFont);
+  int32 charDy= ixPrint::getCharDy(_parent->font.selFont); fontStyle func,w/scale
 
   int32 sx0= getStartX0(), ex0= getEndX0(), sy0= getStartY0(), ey0= getEndY0();
   int32 s, e, lineNr;
@@ -1137,18 +1145,18 @@ void ixTxtData::Sel::_glDraw(Ix *in_ix, const recti in_pos, const vec3i in_scrol
 #endif /// IX_USE_OPENGL
 
 #ifdef IX_USE_VULKAN
-void ixTxtData::Sel::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, const vec3i in_scroll) {
+void ixTxtData::Sel::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const rectf in_pos, const vec3 in_scroll) {
   
   if(!this->operator bool()) return;
 
-  int32 x0= in_pos.x0;
-  int32 y0= in_pos.y0;
-  int32 dx, dy;
-  int32 charDy= ixPrint::getCharDy(_parent->font.selFont);
+  float x0= in_pos.x0;
+  float y0= in_pos.y0;
+  float dx, dy;
+  float charDy= _parent->font.getCharDy();
 
-  int32 sx0= getStartX0(), ex0= getEndX0(), sy0= getStartY0(), ey0= getEndY0();
+  float sx0= getStartX0(), ex0= getEndX0(), sy0= getStartY0(), ey0= getEndY0();
   int32 s, e, lineNr;
-  int32 boundS, boundE;
+  float boundS, boundE;
   bool inBounds;
 
   ixTxtData::Wline *w1, *w2, *p;
@@ -1169,7 +1177,7 @@ void ixTxtData::Sel::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_p
     //y0-= sy0+ w1->dy- in_scroll.y; // bottom origin
     y0+= sy0- in_scroll.y;
     if(w1== w2) dx= ex0- sx0;
-    else        dx= in_pos.dx- sx0+ in_scroll.x;;//ixPrint::getTextLenu32(p->line->text.d+ s, p->nrUnicodes- (s- p->startUnicode), _parent->font, p->spaceSize);
+    else        dx= in_pos.dx- sx0+ in_scroll.x; //_parent->font.getTextLenu32(p->line->text.d+ s, p->nrUnicodes- (s- p->startUnicode), p->spaceSize);
 
     dy= p->dy;
 
@@ -1187,7 +1195,7 @@ void ixTxtData::Sel::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_p
     if(w1== w2) dy= ey0- sy0;
     else {
       uint32 *txt= (uint32 *)p->line->text.d+ p->startUnicode;
-      dy= 0;
+      dy= 0.0f;
       for(int32 a= s; a< p->nrUnicodes; a++, txt++) 
         if(!Str::isComb(*txt))
           dy+= charDy;
@@ -1206,7 +1214,7 @@ void ixTxtData::Sel::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_p
 
   /// draw first line (maybe only one)
   if(inBounds) {
-    in_ix->vki.draw.quad.setPosDi(x0, y0, 0, dx, dy);
+    in_ix->vki.draw.quad.setPosD(x0, y0, 0.0f, dx, dy);
     in_ix->vki.draw.quad.cmdPushPos(in_cmd);
     in_ix->vki.draw.quad.cmdDraw(in_cmd);
   }
@@ -1221,7 +1229,7 @@ void ixTxtData::Sel::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_p
     for(p= (ixTxtData::Wline *)w1->next; p!= w2; p= (ixTxtData::Wline *)p->next) {
       y0+= p->dy;
       if(y0>= boundS && y0<= boundE) {
-        in_ix->vki.draw.quad.setPosDi(x0, y0, 0, dx, p->dy);
+        in_ix->vki.draw.quad.setPosD(x0, y0, 0.0f, dx, p->dy);
         in_ix->vki.draw.quad.cmdPushPos(in_cmd);
         in_ix->vki.draw.quad.cmdDraw(in_cmd);
       }
@@ -1231,7 +1239,7 @@ void ixTxtData::Sel::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_p
     for(p= (ixTxtData::Wline *)w1->next; p!= w2; p= (ixTxtData::Wline *)p->next) {
       x0+= p->dx;
       if(x0>= boundS && x0<= boundE) {
-        in_ix->vki.draw.quad.setPosDi(x0, in_pos.y0, 0, p->dx, in_pos.dy);
+        in_ix->vki.draw.quad.setPosD(x0, in_pos.y0, 0.0f, p->dx, in_pos.dy);
         in_ix->vki.draw.quad.cmdPushPos(in_cmd);
         in_ix->vki.draw.quad.cmdDraw(in_cmd);
       }
@@ -1255,7 +1263,7 @@ void ixTxtData::Sel::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_p
   }
 
   if(inBounds) {
-    in_ix->vki.draw.quad.setPosDi(x0, y0, 0, dx, dy);
+    in_ix->vki.draw.quad.setPosD(x0, y0, 0.0f, dx, dy);
     in_ix->vki.draw.quad.cmdPushPos(in_cmd);
     in_ix->vki.draw.quad.cmdDraw(in_cmd);
   }
@@ -1265,21 +1273,42 @@ void ixTxtData::Sel::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_p
 
 
 
-inline void _debugIxTxtDataDraw1(Ix *in_ix, ixTxtData::Wline *p, int32 x, int32 y, int32 lineNr, bool horiz) {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+inline void _debugIxTxtDataDraw1(VkCommandBuffer in_cmd, Ix *in_ix, ixTxtData::Wline *p, float x, float y, int32 lineNr, bool horiz, rectf *in_clip) {
   char buf[256];          // DEBUG print buffer
   ixFontStyle *save= in_ix->pr.style;
   in_ix->pr.style= &in_ix->debugStyle;
 
+  in_ix->vki.cmdScissorDefault(in_cmd);
+
   sprintf(buf, "spc(%.1f) s(%d) n(%d) wLine(%d)", p->spaceSize, p->startUnicode, p->nrUnicodes, lineNr);
 
   if(horiz) {
-    in_ix->pr.setOrientation(IX_TXT_RIGHT);
-    in_ix->pr.txt2i(x- ixPrint::getTextLenu(buf), y, buf);
+    in_ix->pr.style->setOrientation(IX_TXT_RIGHT);
+    in_ix->pr.txt2f(x- in_ix->pr.style->getTextLenu(buf), y, buf);
   } else {
-    in_ix->pr.setOrientation(IX_TXT_DOWN);
-    in_ix->pr.txt2i(x, y, buf);
+    in_ix->pr.style->setOrientation(IX_TXT_DOWN);
+    in_ix->pr.txt2f(x, y, buf);
   }
 
+  in_ix->vki.cmdScissor(in_cmd, in_clip);
   in_ix->pr.style= save;
 }
 
@@ -1504,18 +1533,14 @@ void ixTxtData::_glDraw(Ix *in_ix, const recti in_pos, const vec3i in_scroll) {
 
 
 #ifdef IX_USE_VULKAN
-#define IX_TXTDATA_DEBUG(a, b, c, d, e, f) \
-        if(_debug) {\
-          in_ix->vk.CmdSetScissor(in_cmd, 0, 1, &in_ix->vki.render.scissor);\
-          _debugIxTxtDataDraw1(a, b, c, d, e, f);\
-          in_ix->vk.CmdSetScissor(in_cmd, 0, 1, &(VkRect2D &)_parent->_clip);\
-        }
+//#define IX_TXTDATA_DEBUG(a, b, c, d, e, f) if(_debug) { in_ix->vki.cmdScissorDefault(in_cmd); _debugIxTxtDataDraw1(a, b, c, d, e, f); in_ix->vki.cmdScissor(in_cmd, &_parent->_clip); }
 
-void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, const vec3i in_scroll) {
+
+void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const rectf in_pos, const vec3 in_scroll) {
   in_ix->pr.style= &font;
-  int32 charDy= ixPrint::getCharDy(font.selFont);
-  int32 boundE;
-  int32 x, y;
+  float charDy= font.getCharDy();
+  float boundE;
+  float x, y;
   ixTexture *t= in_ix->vki.noTexture;
   
   in_ix->vk.CmdBindPipeline(in_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, in_ix->vki.draw.quad.sl->vk->pipeline);
@@ -1531,10 +1556,9 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
   // DEBUG
   if(_debug) {
     char buf[256];  // DEBUG print buffer
-    int cy= ixPrint::getCharDy(in_ix->fnt5x6)+ 1;
+    float cy= in_ix->debugStyle.getCharDy()+ 1.0f;
     ixFontStyle *saveStyle= in_ix->pr.style;
-    recti saveScissor;
-    in_ix->vk.CmdSetScissor(in_cmd, 0, 1, &in_ix->vki.render.scissor);
+    in_ix->vki.cmdScissorDefault(in_cmd);
     in_ix->pr.style= &in_ix->debugStyle;
 
     uint32 unicode= 0xFDFDFDFD;
@@ -1544,21 +1568,21 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
           if(cur.pos< cur.pWline->line->text.nrUnicodes)
             unicode= cur.pWline->line->text.d[cur.pos];
 
-    sprintf(buf, "wlines:%d lines:%d cur[%d,%d,%d %dx %dy unicode[%d] %p,%p]", _wrapLines.nrNodes, lines.nrNodes, cur.pos, cur.wline, cur.line, cur.x0, cur.y0, unicode, cur.pWline, cur.pLine);
-    in_ix->pr.txt2i(in_pos.x0, in_pos.y0- (cy* 1), buf);
-    sprintf(buf, "_view: %d,%d,%d %p,%p", _view.pos, _view.wline, _view.line, _view.pWline, _view.pLine);
-    in_ix->pr.txt2i(in_pos.x0, in_pos.y0- (cy* 2), buf);
-    sprintf(buf, "scroll: vert[%d/%d] horiz[%d/%d]", _parent->vscroll->position, _parent->vscroll->_scroll, _parent->hscroll->position, _parent->hscroll->_scroll);
-    in_ix->pr.txt2i(in_pos.x0, in_pos.y0- (cy* 3), buf);
+    sprintf(buf, "wlines:%d lines:%d cur[%d,%d,%d %.1fx %.1fy unicode[%d] %p,%p]", _wrapLines.nrNodes, lines.nrNodes, cur.pos, cur.wline, cur.line, cur.x0, cur.y0, unicode, cur.pWline, cur.pLine);
+    in_ix->pr.txt2f(in_pos.x0, in_pos.y0- (cy* 1.0f), buf);
+    sprintf(buf, "_view: %.1f,%d,%d %p,%p", _view.pos, _view.wline, _view.line, _view.pWline, _view.pLine);
+    in_ix->pr.txt2f(in_pos.x0, in_pos.y0- (cy* 2.0f), buf);
+    sprintf(buf, "scroll: vert[%.1f/%.1f] horiz[%.1f/%.1f]", _parent->vscroll->position, _parent->vscroll->_scroll, _parent->hscroll->position, _parent->hscroll->_scroll);
+    in_ix->pr.txt2f(in_pos.x0, in_pos.y0- (cy* 3.0f), buf);
 
     in_ix->pr.style= saveStyle;
-    in_ix->vk.CmdSetScissor(in_cmd, 0, 1, &(VkRect2D &)_parent->_clip);
+    in_ix->vki.cmdScissor(in_cmd, &_parent->_clip);
   } /// DEBUG
 
-  in_ix->pr.setOrientation(orientation);
+  in_ix->pr.style->setOrientation(orientation);
 
+  //in_ix->vki.cmdScissorDefault(in_cmd);     // <<< why here??? DEBUG???<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-  in_ix->vk.CmdSetScissor(in_cmd, 0, 1, &in_ix->vki.render.scissor);
 
   
   if(orientation== IX_TXT_RIGHT) {
@@ -1573,12 +1597,8 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
       for(Wline *p= _view.pWline; p; p= (Wline *)p->next) {    /// for each wrapLine
         if(y> boundE) break;                    /// out of drawing bounds check
         in_ix->pr.style->spaceSize= p->spaceSize;
-        in_ix->pr.txt32_2i(x, y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
-        if(_debug) {
-          in_ix->vk.CmdSetScissor(in_cmd, 0, 1, &in_ix->vki.render.scissor);
-          _debugIxTxtDataDraw1(in_ix, p, x+ in_scroll.x, y, lineNr++, true);  // DEBUG
-          //in_ix->vk.CmdSetScissor(in_cmd, 0, 1, &_parent->_clip.getVkRect2D());
-        }
+        in_ix->pr.txt32_2f(x, y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
+        if(_debug) _debugIxTxtDataDraw1(in_cmd, in_ix, p, x+ in_scroll.x, y, lineNr++, true, &_parent->_clip);  // DEBUG
         y+= p->dy;
       }
 
@@ -1587,12 +1607,8 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
       for(Wline *p= _view.pWline; p; p= (Wline *)p->next) {    /// for each wrapLine
         if(y+ p->dy< boundE) break;                    /// out of drawing bounds check
         in_ix->pr.style->spaceSize= p->spaceSize;
-        in_ix->pr.txt32_2i(x- p->dx, y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
-        if(_debug) {
-          in_ix->vk.CmdSetScissor(in_cmd, 0, 1, &in_ix->vki.render.scissor);
-          _debugIxTxtDataDraw1(in_ix, p, x, y, lineNr++, true);  // DEBUG
-          in_ix->vk.CmdSetScissor(in_cmd, 0, 1, &(VkRect2D &)_parent->_clip);
-        }
+        in_ix->pr.txt32_2f(x- p->dx, y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
+        if(_debug) _debugIxTxtDataDraw1(in_cmd, in_ix, p, x, y, lineNr++, true, &_parent->_clip);  // DEBUG
         y+= p->dy;
       }
       
@@ -1601,8 +1617,9 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
       for(Wline *p= _view.pWline; p; p= (Wline *)p->next) {    /// for each wrapLine
         if(y+ p->dy< boundE) break;                    /// out of drawing bounds check
         in_ix->pr.style->spaceSize= p->spaceSize;
-        in_ix->pr.txt32_2i(x+ ((textDx- p->dx)/ 2), y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
-        IX_TXTDATA_DEBUG(in_ix, p, x, y, lineNr++, true);  // DEBUG
+        in_ix->pr.txt32_2f(x+ ((textDx- p->dx)/ 2), y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
+
+        if(_debug) _debugIxTxtDataDraw1(in_cmd, in_ix, p, x, y, lineNr++, true, &_parent->_clip);  // DEBUG
         y+= p->dy;
       }
     }
@@ -1616,8 +1633,8 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
       for(Wline *p= _view.pWline; p; p= (Wline *)p->next) {    /// for each wrapLine
         if(y+ p->dy< boundE) break;    /// out of drawing bounds check
         in_ix->pr.style->spaceSize= p->spaceSize;
-        in_ix->pr.txt32_2i(x, y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
-        IX_TXTDATA_DEBUG(in_ix, p, x, y, lineNr++, true);  // DEBUG
+        in_ix->pr.txt32_2f(x, y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
+        if(_debug) _debugIxTxtDataDraw1(in_cmd, in_ix, p, x, y, lineNr++, true, &_parent->_clip);  // DEBUG
         y-= p->dy;
       }
 
@@ -1626,8 +1643,8 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
       for(Wline *p= _view.pWline; p; p= (Wline *)p->next) {    /// for each wrapLine
         if(y+ p->dy< boundE) break;    /// out of drawing bounds check
         in_ix->pr.style->spaceSize= p->spaceSize;
-        in_ix->pr.txt32_2i(x+ p->dx, y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
-        IX_TXTDATA_DEBUG(in_ix, p, x, y, lineNr++, true);  // DEBUG
+        in_ix->pr.txt32_2f(x+ p->dx, y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
+        if(_debug) _debugIxTxtDataDraw1(in_cmd, in_ix, p, x, y, lineNr++, true, &_parent->_clip);  // DEBUG
         y-= p->dy;
       }
 
@@ -1635,8 +1652,8 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
       for(Wline *p= _view.pWline; p; p= (Wline *)p->next) {    /// for each wrapLine
         if(y+ p->dy< boundE) break;    /// out of drawing bounds check
         in_ix->pr.style->spaceSize= p->spaceSize;
-        in_ix->pr.txt32_2i(x- ((textDx- p->dx)/ 2), y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
-        IX_TXTDATA_DEBUG(in_ix, p, x, y, lineNr++, true);  // DEBUG
+        in_ix->pr.txt32_2f(x- ((textDx- p->dx)/ 2), y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
+        if(_debug) _debugIxTxtDataDraw1(in_cmd, in_ix, p, x, y, lineNr++, true, &_parent->_clip);  // DEBUG
         y-= p->dy;
       }
     }
@@ -1652,8 +1669,8 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
       for(Wline *p= (Wline *)_wrapLines.first; p; p= (Wline *)p->next) {    /// for each wrapLine
         if(x- p->dx> boundE) break;
         in_ix->pr.style->spaceSize= p->spaceSize;
-        in_ix->pr.txt32_2i(x, y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
-        IX_TXTDATA_DEBUG(in_ix, p, x, y, lineNr++, false); // DEBUG
+        in_ix->pr.txt32_2f(x, y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
+        if(_debug) _debugIxTxtDataDraw1(in_cmd, in_ix, p, x, y, lineNr++, false, &_parent->_clip); // DEBUG
         x+= p->dx;
       }
 
@@ -1662,8 +1679,8 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
       for(Wline *p= (Wline *)_wrapLines.first; p; p= (Wline *)p->next) {    /// for each wrapLine
         if(x- p->dx> boundE) break;
         in_ix->pr.style->spaceSize= p->spaceSize;
-        in_ix->pr.txt32_2i(x, y+ p->dy, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
-        IX_TXTDATA_DEBUG(in_ix, p, x, y, lineNr++, false); // DEBUG
+        in_ix->pr.txt32_2f(x, y+ p->dy, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
+        if(_debug) _debugIxTxtDataDraw1(in_cmd, in_ix, p, x, y, lineNr++, false, &_parent->_clip); // DEBUG
         x+= p->dx;
       }
 
@@ -1671,8 +1688,8 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
       for(Wline *p= (Wline *)_wrapLines.first; p; p= (Wline *)p->next) {    /// for each wrapLine
         if(x- p->dx> boundE) break;
         in_ix->pr.style->spaceSize= p->spaceSize;
-        in_ix->pr.txt32_2i(x, y- ((textDy- p->dy)/ 2), p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
-        IX_TXTDATA_DEBUG(in_ix, p, x, y, lineNr++, false); // DEBUG
+        in_ix->pr.txt32_2f(x, y- ((textDy- p->dy)/ 2), p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
+        if(_debug) _debugIxTxtDataDraw1(in_cmd, in_ix, p, x, y, lineNr++, false, &_parent->_clip); // DEBUG
         x+= p->dx;
       }
     }
@@ -1688,8 +1705,8 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
       for(Wline *p= (Wline *)_wrapLines.first; p; p= (Wline *)p->next) {    /// for each wrapLine
         if(x- p->dx> boundE) break;
         in_ix->pr.style->spaceSize= p->spaceSize;
-        in_ix->pr.txt32_2i(x, y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
-        IX_TXTDATA_DEBUG(in_ix, p, x, y, lineNr++, false); // DEBUG
+        in_ix->pr.txt32_2f(x, y, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
+        if(_debug) _debugIxTxtDataDraw1(in_cmd, in_ix, p, x, y, lineNr++, false, &_parent->_clip); // DEBUG
         x+= p->dx;
       }
 
@@ -1698,8 +1715,8 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
       for(Wline *p= (Wline *)_wrapLines.first; p; p= (Wline *)p->next) {    /// for each wrapLine
         if(x- p->dx> boundE) break;
         in_ix->pr.style->spaceSize= p->spaceSize;
-        in_ix->pr.txt32_2i(x, y- p->dy, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
-        IX_TXTDATA_DEBUG(in_ix, p, x, y, lineNr++, false); // DEBUG
+        in_ix->pr.txt32_2f(x, y- p->dy, p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
+        if(_debug) _debugIxTxtDataDraw1(in_cmd, in_ix, p, x, y, lineNr++, false, &_parent->_clip); // DEBUG
         x+= p->dx;
       }
 
@@ -1707,8 +1724,8 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
       for(Wline *p= (Wline *)_wrapLines.first; p; p= (Wline *)p->next) {    /// for each wrapLine
         if(x- p->dx> boundE) break;
         in_ix->pr.style->spaceSize= p->spaceSize;
-        in_ix->pr.txt32_2i(x, y+ ((textDy- p->dy)/ 2), p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
-        IX_TXTDATA_DEBUG(in_ix, p, x, y, lineNr++, false); // DEBUG
+        in_ix->pr.txt32_2f(x, y+ ((textDy- p->dy)/ 2), p->line->text.d, p->startUnicode, p->startUnicode+ p->nrUnicodes);
+        if(_debug) _debugIxTxtDataDraw1(in_cmd, in_ix, p, x, y, lineNr++, false, &_parent->_clip); // DEBUG
         x+= p->dx;
       }
     } /// alignment
@@ -1721,13 +1738,12 @@ void ixTxtData::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, c
     cur._vkDraw(in_cmd, in_ix, in_pos, in_scroll);
   }
 }
-#undef IX_TXTDATA_DEBUG
 #endif /// IX_USE_VULKAN
 
 
 
 // handles keyboard input, text selection, depending if _parent has flags that allow any of such operations
-bool ixTxtData::_update(bool in_mIn) {
+bool ixTxtData::_update() {
   bool ret= false;
   uint32 c;
   bool selPossible, cursorUsable, readOnly;
@@ -2100,12 +2116,15 @@ bool ixTxtData::_update(bool in_mIn) {
   //static int32 imx, imy;        /// these will hold where the initial click happened
   //static int32 iUnicode, iLine; /// the line and unicode when the mouse was initially clicked
 
-  recti r; _parent->getVDcoordsRecti(&r);
+  rectf r; _parent->getPosVD(&r);
+  float mx= _parent->_scaleDiv(in.m.x), my= _parent->_scaleDiv(in.m.y);
+  float mdx= _parent->_scaleDiv(in.m.dx), mdy= _parent->_scaleDiv(in.m.dy);
+  bool inside= r.inside(mx, my);
 
   // no event currently happening
-  if(!Ix::wsys()._op.win && in_mIn) {
+  if(!Ix::wsys()._op.win && inside) {
     /// a r-click event starts - can be a SELECTION DRAG or a CURSOR POS CHANGE
-    if(in.m.but[0].down && r.inside(in.m.x, in.m.y)) {
+    if(in.m.but[0].down) {
       Ix::wsys()._op.win= _parent;
       Ix::wsys()._op.mRclick= true;
       if(selPossible) sel.delData();
@@ -2119,31 +2138,34 @@ bool ixTxtData::_update(bool in_mIn) {
 
 
   // if there are problems with small fonts, and selecting while you don't want selecting,
-  //   selection could happen only if mouse is being hold more than 1 second for example
+  //   selection could happen only if mouse is being hold more than 1 second for example, or moved more than unit* 5 or something like that
 
   /// an event is happening with this window involved
   if(Ix::wsys()._op.win== _parent) {
 
     // R-Click event
     if(Ix::wsys()._op.mRclick) {
-      static int32 lx= -1, ly= -1;
+      static float lx= -1, ly= -1;    // tricky, but hoping the focus can happen only on one window... multiple texts will use the same mem location
 
       // R-Click is being hold down - update cursor & selection
       if(in.m.but[0].down) {
 
+        // THIS CAN BE A MOVEMENT BIGGER THAN A CERTAIN AMOUNT OF PIXELS, SCALED FOR 720p, 1080p, 2160p >>>
+        // _ixEditClickDelta i already created this variable but never used it <<<<<<<<<<<<<<<<<<<<<<<<
+
         /// mouse moved while clicked
-        if(in.m.x!= lx || in.m.y!= ly) {
+        if(mx!= lx || my!= ly) {
           /// text coord y is from top to bottom, like a page of text
           //text.cur._setLineAndPosInPixels(in.m.x- (r.x0+ _viewArea.x0)+ hscroll->position, (r.y0+ _viewArea.ye)- in.m.y+ vscroll->position);
 
           if(cursorUsable)
-            cur._setLineAndPosInPixels(in.m.x- (r.x0+ _parent->_viewArea.x0)+ _parent->hscroll->position, in.m.y- (r.y0+ _parent->_viewArea.y0)+ _parent->vscroll->position);
+            cur._setLineAndPosInPixels(mx- (r.x0+ _parent->_viewArea.x0)+ _parent->hscroll->position, my- (r.y0+ _parent->_viewArea.y0)+ _parent->vscroll->position);
           if(selPossible) {
             if(!sel)
               sel._startSelection();
             sel._updateEndFromCursor();
           }
-          lx= in.m.x, ly= in.m.y;
+          lx= mx, ly= my;
         }
         Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
         return true;
@@ -2155,7 +2177,8 @@ bool ixTxtData::_update(bool in_mIn) {
         //text.cur._setLineAndPosInPixels(imx- (r.x0+ _viewArea.x0), (r.y0+ _viewArea.ye)- imy);
         //text.cur._setLineAndPosInPixels(in.m.x- (r.x0+ _viewArea.x0)+ hscroll->position, (r.y0+ _viewArea.ye)- in.m.y+ vscroll->position);
         if(cursorUsable)
-          cur._setLineAndPosInPixels(in.m.x- (r.x0+ _parent->_viewArea.x0)+ _parent->hscroll->position, in.m.y- (r.y0+ _parent->_viewArea.y0)+ _parent->vscroll->position);
+          cur._setLineAndPosInPixels(mx- (r.x0+ _parent->_viewArea.x0)+ (float)_parent->hscroll->position,
+                                     my- (r.y0+ _parent->_viewArea.y0)+ (float)_parent->vscroll->position);
 
         if(selPossible)
           if(sel.start== sel.end && sel.startLine== sel.endLine)
@@ -2467,7 +2490,7 @@ void ixTxtData::Sel::paste(str32 *in_str) {
 
   // if the view is on the line that is being pasted upon, it has to be updated
   bool moveView= false;
-  int32 moveDelta;
+  float moveDelta;
   if(_parent->_view.pos>= (horiz? _parent->cur.y0: _parent->cur.x0))
     moveView= true;
   if(_parent->_view.pLine== _parent->cur.pLine)
@@ -2757,20 +2780,17 @@ inline void ixTxtData::Cursor::increaseUnicode(int32 in_n) {
 }
 
 
-void ixTxtData::Cursor::advanceLineForPixels(int32 in_pixels) {
+void ixTxtData::Cursor::advanceLineForPixels(float in_pixels) {
   //_setLineAndPosInPixels() and _setPosInPixels() are done
     //i think it's better to use those, as there's fewer funcs to debug if something is wrong
     //so this will just change the in_pixels to be exact pixels to jump to for _setLineAndPosInPixels() i think, and it will be fine
     //but, keep the current func, don't delete, comment, due who knows...
 
-
-
-
-  if(!in_pixels) return;
+  if(in_pixels== 0.0f) return;
 
   // have to use getPosForPixel() func, that is not done yet i think
 
-  int32 saveX0= x0, saveY0= y0;   /// will put pos as closely as possible to current pos
+  float saveX0= x0, saveY0= y0;   /// will put pos as closely as possible to current pos
   bool horiz= _parent->orientation& IX_TXT_HORIZONTAL;
 
   // JUST ADVANCE LINE BY LINE, PUT POS WHERE IT WAS, CUZ IT CHANGES WITH EVERY LINE ADVANCE
@@ -2778,7 +2798,7 @@ void ixTxtData::Cursor::advanceLineForPixels(int32 in_pixels) {
   while(1) {
 
     // condition to break the loop - cursor is as close as possible to the target
-    if((in_pixels>= 0) && (in_pixels< (horiz? pWline->dy: pWline->dx)))
+    if((in_pixels>= 0.0f) && (in_pixels< (horiz? pWline->dy: pWline->dx)))
       break;
     
     /// decrease
@@ -2951,7 +2971,7 @@ void ixTxtData::Cursor::pgUp() {
   bool horiz= _parent->orientation& IX_TXT_HORIZONTAL;  /// shortcut
   ixBaseWindow *p= _parent->_parent;                    /// shortcut
   //int32 advance= (horiz? p->pos.dy: p->pos.dx);
-  int32 delta= (horiz? p->_viewArea.dy: p->_viewArea.dx);
+  float delta= (horiz? p->_viewArea.dy: p->_viewArea.dx);
 
   if(horiz) { if(p->hscroll) p->hscroll->setPositionD(-delta); }
   else      { if(p->vscroll) p->vscroll->setPositionD(-delta); }
@@ -2963,7 +2983,7 @@ void ixTxtData::Cursor::pgDown() {
   bool horiz= _parent->orientation& IX_TXT_HORIZONTAL;  /// shortcut
   ixBaseWindow *p= _parent->_parent;                    /// shortcut
   //int32 advance= (horiz? p->pos.dy:            p->pos.dx);
-  int32 delta=   (horiz? p->_viewArea.dy: p->_viewArea.dx);
+  float delta=   (horiz? p->_viewArea.dy: p->_viewArea.dx);
 
   if(horiz) { if(p->hscroll) p->hscroll->setPositionD(delta); }
   else      { if(p->vscroll) p->vscroll->setPositionD(delta); }
@@ -2995,7 +3015,7 @@ void ixTxtData::Cursor::ctrlPgUp() {
   bool horiz= _parent->orientation& IX_TXT_HORIZONTAL;  /// shortcut
   if(horiz && !_parent->_parent->vscroll) return;
   if((!horiz) && !_parent->_parent->hscroll) return;
-  int32 saveX0= x0, saveY0= y0;
+  float saveX0= x0, saveY0= y0;
 
   wline= _parent->_view.wline;
   line= _parent->_view.line;
@@ -3027,7 +3047,7 @@ void ixTxtData::Cursor::ctrlPgDown() {
   bool horiz= _parent->orientation& IX_TXT_HORIZONTAL;  /// shortcut
   if(horiz && !_parent->_parent->vscroll) return;
   if((!horiz) && !_parent->_parent->hscroll) return;
-  int32 saveX0= x0, saveY0= y0;
+  float saveX0= x0, saveY0= y0;
 
   wline= _parent->_view.wline;
   line= _parent->_view.line;
@@ -3043,7 +3063,7 @@ void ixTxtData::Cursor::ctrlPgDown() {
       Wline *p= (Wline *)pWline->next;
       if(!p)
         break;
-      if(y0+ pWline->dy+ p->dy> _parent->_parent->vscroll->position+ (int32)_parent->_parent->_viewArea.dy)
+      if(y0+ pWline->dy+ p->dy> _parent->_parent->vscroll->position+ _parent->_parent->_viewArea.dy)
         break;
       increaseLine(1, false);
     }
@@ -3058,7 +3078,7 @@ void ixTxtData::Cursor::ctrlPgDown() {
       Wline *p= (Wline *)pWline->next;
       if(!p)
         break;
-      if(x0+ pWline->dx+ p->dx> _parent->_parent->hscroll->position+ (int32)_parent->_parent->_viewArea.dx)
+      if(x0+ pWline->dx+ p->dx> _parent->_parent->hscroll->position+ _parent->_parent->_viewArea.dx)
         break;
       increaseLine(1, false);
     }
@@ -3128,33 +3148,32 @@ void ixTxtData::Cursor::updateWlineAndCoords() {
 }
 
 
-int32 ixTxtData::Cursor::_getPosInPixels() {
-  if(!pLine) return 0;
-  if(!pLine->text.d) return 0;
+float ixTxtData::Cursor::_getPosInPixels() {
+  if(!pLine) return 0.0f;
+  if(!pLine->text.d) return 0.0f;
 
-  int32 ret= 0;
+  float ret= 0.0f;
   //recti *p= &_parent->_parent->_childArea; this won't work due the window could have actual children
-  void *font= _parent->font.selFont;
-  int32 charDy= ixPrint::getCharDy(font);
+  float charDy= _parent->font.getCharDy();
 
   // return value depending on text orientation
   if(_parent->orientation& IX_TXT_RIGHT) {
     if(pos- pWline->startUnicode> 0)
-      ret= ixPrint::getTextLenu32(pLine->text.d+ pWline->startUnicode, pos- pWline->startUnicode, font, pWline->spaceSize);
+      ret= _parent->font.getTextLenu32(pLine->text.d+ pWline->startUnicode, pos- pWline->startUnicode, pWline->spaceSize);
 
     if(_parent->alignment& IX_TXT_ALN_CENTER)
       //ret+= (p->dx- pWline->dx)/ 2;
-      ret+= (_parent->textDx- pWline->dx)/ 2;
+      ret+= (_parent->textDx- pWline->dx)/ 2.0f;
 
     else if(_parent->alignment& IX_TXT_ALN_END)
       ret+= _parent->textDx- pWline->dx;
 
   } else if(_parent->orientation& IX_TXT_LEFT) {
     if(pos- pWline->startUnicode> 0)
-      ret= _parent->textDx- ixPrint::getTextLenu32(pLine->text.d+ pWline->startUnicode, pos- pWline->startUnicode, font, pWline->spaceSize);
+      ret= _parent->textDx- _parent->font.getTextLenu32(pLine->text.d+ pWline->startUnicode, pos- pWline->startUnicode, pWline->spaceSize);
 
     if(_parent->alignment& IX_TXT_ALN_CENTER)
-      ret-= (_parent->textDx- pWline->dx)/ 2;
+      ret-= (_parent->textDx- pWline->dx)/ 2.0f;
 
     else if(_parent->alignment& IX_TXT_ALN_END)
       ret-= _parent->textDx- pWline->dx;
@@ -3166,7 +3185,7 @@ int32 ixTxtData::Cursor::_getPosInPixels() {
         ret-= charDy;                             // <<< MULTIPLE FONTS CHANGE HERE
 
     if(_parent->alignment& IX_TXT_ALN_CENTER)
-      ret-= (_parent->textDy- pWline->dy)/ 2;
+      ret-= (_parent->textDy- pWline->dy)/ 2.0f;
     else if(_parent->alignment& IX_TXT_ALN_END)
       ret-= _parent->textDy- pWline->dy;
 
@@ -3176,7 +3195,7 @@ int32 ixTxtData::Cursor::_getPosInPixels() {
         ret+= charDy;                             // <<< MULTIPLE FONTS CHANGE HERE
 
     if(_parent->alignment& IX_TXT_ALN_CENTER)
-      ret-= (_parent->textDy- pWline->dy)/ 2;
+      ret-= (_parent->textDy- pWline->dy)/ 2.0f;
     else if(_parent->alignment& IX_TXT_ALN_END)
       ret-= _parent->textDy- pWline->dy;
   }
@@ -3187,12 +3206,8 @@ int32 ixTxtData::Cursor::_getPosInPixels() {
 
 // slow func if there's many lines
 // this func recalculates, basically, y0 or x0, so not sure if needed
-int32 ixTxtData::Cursor::_getWlineInPixels() {
-  //if(!pLine) return 0;
-  //if(!pLine->text.d) return 0;
-
-  //int32 charDy= ixPrint::getCharDy(_parent->font);
-  int32 ret= 0;
+float ixTxtData::Cursor::_getWlineInPixels() {
+  float ret= 0.0f;
   Wline *p= (Wline *)_parent->_wrapLines.first;
 
   if(!p || !pWline) return 0;
@@ -3210,12 +3225,12 @@ int32 ixTxtData::Cursor::_getWlineInPixels() {
 }
 
 
-void ixTxtData::Cursor::_setPosInPixels(int32 in_pixels) {
-  int32 lineStart;
+void ixTxtData::Cursor::_setPosInPixels(float in_pixels) {
+  float lineStart;
 
   /// line start (wline start) in pixels, from origin
-  if     (_parent->alignment& IX_TXT_ALN_START)   lineStart= 0;
-  else if(_parent->alignment& IX_TXT_ALN_CENTER)  lineStart= (_parent->textDx- pWline->dx)/ 2;
+  if     (_parent->alignment& IX_TXT_ALN_START)   lineStart= 0.0f;
+  else if(_parent->alignment& IX_TXT_ALN_CENTER)  lineStart= (_parent->textDx- pWline->dx)/ 2.0f;
   else if(_parent->alignment& IX_TXT_ALN_END)     lineStart= _parent->textDx- pWline->dx;
 
   // cursor pos depending on text orientation
@@ -3225,7 +3240,7 @@ void ixTxtData::Cursor::_setPosInPixels(int32 in_pixels) {
     else if(in_pixels> lineStart+ pWline->dx)
       pos= pWline->startUnicode+ pWline->nrUnicodes;
     else
-      pos= pWline->startUnicode+ ixPrint::getUnicodesMaxPixels32(pLine->text.d+ pWline->startUnicode, in_pixels- lineStart, _parent->font.selFont, pWline->spaceSize);
+      pos= pWline->startUnicode+ _parent->font.getUnicodesMaxPixels32(pLine->text.d+ pWline->startUnicode, in_pixels- lineStart, pWline->spaceSize);
 
   } else if(_parent->orientation& IX_TXT_LEFT) {
     if(in_pixels< _parent->textDx- lineStart- pWline->dx)
@@ -3233,7 +3248,7 @@ void ixTxtData::Cursor::_setPosInPixels(int32 in_pixels) {
     else if(in_pixels> _parent->textDx- lineStart)
       pos= pWline->startUnicode;
     else
-      pos= pWline->startUnicode+ ixPrint::getUnicodesMaxPixels32(pLine->text.d+ pWline->startUnicode, _parent->textDx- in_pixels- lineStart, _parent->font.selFont, pWline->spaceSize, IX_TXT_LEFT);
+      pos= pWline->startUnicode+ _parent->font.getUnicodesMaxPixels32(pLine->text.d+ pWline->startUnicode, _parent->textDx- in_pixels- lineStart, pWline->spaceSize, IX_TXT_LEFT);
 
   } else if(_parent->orientation& IX_TXT_DOWN) {
     if(in_pixels< lineStart)
@@ -3241,7 +3256,7 @@ void ixTxtData::Cursor::_setPosInPixels(int32 in_pixels) {
     else if(in_pixels> lineStart+ pWline->dy)
       pos= pWline->startUnicode+ pWline->nrUnicodes;
     else
-      pos= pWline->startUnicode+ ixPrint::getUnicodesMaxPixels32(pLine->text.d+ pWline->startUnicode, in_pixels- lineStart, _parent->font.selFont, pWline->spaceSize, IX_TXT_DOWN);
+      pos= pWline->startUnicode+ _parent->font.getUnicodesMaxPixels32(pLine->text.d+ pWline->startUnicode, in_pixels- lineStart, pWline->spaceSize, IX_TXT_DOWN);
 
   } else if(_parent->orientation& IX_TXT_UP) {
     if(in_pixels< _parent->textDy- lineStart- pWline->dy)
@@ -3249,8 +3264,9 @@ void ixTxtData::Cursor::_setPosInPixels(int32 in_pixels) {
     else if(in_pixels> _parent->textDy- lineStart)
       pos= pWline->startUnicode;
     else
-      pos= pWline->startUnicode+ ixPrint::getUnicodesMaxPixels32(pLine->text.d+ pWline->startUnicode, _parent->textDx- in_pixels- lineStart, _parent->font.selFont, pWline->spaceSize, IX_TXT_UP);
+      pos= pWline->startUnicode+ _parent->font.getUnicodesMaxPixels32(pLine->text.d+ pWline->startUnicode, _parent->textDx- in_pixels- lineStart, pWline->spaceSize, IX_TXT_UP);
   } /// text orientation
+
 
   if(pos> 0)
     if(pLine->text.d[pos- 1]== '\n')
@@ -3264,11 +3280,11 @@ void ixTxtData::Cursor::_setPosInPixels(int32 in_pixels) {
 
 // pixel coords are from 0 to textDx/Dy
 // they can be negative or over the bounds, in that case the cursor will set to the closest position possible
-void ixTxtData::Cursor::_setLineAndPosInPixels(int32 in_x, int32 in_y) {
+void ixTxtData::Cursor::_setLineAndPosInPixels(float in_x, float in_y) {
   bool horiz= _parent->orientation& IX_TXT_HORIZONTAL;
   
   // cursor line (wline)
-  if(in_y< 0)
+  if(in_y< 0.0f)
     resetToStart();
   else if(in_y> _parent->textDy)
     resetToEnd();
@@ -3362,7 +3378,8 @@ void ixTxtData::Cursor::makeSureInBounds() {
 
 void ixTxtData::Cursor::makeSureVisible() {
   bool horiz= _parent->orientation& IX_TXT_HORIZONTAL;
-  int32 viewLen;
+  float viewLen;
+  float newPos;
   ixScroll *scr;
 
   // text orientation = horizontal
@@ -3372,7 +3389,7 @@ void ixTxtData::Cursor::makeSureVisible() {
     if(scr) {
 
       viewLen= _parent->_parent->_viewArea.dy;
-      if(viewLen< 1) return;
+      if(viewLen< 1.0f) return;
 
       // cursor is out of view, to the top
       if(y0< scr->position) {
@@ -3383,24 +3400,13 @@ void ixTxtData::Cursor::makeSureVisible() {
       } else if(y0+ pWline->dy> scr->position+ viewLen) {
         /// this method puts _view to cur, and scrolls up until it reaches newPos
         /// it is slower for 1 line scrolls, or small texts, but it is the same speed for huge texts, and that's why it's best to use
-        int32 newPos= y0- viewLen+ pWline->dy;       // _view.pos must reach this point, from the cursor position
+        newPos= y0- viewLen+ pWline->dy;       // _view.pos must reach this point, from the cursor position
         if(newPos< 0) newPos= 0;
         _parent->_view.moveToCursor();
 
         /// scroll the view cursor until the first line that's out of view
         while(_parent->_view.pos> newPos)
           _parent->_view.decreaseLine();
-        /*
-        for(Wline *p= (Wline *)pWline->prev; p && _parent->_view.pos> newPos; p= (Wline *)p->prev) {
-          /// decrease _view by one line
-          if(p->line!= _parent->_view.pLine)
-            _parent->_view.line--,                                    /// 1. decrease line
-            _parent->_view.pLine= (Line *)_parent->_view.pLine->prev; /// 2. decrease pLine
-          _parent->_view.wline--;                                     /// 3. decrease wline
-          _parent->_view.pWline= p;                                   /// 4. decrease pWline
-          _parent->_view.pos-= ((Wline *)p->next)->dy;                /// 5. decrease pos
-        }
-        */
 
         _parent->_parent->vscroll->setPosition(newPos);
         //_parent->_view.pos= newPos;
@@ -3436,23 +3442,13 @@ void ixTxtData::Cursor::makeSureVisible() {
 
       /// cursor is out of view, to the bottom
       } else if(x0> scr->position+ viewLen) {
-        int32 newPos= x0- (viewLen- pWline->dx);
+        newPos= x0- (viewLen- pWline->dx);
         if(newPos< 0) newPos= 0;
         _parent->_view.moveToCursor();
 
         /// scroll the view cursor until the first line that is partially visible
         while(_parent->_view.pos> newPos)
           _parent->_view.decreaseLine();
-        /*
-        for(Wline *p= (Wline *)pWline->prev; p && _parent->_view.pos> newPos; p= (Wline *)p->prev) {
-          if(p->line!= _parent->_view.pLine)
-            _parent->_view.line--,                                    /// 1. line
-            _parent->_view.pLine= (Line *)_parent->_view.pLine->prev; /// 2. pLine
-          _parent->_view.wline--;                                     /// 3. wline
-          _parent->_view.pWline= p;                                   /// 4. pWline
-          _parent->_view.pos-= p->dx;                                 /// 5. pos
-        }
-        */
         _parent->_parent->hscroll->setPosition(newPos);
       } /// over cursor / before cursor
     } /// horizontal check
@@ -3466,8 +3462,6 @@ void ixTxtData::Cursor::makeSureVisible() {
       if(y0+ drawWidth> scr->position+ viewLen)
         scr->setPosition(x0+ drawWidth- viewLen);
     } /// vertical check
-
-
   } /// horizontal / vertical text
 }
   
@@ -3556,85 +3550,11 @@ void ixTxtData::ViewPos::moveToScrollPosition() {
   else if(pos+ (horiz? pWline->dy: pWline->dx)< scr->position)
     while(pos+ (horiz? pWline->dy: pWline->dx)< scr->position)
       advanceLine();
-
-  /*
-  // horizontal text
-  if(_parent->orientation& IX_TXT_HORIZONTAL) {
-    ixScroll *scr= _parent->_parent->vscroll;
-    if(!scr)
-      return;
-
-    // 2 possibilities, pos is lower, pos is higher (3rd is equal, nothing needs be done)
-    if(pos> scr->position) {
-      // decrease;
-      while(pos> scr->position) {
-        if(pWline->prev== null) { error.detail("prev pointer in pWline is null", __FUNCTION__); break; }
-        pWline= (Wline *)pWline->prev;
-        wline--;
-        pos-= pWline->dy;
-        if(pWline->line!= pLine) {
-          if(pLine->prev== null) { error.detail("prev pointer in pLine is null", __FUNCTION__); break; }
-          pLine= (Line *)pLine->prev,
-          line--;
-        }
-      }
-    } else if(pos+ pWline->dy< scr->position) {
-      // increase;
-      while(pos+ pWline->dy< scr->position) {
-        pos+= pWline->dy;
-        if(pWline->next== null) { error.detail("next in pWline is null", __FUNCTION__); break; }
-        pWline= (Wline *)pWline->next;
-        wline++;
-        if(pWline->line!= pLine) {
-          if(pWline->next== null) { error.detail("next in pLine is null", __FUNCTION__); break; }
-          pLine= (Line *)pLine->next,
-          line++;
-        }
-      }
-    } /// pos is not visible
-
-  // vertical text
-  } else {
-    ixScroll *scr= _parent->_parent->hscroll;
-    if(!scr)
-      return;
-
-
-    // 2 possibilities, pos is lower, pos is higher (3rd is equal, nothing needs be done)
-    if(pos> scr->position) {
-      // decrease;
-      while(pos> scr->position) {
-        if(pWline->prev== null) { error.detail("prev pointer in pWline is null", __FUNCTION__); break; }
-        pWline= (Wline *)pWline->prev;
-        wline--;
-        pos-= pWline->dx;
-        if(pWline->line!= pLine) {
-          if(pLine->prev== null) { error.detail("prev pointer in pLine is null", __FUNCTION__); break; }
-          pLine= (Line *)pLine->prev,
-          line--;
-        }
-      }
-    } else if(pos+ pWline->dx< scr->position) {
-      // increase;
-      while(pos+ pWline->dx< scr->position) {
-        pos+= pWline->dx;
-        if(pWline->next== null) { error.detail("next in pWline is null", __FUNCTION__); break; }
-        pWline= (Wline *)pWline->next;
-        wline++;
-        if(pWline->line!= pLine) {
-          if(pLine->next== null) { error.detail("next in pLine is null", __FUNCTION__); break; }
-          pLine= (Line *)pLine->next,
-          line++;
-        }
-      }
-    } /// pos is not visible
-  } /// horiz / vert text
-  */
 }
 
 
 
-void ixTxtData::ViewPos::moveRelativeToCursor(int32 in_pixels) {
+void ixTxtData::ViewPos::moveRelativeToCursor(float in_pixels) {
   bool horiz= _parent->orientation& IX_TXT_HORIZONTAL;
   moveToCursor();
 

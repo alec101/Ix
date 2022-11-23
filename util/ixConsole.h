@@ -31,7 +31,7 @@ public:
   
   vec4 bgColor;
   ixTexture *bgTex;             // set bgTex.fileName
-  int showPercentage;           // what percentage of the screen will be used to show the camera (100 is fullscreen, 50, half the screen, etc)
+  float showPercentage;         // [def:0.5]what percentage of the screen will be used to show the camera (0.0- 1.0 etc)
   std::mutex mutex;
   //void *font;                 // console ixPrint font
   ixFontStyle fontStyle;        // console ixPrint font style
@@ -48,9 +48,9 @@ public:
   inline void clearBuffers() { mutex.lock(); _clearBuffers(); mutex.unlock(); }        // clears the console buffers
 
   void update();
-  void _draw(int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy);
-  void _glDraw(int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy);
-  void _vkDraw(int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy);
+  void _draw(float in_x0, float in_y0, float in_dx, float in_dy);
+  void _glDraw(float in_x0, float in_y0, float in_dx, float in_dy);
+  void _vkDraw(float in_x0, float in_y0, float in_dx, float in_dy);
   void print(cchar *txt);
   void printf(cchar *txt, ...);
 
@@ -87,8 +87,8 @@ private:
   uint8 visibleX0, visibleXe;
 
   // command line scrolling helpers
-  void _adjustVisibleX0(uint8 c, int editSize); // makes sure that character number c is visible, scrolling to the left if neccesary
-  void _adjustVisibleXe(uint8 c, int editSize); // makes sure that character number c is visible, scrolling to the right if neccesary
+  void _adjustVisibleX0(uint8 c, float editSize); // makes sure that character number c is visible, scrolling to the left if neccesary
+  void _adjustVisibleXe(uint8 c, float editSize); // makes sure that character number c is visible, scrolling to the right if neccesary
 
   
 

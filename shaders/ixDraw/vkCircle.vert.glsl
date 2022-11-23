@@ -5,11 +5,17 @@ layout(location= 0) out vec3 out_UV;
 
 // global uniform buffer
 layout(set= 0, binding= 0) uniform GlobalUniforms {
-  mat4 cameraPersp;         // perspective camera matrix
-  mat4 cameraOrtho;         // orthographic camera matrix
-  vec3 cameraPos;
-  vec2 vp;                  // viewport position on the virtual desktop
-  vec2 vs;                  // viewport size
+  mat4 cameraPersp;       // perspective camera matrix
+  mat4 cameraUI;          // UI orthographic camera matrix
+  vec3 cameraPos;         // camera position (eye) in the world
+  vec2 vp;                // UI viewport position on the virtual desktop
+  vec2 vs;                // UI viewport size
+  float UIscale;
+
+  vec3 sunPos;
+  vec3 sunColor;
+  float sunAmbientStr;
+  float sunSpecularStr;
 } glb;
 
 // push constants - to force more compact data, vectors are not used, as any vector ocupies 16 bytes (even vec2 or vec3)
@@ -48,5 +54,5 @@ void main() {
   if((p.flags& 0x0001)> 0)
     gl_Position= glb.cameraPersp* gl_Position;
   else
-    gl_Position= glb.cameraOrtho* gl_Position;
+    gl_Position= glb.cameraUI* gl_Position;
 }

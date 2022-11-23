@@ -8,10 +8,10 @@ layout(location= 1) out vec4 out_vert[2];
 // global uniform buffer
 layout(set= 0, binding= 0) uniform GlobalUniforms {
   mat4 cameraPersp;         // perspective camera matrix
-  mat4 cameraOrtho;         // orthographic camera matrix
+  mat4 cameraUI;            // UI orthographic camera matrix
   vec3 cameraPos;
-  vec2 vp;                  // viewport position on the virtual desktop
-  vec2 vs;                  // viewport size
+  vec2 vp;                  // UI viewport position on the virtual desktop
+  vec2 vs;                  // UI viewport size
 } glb;
 
 // push constants
@@ -43,9 +43,9 @@ void main() {
     out_vert[0]= glb.cameraPersp* p.pos[0],
     out_vert[1]= glb.cameraPersp* p.pos[1];
   } else {
-    gl_Position= glb.cameraOrtho* p.pos[gl_VertexIndex];
-    out_vert[0]= glb.cameraOrtho* p.pos[0],
-    out_vert[1]= glb.cameraOrtho* p.pos[1];
+    gl_Position= glb.cameraUI* p.pos[gl_VertexIndex];
+    out_vert[0]= glb.cameraUI* p.pos[0],
+    out_vert[1]= glb.cameraUI* p.pos[1];
   }
 
   out_vert[0].xyz= out_vert[0].xyz/ out_vert[0].w;

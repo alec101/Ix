@@ -2,9 +2,9 @@
 #include "ix/winSys/_privateDef.h"
 
 
-/*
-- buttons must be able to be toggle buttons, not only something you press and imediatly depresses
-
+/* TODO:
+ - maybe more text position options
+ - unsigned manualOff: 1;      // toggled button: when pressed again, can it be toggled off, or it will stay on <<< possible
 
 
 */
@@ -15,8 +15,6 @@ ixButton::ixButton(): usage(this), ixBaseWindow(&is, &usage) {
   _type= ixeWinType::button;
   textX= textY= 0;
   _specialAction= 0;
-
-  //font= null;
 }
 
 
@@ -30,27 +28,22 @@ void ixButton::delData() {
   text.delData(); 
   is.delData();
   usage.delData();
-  //font= null;
   textX= textY= 0;
 }
 
 
-/*
-void ixButton::setText(cchar *s) {
-  text= s;
-}
-*/
+
 
 
 
 void ixButton::setTextCentered(cchar *in_text) {
   text= in_text;
   
-  int32 dx= ixPrint::getTextLen(in_text, 0, font.selFont);
-  int32 dy= ixPrint::getCharDy(font.selFont);
+  float dx= font.getTextLen(in_text, 0);  // ixPrint::getTextLen(in_text, 0, font.selFont);
+  float dy= font.getCharDy();             // ixPrint::getCharDy(font.selFont)* font;
 
-  textX= (pos.dx- dx)/ 2;
-  textY= (pos.dy- dy)/ 2;
+  textX= (float)((int)(pos.dx- dx)/ 2);
+  textY= (float)((int)(pos.dy- dy)/ 2);
 }
 
 
@@ -62,19 +55,7 @@ void ixButton::setTextCentered(cchar *in_text) {
 // DRAW func ========================------------------------------------
 #ifdef IX_USE_OPENGL
 void ixButton::_glDraw(Ix *in_ix, ixWSsubStyleBase *dummy) {
-  /*
-  // THE WINDOW COULD HAVE CHILDREN, THEY'RE NOT DRAWN. <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-  ixBaseWindow::_glDraw(in_ix, (is.pressed? stylePressed: null));
-
-  recti clp;
-  getVDcoordsRecti(&clp);
-  clp.intersectRect(_clip);
-
-  in_ix->pr.style= &font;
-  //in_ix->pr.setScissor(&clp);
-  in_ix->pr.txt2i(clp.x0+ textX, clp.y0+ textY, text);
-  */
+  error.makeme();
 }
 #endif
 
@@ -85,15 +66,14 @@ void ixButton::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *dumm
   if(!is.visible) return;
   if(!_clip.exists()) return;
 
-  int32 _x, _y;
-  getVDcoords2i(&_x, &_y);
-  recti clp;
-  getVDcoordsRecti(&clp);
+  rectf r; getPosVD(&r);
+
+  rectf clp(r);
   clp.intersectRect(_clip);
   in_ix->vki.cmdScissor(in_cmd, &clp);
 
   in_ix->pr.style= &font;
-  in_ix->pr.txt2i(_x+ textX, _y+ textY, text);
+  in_ix->pr.txt2f(r.x0+ textX, r.y0+ textY, text);
 
   // THE WINDOW COULD HAVE CHILDREN, THEY'RE NOT DRAWN. <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 }
@@ -126,25 +106,37 @@ void ixButton::_doSpecialAction() {
 void ixButton::setActivate(bool in_b) {
   is.activated= in_b;
   is.pressed= in_b;
-  //_update(false, false);
 }
 
 
-bool ixButton::_update(bool in_mIn, bool in_updateChildren) {
+
+
+
+
+
+
+
+
+
+
+
+
+// UPDATE func ==========================---------------------------
+
+bool ixButton::_update(bool in_updateChildren) {
   _doSpecialAction();
   if(!is.visible) return false;
-
-  recti r; getVDcoordsRecti(&r);
-  bool inside= r.inside(in.m.x, in.m.y);
+  rectf r;
+  bool inside;
 
   /// update it's children first
   if(in_updateChildren)
-    if(_updateChildren((in_mIn? inside: false)))
+    if(_updateChildren())
       return true;
-
-  //int32 x= hook.pos.x+ pos.x0, y= hook.pos.y+ pos.y0;
-
-
+  
+  float mx= _scaleDiv(in.m.x), my= _scaleDiv(in.m.y);
+  getPosVD(&r);
+  inside= r.inside(mx, my);
 
   // an operation is in progress
   if(Ix::wsys()._op.win) {
@@ -154,8 +146,7 @@ bool ixButton::_update(bool in_mIn, bool in_updateChildren) {
     if(Ix::wsys()._op.mLclick) {
 
       /// recheck the pressed state depending on the mouse position
-      //if(!mPos(x, y, pos.dx, pos.dy))
-      if(!r.inside(in.m.x, in.m.y))
+      if(!inside)
         is.pressed= is.activated; //(is.activated? false: true);
       else
         is.pressed= !is.activated; //(is.activated? true: false);
@@ -166,8 +157,7 @@ bool ixButton::_update(bool in_mIn, bool in_updateChildren) {
       if(!in.m.but[0].down) {
 
         /// activate (deactivate) button - if the mouse was depressed in the button's area
-        //if(mPos(x, y, pos.dx, pos.dy)) {
-        if(r.inside(in.m.x, in.m.y)) {
+        if(inside) {
 
           // toggled button state switch
           if(usage.toggleable) {
@@ -212,10 +202,9 @@ bool ixButton::_update(bool in_mIn, bool in_updateChildren) {
 
 
   // no operation is in progress
-  } else if(in_mIn) {
+  } else if(inside) {
     if(in.m.but[0].down) {
-      //if(mPos(x, y, pos.dx, pos.dy)) {
-      if(r.inside(in.m.x, in.m.y)) {
+      //if(inside) {
         is.pressed= !is.activated; //(is.activated? false: true);
 
         Ix::wsys()._op.mLclick= true;
@@ -224,9 +213,8 @@ bool ixButton::_update(bool in_mIn, bool in_updateChildren) {
 
         Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
         return true;
-      }
+      //}
     } /// left mouse button is being pressed
-    //_colorToUse= &colorHover;
   } /// operation in progress / no operation in progress
 
   if(is.activated) {
@@ -237,7 +225,7 @@ bool ixButton::_update(bool in_mIn, bool in_updateChildren) {
     _colorBRDtoUse= &colorBRD;
   }
 
-  return ixBaseWindow::_update(in_mIn, false);
+  return ixBaseWindow::_update(false);
 }
 
 

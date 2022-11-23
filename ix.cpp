@@ -422,7 +422,7 @@ Ix::Ix(): ixClass(ixClassT::IX), res(this)
   #endif
 {
   cameraPersp._parent= this;
-  cameraOrtho._parent= this;
+  cameraUI._parent= this;
   camera= &cameraPersp;
   pr._ix= this;
   
@@ -622,6 +622,8 @@ void Ix::init(void *in_glbData[2], uint32 in_glbSize) {
   }
   #endif
 
+  
+
   // random generator seeds
   ixUtil::randInit();
 }
@@ -662,7 +664,9 @@ void Ix::initWindow(osiWindow *in_w) {
   //_FUNCconsole= &console.ixErrorPrint;
   
   // ALL CLASSES INIT HERE
-  
+
+  Ix::wsys().init(this);
+
   res.mat._init();
 
   pr.init();
@@ -703,14 +707,20 @@ void Ix::update() {
   #endif
 
   #ifdef IX_USE_VULKAN
-  if(osi.flags.minimized)
-    if(vki.swap.handle->swapchain) {
-      vk.QueueWaitIdle(*vki.q1);
-      vki.swap.handle->destroy();
+  
+  if(osi.flags.windowMinimized)
+    if(win->isMinimized) {
+      if(vki.swap.handle->swapchain) {
+        vk.QueueWaitIdle(*vki.q1);
+        vki.swap.handle->destroy();
+      }
     }
 
+
+  
   if(osi.flags.windowResized) {
     vki.swap.rebuild();
+    wsys().computeScale(this);
   }
 
   #endif
@@ -803,11 +813,21 @@ bool Ix::startOrtho() {
   if(!win->isCreated) return false;
 
   // virtual desktop coords
-  cameraOrtho.setOrtho(rectf((float)win->x0, (float)win->y0, (float)(win->x0+ win->dx), (float)(win->y0+ win->dy)), -1000.5f, 100.5f);
+  float s= Ix::wsys().scale;
+  //s= 1.0f;
+  //cameraOrtho.setOrtho(rectf((float)win->x0* s, (float)win->y0* s, (float)(win->x0+ win->dx)* s, (float)(win->y0+ win->dy)* s), -1000.5f, 100.5f);
+
+  // scale div
+  cameraUI.setOrtho(rectf((float)win->x0/ s, (float)win->y0/ s, (float)(win->dx)/ s, (float)(win->dy)/ s), -1000.5f, 100.5f);
+  // scale none
+  //cameraUI.setOrtho(rectf((float)win->x0, (float)win->y0, (float)(win->dx), (float)(win->dy)), -1000.5f, 100.5f);
+  // scale mul
+  //cameraUI.setOrtho(rectf((float)win->x0* s, (float)win->y0* s, (float)(win->dx)* s, (float)(win->dy)* s), -1000.5f, 100.5f);
+
   // viewport coords
   //cameraOrtho.setOrtho(rectf((float)(win->dx), (float)(win->dy)), -1000.5f, 100.5f);
 
-  camera= &cameraOrtho;
+  camera= &cameraUI;
   
   #ifdef IX_USE_VULKAN
   if(renVulkan()) {

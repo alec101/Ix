@@ -9,9 +9,12 @@ layout(location= 0) out vec4 out_color;
 
 layout(set= 0, binding= 0) uniform GlobalUniforms {
   mat4 cameraPersp;         // perspective camera matrix
-  mat4 cameraOrtho;         // orthographic camera matrix
+  mat4 cameraUI;            // UI orthographic camera matrix
   vec3 cameraPos;
   vec2 vp;                  // viewport position on the virtual desktop
+  vec2 vs;                  // [scaled] viewport size
+  float UIscale;            //
+
 } glb;
 
 layout(set= 1, binding= 0) uniform sampler2D texSampler;
@@ -35,10 +38,10 @@ void main() {
   
   // hollow RECTANGLE drawing
   if(p.hollow> 0.0) {
-    if( ((gl_FragCoord.x+ glb.vp.x)>= (p.x0+ p.hollow)) &&
-        ((gl_FragCoord.x+ glb.vp.x)<= (p.xe- p.hollow)) && 
-        ((gl_FragCoord.y+ glb.vp.y)>= (p.y0+ p.hollow)) && 
-        ((gl_FragCoord.y+ glb.vp.y)<= (p.ye- p.hollow)) ) {
+    if( (((gl_FragCoord.x/ glb.UIscale)+ glb.vp.x)>= (p.x0+ p.hollow)) &&
+        (((gl_FragCoord.x/ glb.UIscale)+ glb.vp.x)<= (p.xe- p.hollow)) && 
+        (((gl_FragCoord.y/ glb.UIscale)+ glb.vp.y)>= (p.y0+ p.hollow)) && 
+        (((gl_FragCoord.y/ glb.UIscale)+ glb.vp.y)<= (p.ye- p.hollow)) ) {
       out_color= vec4(0, 0, 0, 0);
       return;
     }

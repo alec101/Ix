@@ -18,9 +18,8 @@ class ixMenuItem: public chainData {
   ixMenuItem(): childMenu(null), parent(null) {}
   
 private:
-  vec2i _textPos;
-  recti _pos;           // the menu bounds or position (the classic pos), inside the whole ixMenu::pos
-  
+  vec2 _textPos;
+  rectf _pos;           // the menu bounds or position (the classic pos), inside the whole ixMenu::pos
 
   friend class ixMenu;
   friend class ixMenuBar;
@@ -50,17 +49,17 @@ public:
   Usage usage;
   Is is;
 
-  ixFontStyle font;
+  //ixFontStyle font;
 
   chainList items;
-  int32 menuBorder;         // [def:2] menu border width (in pixels)
-  int32 itemBorder;         // [def:1] menu item border width (in pixels)
+
+  bool borderAutoSize;      // [def:true] menuBorder & itemBorder have auto sizes based on monitor resolution
+  float menuBorder;         // [def:2 x2 scaled for bigger res] menu border width (in pixels)
+  float itemBorder;         // [def:1 x2 scaled for bigger res] menu item border width (in pixels)
 
   // funcs
 
-  void showAndSetPosition(int32 x, int32 y);      // shows the menu on a specific place, usually called by a r-click menu
-
-
+  void showAndSetPosition(float x, float y);      // shows the menu on a specific place, usually called by a r-click menu
 
   void addMenuItem(cchar *text);
   void addMenuItemAfter(cchar *text, ixMenuItem *afterPoint);
@@ -78,13 +77,12 @@ public:
 
   void hideMenu();                      // this will hide every menu attached to this menu, the whole tree.
 
-  //void draw(Ix *in_ix, ixWSsubStyleBase *in_style= null); // draws the window; can pass another style to use - ATM this is a simple but not elegant way draw the window in another state
   
-  void move(int32 x0, int32 y0);            // moves window and all children to specified coords
-  void moveDelta(int32 dx, int32 dy);       // moves window and all children a delta distance (deltax, deltay)
-  void resize(int32 dx, int32 dy);          // resizes window, this will move all children hooked on the right and bottom side
-  void resizeDelta(int32 dx, int32 dy);     // resizes window (enlarges, shrinkens by specified amount), this will move all children hooked on the right and bottom side
-  void setPos(int32 x0, int32 y0, int32 dx, int32 dy); // sets position and size of the window
+  void move(float x0, float y0);            // disabled
+  void moveDelta(float dx, float dy);       // disabled
+  void resize(float dx, float dy);          // disabled
+  void resizeDelta(float dx, float dy);     // disabled
+  void setPos(float x0, float y0, float dx, float dy); // disabled
 
   // constructor / destructor
 
@@ -95,7 +93,7 @@ public:
 protected:
   ixMenuItem *_highlighted;
   
-  bool _update(bool mouseInside, bool updateChildren= true);
+  bool _update(bool updateChildren= true);
   #ifdef IX_USE_OPENGL
   virtual void _glDraw(Ix *in_ix, ixWSsubStyleBase *in_style= null);  // the drue draw func, init stuff, pass it to this
   #endif
@@ -103,22 +101,22 @@ protected:
   virtual void _vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_style= null);  // the drue draw func, init stuff, pass it to this
   #endif
   
+  
   void _computeMenuItemPos();
   void _computeMenuPos();
   void _computeMenuAllPos();               // computes menu dx/dy, each item rect, text position
-
-  //void _computeMenuPositions();
+  void _computeMenuBorderSize(osiMonitor *in_m);
+  
 
   bool _itemPartOfThis(ixMenuItem *in_i);     // returns true if the menu item is part of <this ixMenu>
   bool _useCustomPos;
-  vec2i _customPos;
+  vec2 _customPos;
 
-  int32 _dxRequired, _dyRequired;             // dx and dy required to fit all the menu items
+  float _dxRequired, _dyRequired;             // dx and dy required to fit all the menu items
+  float _scale;
 
-  int32 _getTriangleWidth();                  // the triangle (arrow) pointing to the left or right meaning the menu expands
+  float _getTriangleWidth();                  // the triangle (arrow) pointing to the left or right meaning the menu expands
 
-  //vec2i _initial;
-  //void _computeInitial(int32 dx, int32 dy);      // menu dimensions must be known, it will check where the menu can fit (x0 and y0)
   friend class ixMenuBar;
 };
 
@@ -140,8 +138,8 @@ public:
   ixMenuBarItem(): chainData(), menu(null) {}
 
 private:
-  vec2i _textPos;
-  recti _pos;           // the menu bounds or position (the classic pos), inside the whole ixMenu::pos
+  vec2 _textPos;
+  rectf _pos;           // the menu bounds or position (the classic pos), inside the whole ixMenu::pos
   friend class ixMenu;
   friend class ixMenuItem;
   friend class ixMenuBar;
@@ -159,22 +157,16 @@ public:
 
   // funcs
 
-
   void addMenuBarItem(cchar *text);
-
   void attachMenu(ixMenuBarItem *in_barItem, ixMenu *in_menu);     // attaches in_menu to in_barItem
   void hideMenus();                           // will hide all menus attached to this bar, the whole tree.
 
 
-  //void draw(Ix *in_ix, ixWSsubStyleBase *in_style= null);
-
-  void move(int32 x0, int32 y0);            // moves window and all children to specified coords
-  void moveDelta(int32 dx, int32 dy);       // moves window and all children a delta distance (deltax, deltay)
-  void resize(int32 dx, int32 dy);          // DISABLED, menus cannot be resized
-  void resizeDelta(int32 dx, int32 dy);     // DISABLED, menus cannot be resized
-  void setPos(int32 x0, int32 y0, int32 dx, int32 dy); // sets position of the menu. the sizes are ignored
-
-  
+  void move(float x0, float y0);            // moves window and all children to specified coords
+  void moveDelta(float dx, float dy);       // moves window and all children a delta distance (deltax, deltay)
+  void resize(float dx, float dy);          // DISABLED, menus cannot be resized
+  void resizeDelta(float dx, float dy);     // DISABLED, menus cannot be resized
+  void setPos(float x0, float y0, float dx, float dy); // sets position of the menu. the sizes are ignored
 
   // constructor / destructor
 
@@ -182,18 +174,20 @@ public:
   ~ixMenuBar();
   void delData();
 
-
 protected:
   ixMenuBarItem *_hovered;
   ixMenuBarItem *_selected;
 
-  bool _update(bool mouseInside, bool updateChildren= true);
+  bool _update(bool updateChildren= true);
   #ifdef IX_USE_OPENGL
   virtual void _glDraw(Ix *in_ix, ixWSsubStyleBase *in_style= null);  // the drue draw func, init stuff, pass it to this
   #endif
   #ifdef IX_USE_VULKAN
   virtual void _vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_s= null);
   #endif
+
+
+  //float _scale;
 
   void _computeBarPositions();
 };

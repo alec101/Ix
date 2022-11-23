@@ -1,6 +1,12 @@
 #include "ix/ix.h"
 #include "ix/winSys/_privateDef.h"
 
+/* TODO
+  - maybe a style set for it, check draw() to update?
+  - draw has a unit compute, must compute only when needed
+*/
+
+
 ///========================///
 // constructor / destructor //
 ///========================///
@@ -8,7 +14,7 @@
 ixDropList::ixDropList(): usage(this), ixBaseWindow(&is, &usage) {
   _type= ixeWinType::dropList;
 
-  buttonDx= buttonDy= 0;
+  buttonDx= buttonDy= 0.0f;
   selNr= -1;
   sel= null;
 
@@ -51,10 +57,10 @@ void ixDropList::delData() {
 ///===========///
 
 
-void ixDropList::Usage::setListMaxLength(int32 in_len) {
-  if(in_len< 0) in_len= 0;
+void ixDropList::Usage::setListMaxLength(float in_len) {
+  if(in_len< 0.0f) in_len= 0.0f;
   _maxLength= in_len;
-  if(in_len== 0)
+  if(in_len== 0.0f)
     ((ixDropList *)_win)->_scr->setVisible(false);
 }
 
@@ -68,11 +74,12 @@ void ixDropList::Usage::setListMaxLength(int32 in_len) {
 
 
 
-void ixDropList::setButtonDxDy(int32 dx, int32 dy) {
-  if(dx< 0) dx= 0;
-  if(dy< 0) dy= 0;
+void ixDropList::setButtonDxDy(float dx, float dy) {
+  if(dx< 0.0f) dx= 0.0f;
+  if(dy< 0.0f) dy= 0.0f;
 
   buttonDx= dx, buttonDy= dy;
+  _computeRects();
 }
 
 
@@ -140,41 +147,42 @@ void ixDropList::delAllOptions() {
 
 
 
+
+
+
+
 void ixDropList::_computeRects() {
-  pos.setD(pos.x0, pos.y0, buttonDx, buttonDy);
+  float y0list= pos.y0+ buttonDy;
+  float dyList= 0;
+  ixDropListData *p= (ixDropListData *)optionList.first;
 
-  // for each option in list
-  int32 y= pos.ye;
-  for(ixDropListData *p= (ixDropListData *)optionList.first; p; p= (ixDropListData *)p->next) {
-    /// pos update
-    if(is.expanded) {
-      pos.ye+= buttonDy;
-      if(usage._maxLength && ((pos.ye- pos.y0- buttonDy)> usage._maxLength))
-        pos.ye= pos.y0+ buttonDy+ usage._maxLength;
-    }
+  for(uint a= 0; a< optionList.nrNodes; a++, p= (ixDropListData *)p->next) {
+    p->pos.setD(pos.x0, y0list+ (buttonDy* (float)a), pos.dx, buttonDy);     /// rects could differ in height, ATM buttonDy is fine
+    if(is.expanded)
+      dyList+= p->pos.dy;
+  }
 
-    p->pos.set(pos.x0, y, pos.xe, y+ buttonDy);
-
-    y+= buttonDy;
-  } /// for each option in list
-
-  pos.compDeltas();
+  if(usage._maxLength)
+    if(dyList> usage._maxLength)
+      dyList= usage._maxLength;
   
+  dyList+= buttonDy;        // the selected always visible on top
+
+  pos.setD(pos.x0, pos.y0, pos.dx, dyList);
+
   _computeAll();
   _computeScr();
 }
 
 
 void ixDropList::_computeScr() {
-  int32 x, y;
-  int32 dx, dy, minDy;
-  int32 lastYe;
+  float x, y, dx, dy, minDy, lastYe;
   bool isNeeded= false;      // if the scroll is needed
   
   /// if the list is expanded & there is at least one option, the scroll might be needed
   if(is.expanded && optionList.last) {
     lastYe= ((ixDropListData *)optionList.last)->pos.ye;
-    // if last option y0 is further down than pos.y0, then scroll is needed
+    // if last option y0 is further down than pos.ye, then scroll is needed
     if(lastYe> pos.ye)
       isNeeded= true;
   }
@@ -188,7 +196,7 @@ void ixDropList::_computeScr() {
     y= buttonDy;
 
     
-    _scr->steps= lastYe- pos.ye;
+    _scr->steps= int(lastYe- pos.ye);
     _scr->setPos(x, y, dx, dy);
     _scr->_computeButtons();
     _scr->_asurePosInBounds();
@@ -226,19 +234,21 @@ void ixDropList::select(int32 in_n) {
 //  ##    ##    ##          ##    ##    ########       ##       ##
 //    ####      ##          ######      ##    ##       ##       ########
 
-bool ixDropList::_update(bool in_mIn, bool updateChildren) {
+bool ixDropList::_update(bool updateChildren) {
   if(!is.visible) return false;
 
-  recti r; getVDcoordsRecti(&r);
-  bool insideThis= r.inside(in.m.x, in.m.y);
+  rectf r;
+  bool insideThis;
+  float mx, my;
 
   // update it's children first
   if(updateChildren)
-    if(_updateChildren((in_mIn? insideThis: false)))
+    if(_updateChildren())
       return true;
 
-
-
+  mx= _scaleDiv(in.m.x), my= _scaleDiv(in.m.y);
+  getPosVD(&r);
+  insideThis= r.inside(mx, my);
 
   // FUNCTION CORE
 
@@ -251,10 +261,10 @@ bool ixDropList::_update(bool in_mIn, bool updateChildren) {
 
       // the left mouse button is depressed -> action is needed
       if((!in.m.but[0].down) && insideThis) {
-        recti b(r.x0, r.y0, r.dx, buttonDy);
+        rectf b(r.x0, r.y0, pos.dx, buttonDy);
 
         // top button click - expand/retract the list
-        if(b.inside(in.m.x, in.m.y)) {
+        if(b.inside(mx, my)) {
           is.expanded= !is.expanded;
           _computeRects();
           Ix::wsys()._op.delData();
@@ -271,7 +281,7 @@ bool ixDropList::_update(bool in_mIn, bool updateChildren) {
           }
 
           for(; p; p= (ixDropListData *)p->next, a++) {
-            if(b.inside(in.m.x, in.m.y)) {
+            if(b.inside(mx, my)) {
               sel= p;
               selNr= a;
               is.expanded= 0;
@@ -280,7 +290,7 @@ bool ixDropList::_update(bool in_mIn, bool updateChildren) {
               Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
               return true;
             }
-            b.moveD(0, buttonDy);
+            b.moveD(0.0f, buttonDy);
 
           } /// for each option
         } /// depress on top or on list
@@ -288,25 +298,19 @@ bool ixDropList::_update(bool in_mIn, bool updateChildren) {
     } /// left click operation
 
   // no operation is in progress
-  } else if(in_mIn) {
+  } else if(insideThis) {
     if(in.m.but[0].down) {
-      if(r.inside(in.m.x, in.m.y)) {
-        //is.pressed= !is.activated; //(is.activated? false: true);
-
-        Ix::wsys()._op.mLclick= true;
-        Ix::wsys()._op.win= this;
-        Ix::wsys().bringToFront(this);
-        Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
-        return true;
-      }
+      Ix::wsys()._op.mLclick= true;
+      Ix::wsys()._op.win= this;
+      Ix::wsys().bringToFront(this);
+      Ix::wsys().flags.setUp((uint32)ixeWSflags::mouseUsed);
+      return true;
     } /// left mouse button is being pressed
   } /// operation in progress / no operation in progress
 
 
-
-
   // base window update, at this point - no childrens tho, those were updated first
-  return ixBaseWindow::_update(in_mIn, false);
+  return ixBaseWindow::_update(false);
 }
 
 
@@ -332,12 +336,12 @@ bool ixDropList::_update(bool in_mIn, bool updateChildren) {
 void ixDropList::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_style) {
   if(!_clip.exists()) return;
   if(!is.visible) return;
+  
 
   in_ix->pr.style= &font;
-  int32 charDy= ixPrint::getCharDy(font.selFont);
-  int32 _x, _y;
-  getVDcoords2i(&_x, &_y);
-
+  float charDy= font.getCharDy();
+  float _x, _y; getPosVD(&_x, &_y);
+  
   //ixWSgenericStyle *s= (ixWSgenericStyle *)(in_style? in_style: style); // <<< NO STYLE SET FOR DROPLIST
 
   ixDropListData *p= (ixDropListData *)optionList.first;
@@ -354,7 +358,7 @@ void ixDropList::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in
 
   in_ix->vki.draw.quad.push.color= color;
   in_ix->vki.draw.quad.push.hollow= -2.0f;
-  in_ix->vki.draw.quad.setPosD((float)_x, (float)_y, 0.0f, (float)pos.dx, (float)buttonDy);
+  in_ix->vki.draw.quad.setPosD(_x, _y, 0.0f, pos.dx, buttonDy);
 
   in_ix->vki.draw.quad.cmdPushAll(in_cmd);
   in_ix->vki.draw.quad.cmdDraw(in_cmd);
@@ -374,13 +378,11 @@ void ixDropList::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in
   in_ix->vki.draw.triangle.push.color= font.color1;
   in_ix->vki.draw.triangle.flagTexture(false);
   in_ix->vki.draw.triangle.flagDisabled(is.disabled);
-
   
-  in_ix->vki.draw.triangle.setPos(0, (float)(_x+ buttonDx- 4),               (float)(_y+ 4));
-  in_ix->vki.draw.triangle.setPos(1, (float)(_x+ (buttonDx- buttonDy)+ 4),   (float)(_y+ 4));
-  //in_ix->vki.draw.triangle.setPos(2, (float)(_x+ (buttonDx- (buttonDy/ 2))), (float)(_y+ buttonDy- 4));
-  in_ix->vki.draw.triangle.setPos(2, (float)_x+ ((float)buttonDx- ((float)buttonDy/ 2.0f)), (float)(_y+ buttonDy- 4));
-
+  float unit= (float)_getUnit()* 4;
+  in_ix->vki.draw.triangle.setPos(0, _x+ buttonDx- unit,               _y+ unit);
+  in_ix->vki.draw.triangle.setPos(1, _x+ (buttonDx- buttonDy)+ unit,   _y+ unit);
+  in_ix->vki.draw.triangle.setPos(2, _x+ (buttonDx- (buttonDy/ 2.0f)), _y+ buttonDy- unit);
 
 
   in_ix->vki.draw.triangle.cmdPushAll(in_cmd);
@@ -389,12 +391,12 @@ void ixDropList::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in
 
   // selected option draw
   if(sel) {
-    in_ix->pr.txt32_2i(_x, _y+ ((buttonDy- charDy)/ 2), sel->text);
+    in_ix->pr.txt32_2f(_x, _y+ ((buttonDy- charDy)/ 2.0f), sel->text);
   }
 
   // expanded list draw
   if(is.expanded && p) {
-    recti clp;
+    rectf clp;
     clp.setD(_x, _y+ buttonDy, pos.dx, pos.dy- buttonDy);
     clp.intersectRect(_clip);
     if(!clp.exists()) return;
@@ -406,7 +408,7 @@ void ixDropList::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in
     in_ix->vki.draw.quad.cmdTexture(in_cmd, null);
 
     in_ix->vki.draw.quad.push.color= color;
-    in_ix->vki.draw.quad.setPosD((float)_x, (float)_y+ buttonDy, 0.0f, (float)pos.dx, (float)pos.dy- buttonDy);
+    in_ix->vki.draw.quad.setPosD(_x, _y+ buttonDy, 0.0f, pos.dx, pos.dy- buttonDy);
     in_ix->vki.draw.quad.push.hollow= -2;
     in_ix->vki.draw.quad.cmdPushAll(in_cmd);
     in_ix->vki.draw.quad.cmdDraw(in_cmd);
@@ -418,12 +420,12 @@ void ixDropList::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in
 
     in_ix->vki.draw.quad.push.hollow= -1;
 
-
-    int32 prx= hook.pos.x+ p->pos.x0;
-    int32 pry= hook.pos.y+ p->pos.y0+ ((buttonDy- charDy)/ 2)- _scr->position;
+    
+    float prx= hook.pos.x+ p->pos.x0;
+    float pry= hook.pos.y+ p->pos.y0+ ((buttonDy- charDy)/ 2.0f)- _scr->position;
 
     for(; p; p= (ixDropListData *)p->next, pry+= buttonDy)
-      in_ix->pr.txt32_2i(prx, pry, p->text);
+      in_ix->pr.txt32_2f(prx, pry, p->text);
    
     _scr->_vkDraw(in_cmd, in_ix, in_style);  
   }
@@ -434,75 +436,7 @@ void ixDropList::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in
 
 #ifdef IX_USE_OPENGL
 void ixDropList::_glDraw(Ix *in_ix, ixWSsubStyleBase *in_style) {
-  /*
-  int32 charDy= ixPrint::getCharDy(font.selFont);
-  int32 prx, pry;
-  ixDropListData *p= (ixDropListData *)optionList.first;
-
-
-  //ixWSgenericStyle *s= (ixWSgenericStyle *)in_style;
-  //if(!s)
-  //  s= (ixWSgenericStyle *)style;
-  //ixWSstyle::GPU *sGPU= s->parent->getGPUassets(in_ix);
-  //if(!sGPU) return;
-
-
-  in_ix->pr.style= &font;
-  in_ix->pr.setScissor(&_clip);
-
-  
-  glUseProgram(in_sl->gl->id);
-  in_sl->setClipPlaneR(_clip);
-  //glUniform4f(sl->u_color, 1.0f, 1.0f, 1.0f, 1.0f);
-
-  // selected option draw
-  if(sel) {
-    prx= pos.x0;
-    pry= (buttonDy- charDy)/ 2;
-    if(pry< 0) pry= 0;
-    pry+= pos.ye- buttonDy;
-    prx+= hook.pos.x;
-    pry+= hook.pos.y;
-
-    in_ix->pr.txt32_2i(prx, pry, sel->text);
-  }
-
-  // expanded list draw
-  if(is.expanded && p) {
-    // a border around the dropdown
-    //glUseProgram(in_sl->id);
-    //in_sl->hollowRect(pos.x0+ hook.pos.x, pos.y0+ hook.pos.y, pos.dx, pos.dy- buttonDy);
-    
-    in_ix->glo.draw.quad.useProgram();
-    in_ix->glo.draw.quad.setClipPlaneR(_clip);
-    in_ix->glo.draw.quad.setColorv(colorBRD);
-    in_ix->glo.draw.quad.setHollow(1.0f);
-    in_ix->glo.draw.quad.setCoordsDi(pos.x0+ hook.pos.x, pos.y0+ hook.pos.y, pos.dx, pos.dy);
-    in_ix->glo.draw.quad.render();
-    in_ix->glo.draw.quad.setHollow(-1.0f);
-
-
-    //in_ix->pr.addClipPlaneD(pos.x0+ hook.pos.x, pos.y0+ hook.pos.y, pos.dx, pos.dy- buttonDy);
-    recti clp; clp.setD(pos.x0+ hook.pos.x, pos.y0+ hook.pos.y, pos.dx, pos.dy- buttonDy);
-    clp.intersectRect(_clip);
-    in_ix->pr.setClipPlaneR(&clp);
-
-    prx= p->x0;
-    pry= (buttonDy- charDy)/ 2;
-    if(pry< 0) pry= 0;
-    pry+= p->y0;
-    pry+= _scr->position;
-    prx+= hook.pos.x;
-    pry+= hook.pos.y;
-
-    for(; p; p= (ixDropListData *)p->next) {
-      in_ix->pr.txt32_2i(prx, pry, p->text);
-      pry-= buttonDy;
-    }
-
-    in_ix->pr.delScissor();
-  }
-  */
+  error.makeme();
 }
 #endif /// IX_USE_OPENGL
 

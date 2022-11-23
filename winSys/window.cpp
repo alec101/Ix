@@ -30,8 +30,6 @@ void ixWindow::delData() {
 // funcs
 
 
-
-
 void ixWindow::setTitle(cchar *in_text, ixWSgenericStyle *in_style) {
   useTitle= true;
   str32 s32(in_text);
@@ -211,23 +209,29 @@ void ixWindow::_vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, ixWSsubStyleBase *in_s
 
 // window UPDATE =====------------------------------------------------
 
-bool ixWindow::_update(bool in_mouseInside, bool in_updateChildren) {
+bool ixWindow::_update(bool in_updateChildren) {
+  rectf r;
+  bool inside;
+  float mx, my;
+
   if(!is.visible) return false;
-  if(ixBaseWindow::_update(in_mouseInside, in_updateChildren)) return true;
+  if(ixBaseWindow::_update()) return true;
+
+  getPosVD(&r);
+  mx= _scaleDiv(in.m.x), my= _scaleDiv(in.m.y);
+  inside= r.inside(mx, my);
 
   // an operation is in progress
   if(Ix::wsys()._op.win) {
 
-
-
   // no operation is in progress
   } else {
-    if(in_mouseInside) {
+    if(inside) {
 
       // mouse title drag-move
       if(in.m.but[0].down) {
         if(usage.movable && useTitle && title)
-          if(mPos(title->hook.pos.x+ title->pos.x0, title->hook.pos.y+ title->pos.y0, (int32)title->pos.dx, (int32)title->pos.dy)) {
+          if(_mINSIDE(title->hook.pos.x+ title->pos.x0, title->hook.pos.y+ title->pos.y0, title->pos.dx, title->pos.dy)) {
             Ix::wsys()._op.moving= true;
             Ix::wsys()._op.win= this;
             Ix::wsys().bringToFront(this);

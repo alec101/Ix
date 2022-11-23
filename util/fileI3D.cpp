@@ -6,10 +6,10 @@
 // private stuff
 namespace _ixI3D {
   const char id[]= "ix3D";
-  const uint32 version= IX_VER_MAKE(0, 0, 1);
+  const uint32 version= IX_VER_MAKE(0, 0, 2);
 }
 
-
+// 0.0.1 initial working, total scrapped, cannot load from such files
 
 
 
@@ -39,35 +39,13 @@ bool ixMesh::_saveI3D(cchar *in_fname, ixFlags32 in_flags) {
   if(fileInputName.len)
     IXFWRITE(fileInputName.d, 1, fileInputName.len, f);
 
-  IXFWRITE(&nrVert,   4, 1, f);
-  IXFWRITE(&dataType, 4, 1, f);
-  IXFWRITE(&flags,    4, 1, f);
-
-  // data 0
-  if(dataType== 0) {
-    Data0 p(this);
-
-    IXFWRITE(p.pos,  12, nrVert, f);
-    IXFWRITE(p.nrm,  12, nrVert, f);
-    IXFWRITE(p.tex1, 8,  nrVert, f);
-
-  // data 1 (data0 interweaved)
-  }else if(dataType== 1) {
-     Data1i p(this);
-     
-     IXFWRITE(p.vert, p.size(), nrVert, f);
-
-  } else IXERR("Unknown data type");
-
-
-
-
-
-  // MATERIAL
-  mat;  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-
+  IXFWRITE(&nrVert, 4, 1,    f);
+  IXFWRITE(&format, sizeof(DataFormat), 1, f);    // IXMESH_MAX_CHANNELS is 16 for v0.0.2
+  IXFWRITE(&flags,  4, 1,    f);
   
+  IXFWRITE(&size,   8, 1,    f);
+  IXFWRITE(data,    1, size, f);
+
 
 Exit:
   if(f) fclose(f);
@@ -158,28 +136,18 @@ bool ixMesh::_loadI3DdataV0_0_1(FILE *in_f, ixFlags32 in_flags) {
     osi.fseek64(in_f, l, SEEK_CUR);
   }
 
-  IXFREAD(&nrVert,   4, 1, in_f);
-  IXFREAD(&dataType, 4, 1, in_f);
-  IXFREAD(&flags,    4, 1, in_f);
+  IXFREAD(&nrVert, 4,                  1,    in_f);
+  IXFREAD(&format, sizeof(DataFormat), 1,    in_f);
+  IXFREAD(&flags,  4,                  1,    in_f);
   
   if(nrVert== 0) IXERR("mesh::nrVert> from file is 0");
-  if(dataType== 0) {
-    data= new uint8[Data0::size()* nrVert];
-    Data0 p(this);
 
-    IXFREAD(p.pos, 12, nrVert, in_f);
-    IXFREAD(p.nrm, 12, nrVert, in_f);
-    IXFREAD(p.tex1, 8, nrVert, in_f);
+  IXFREAD(&size,   8,                  1,    in_f);
+  if(size== 0) IXERR("mesh::size from file is 0");
 
-  } else if(dataType== 1) {
-    data= new uint8[Data1i::size()* nrVert];
-    Data1i p(this);
-
-    IXFREAD(p.vert, p.size(), nrVert, in_f);
-
-  } else IXERR("Unknown data type");
-
-
+  data= new uint8[size];
+  IXFREAD(data,    1,                  size, in_f);
+  
 
 Exit:
   if(err) {

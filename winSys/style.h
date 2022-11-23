@@ -43,7 +43,7 @@ public:
   vec4 colorBRD;          // border color of the window
   vec4 colorBRDfocus;     // border color of the window when it has focus (currently selected / focused window)
 
-  float nonTexturedBorderWidth; // [def:1] 
+  float nonTexturedBorderWidth; // [def:1] it's multiplied by a unit, based on the monitor size. For 4k, that's 4
 
   // texture cfg
 

@@ -12,22 +12,23 @@
 
 
 
-using namespace mlib;
-
 class _ixFont;        /// [internal] font 'core'; this chainList is in Print class.
 class _ixFSize;       /// [internal] all sizes in _ixFont
 class _ixFPage;       /// [internal] all pages in _SizeList
 class _ixFChar;       /// [internal] all chars in _Page
+
+class ixFontStyle;
 class ixPrint;
 class ixShader;
-class ixvkBuffer;
 
-class _ixM3;
-class _ixM5;
-class _ixM5U;
-int32 _getBytesMaxPixels(const void *txt, int utfType, int maxPixels, void *font, float spaceSize= 0.0f);
-int32 _getGlyphsMaxPixels(bool unicodes, const void *txt, int utfType, int maxPixels, void *font, float spaceSize= 0.0f, int8 orientation= IX_TXT_RIGHT);
-int32 _getTextLen(const void *txt, int utfType, bool unicodes, int32 nrGlyphs, void *font, float spaceSize= 0.0f, int8 orientation= IX_TXT_RIGHT);
+//class ixvkBuffer;
+
+int32 _getBytesMaxPixels(const void *txt, int utfType, float maxPixels, void *font, float spaceSize= 0.0f);
+int32 _getGlyphsMaxPixels(bool unicodes, const void *txt, int utfType, float maxPixels, void *font, float spaceSize= 0.0f, int8 orientation= IX_TXT_RIGHT);
+float _getTextLen(const void *txt, int utfType, bool unicodes, int32 nrGlyphs, void *font, float spaceSize= 0.0f, int8 orientation= IX_TXT_RIGHT);
+
+
+
 
 
 class ixFontStyle {
@@ -35,6 +36,8 @@ public:
   void *selFont;        // printing font
   int8 dblPrecision;    // how many decimals after comma will be printed [0- 19 everything out of these bounds causes error]
   int8 orientation;     // [def:IX_TXT_RIGHT] text orientation, can be one of 4 cardinal orientations, check top of header for all defines
+
+  float scale;          // everything is multiplied by this scale, for bigger/smaller text
 
   vec4 color1;          // main text color, default white (1, 1, 1, 1)
   vec4 color2;          // shadow/outline color, default black (0, 0, 0, 1)
@@ -45,10 +48,40 @@ public:
 
   float spaceSize;      // [def:0.0f] when left default, it's the font's default space char size, else this value is used to delimit characters
 
-  void operator=(ixFontStyle &s) { selFont= s.selFont, dblPrecision= s.dblPrecision, orientation= s.orientation, color1= s.color1, color2= s.color2, drawMode= s.drawMode, shadowPos= s.shadowPos, outlineSize= s.outlineSize, spaceSize= s.spaceSize; }
+  // printing format funcs
+
+  void setDblPrecision(int8 n) { dblPrecision= (n>= 0 && n<= 19? n: 2); }  // set the double and float number print precision (default 2)
+  void setOrientation(int8 o)  { orientation= o; }   // [def:IX_TXT_RIGHT] text orientation, can be one of 4 cardinal orientations, check top of header for all defines
+
+
+  void operator=(ixFontStyle &s) { selFont= s.selFont, dblPrecision= s.dblPrecision, orientation= s.orientation, color1= s.color1, color2= s.color2, drawMode= s.drawMode, shadowPos= s.shadowPos, outlineSize= s.outlineSize, spaceSize= s.spaceSize; scale= s.scale; }
+
+
+  float getCharDx(uint32);       // returns the width(dx), in pixels, scalling is applied
+  float getCharDy();             // returns the size(dy), in pixels, scalling is applied
+  /// if <spaceSize> is 0.0f, font default is used for the size of the space character (used for wrapping)
+  /// returns the size(dx), in pixels, of the specified utf-8 text,  using provided font. and maximum characters
+  inline float getTextLen  (cchar   *txt, int32 nrChars= 0, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return (scale== 0.0f? 0.0f: _getTextLen(txt,  8, false, nrChars, selFont, spaceSize/ scale, o)* scale+ 1.0f); }
+  inline float getTextLen16(cchar16 *txt, int32 nrChars= 0, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return (scale== 0.0f? 0.0f: _getTextLen(txt, 16, false, nrChars, selFont, spaceSize/ scale, o)* scale+ 1.0f); }
+  inline float getTextLen32(cchar32 *txt, int32 nrChars= 0, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return (scale== 0.0f? 0.0f: _getTextLen(txt, 32, false, nrChars, selFont, spaceSize/ scale, o)* scale+ 1.0f); }
+  /// returns the size(dx), in pixels, of the specified utf-8 text,  using provided font. and maximum unicodes
+  inline float getTextLenu  (cchar   *txt, int32 nrUnicodes= 0, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return (scale== 0.0f? 0.0f: _getTextLen(txt,  8, true, nrUnicodes, selFont, spaceSize/ scale, o)* scale+ 1.0f); }
+  inline float getTextLenu16(cchar16 *txt, int32 nrUnicodes= 0, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return (scale== 0.0f? 0.0f: _getTextLen(txt, 16, true, nrUnicodes, selFont, spaceSize/ scale, o)* scale+ 1.0f); }
+  inline float getTextLenu32(cchar32 *txt, int32 nrUnicodes= 0, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return (scale== 0.0f? 0.0f: _getTextLen(txt, 32, true, nrUnicodes, selFont, spaceSize/ scale, o)* scale+ 1.0f); }
+  /// returns maximum number of bytes in the txt that can be printed and fit into maxPixels (dx)
+  inline int32 getBytesMaxPixels  (cchar   *txt, float maxPixels, float spaceSize= 0.0f) { return (scale== 0.0f? 0: _getBytesMaxPixels(txt,  8, maxPixels/ scale, selFont, spaceSize/ scale)); }
+  inline int32 getBytesMaxPixels16(cchar16 *txt, float maxPixels, float spaceSize= 0.0f) { return (scale== 0.0f? 0: _getBytesMaxPixels(txt, 16, maxPixels/ scale, selFont, spaceSize/ scale)); }
+  /// returns maximum number of chars in the txt that can be printed and fit into maxPixels (dx)
+  inline int32 getCharsMaxPixels  (cchar   *txt, float maxPixels, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return (scale== 0.0f? 0: _getGlyphsMaxPixels(false, txt,  8, maxPixels/ scale, selFont, spaceSize/ scale, o)); }
+  inline int32 getCharsMaxPixels16(cchar16 *txt, float maxPixels, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return (scale== 0.0f? 0: _getGlyphsMaxPixels(false, txt, 16, maxPixels/ scale, selFont, spaceSize/ scale, o)); }
+  inline int32 getCharsMaxPixels32(cchar32 *txt, float maxPixels, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return (scale== 0.0f? 0: _getGlyphsMaxPixels(false, txt, 32, maxPixels/ scale, selFont, spaceSize/ scale, o)); }
+  /// returns maximum number of unicodes in the txt that can be printed and fit into maxPixels (dx)
+  inline int32 getUnicodesMaxPixels  (cchar   *txt, float maxPixels, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return (scale== 0.0f? 0: _getGlyphsMaxPixels(true, txt,  8, maxPixels/ scale, selFont, spaceSize/ scale, o)); }
+  inline int32 getUnicodesMaxPixels16(cchar16 *txt, float maxPixels, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return (scale== 0.0f? 0: _getGlyphsMaxPixels(true, txt, 16, maxPixels/ scale, selFont, spaceSize/ scale, o)); }
+  inline int32 getUnicodesMaxPixels32(cchar32 *txt, float maxPixels, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return (scale== 0.0f? 0: _getGlyphsMaxPixels(true, txt, 32, maxPixels/ scale, selFont, spaceSize/ scale, o)); }
 
   ixFontStyle() { selFont= null; restoreDefaults(); }
-  void restoreDefaults() { dblPrecision= 2; orientation= IX_TXT_RIGHT; color1.set(1.0f, 1.0f, 1.0f, 1.0f); drawMode= 0; color2.set(0.0f, 0.0f, 0.0f, 1.0f); shadowPos= vec2(2.0f, 2.0f); spaceSize= 0.0f; outlineSize= 0; }
+  void restoreDefaults() { dblPrecision= 2; orientation= IX_TXT_RIGHT; color1.set(1.0f, 1.0f, 1.0f, 1.0f); drawMode= 0; color2.set(0.0f, 0.0f, 0.0f, 1.0f); shadowPos= vec2(2.0f, 2.0f); spaceSize= 0.0f; outlineSize= 0; scale= 1.0f; }
 protected:
   
 };
@@ -59,15 +92,10 @@ extern ixFontStyle ixDefFontStyle;
 
 
 
+
+
 class ixPrintShader: public ixShader {
 public:
-
-  #ifdef IX_USE_OPENGL
-  int u_camera, u_color, u_viewportPos;
-  int u_clip;                   // bool, enable/disable
-  int u_clip0, u_clipE;         // clip rectangle 0= start, e= end - no need for start point to be lower then end point
-  virtual void initUniforms();
-  #endif
 
   virtual void printChar(uint32)= 0;
   virtual void txt(const void *, int, int, int, int, int)= 0;
@@ -101,6 +129,10 @@ public:
   //float spaceSize;      // [def:0.0f] when left default, it's the font's default space char size, else this value is used to delimit characters
   ixFontStyle *style;
 
+  chainList fonts;       // chain list with all loaded fonts (_ixFont is data)
+  ixPrintShader *_shader;
+  bool justDraw;
+
   // font loading - check further down for a list of all pages that can be used
 
   void *loadFont(cchar *name, int size= 0, int16 page= 0);  /// returns an id for the loaded font, or null if failed. [size 0]: fnt- load the first size; ttf- size 12(?) !!! page 0 will be loaded even if a different page is specified
@@ -119,14 +151,6 @@ public:
   void *setFont(cchar *name, int size);               // select an already loaded font & size; returns font's id or NULL if failed
   void *getFont(cchar *name, int size);               // returns a font ID for the specified size & font (font must be already loaded)
 
-  chainList fonts;       // chain list with all loaded fonts (_ixFont is data)
-
-  // printing format funcs
-
-  void setDblPrecision(int8 n) { style->dblPrecision= (n>= 0 && n<= 19? n: 2); }  // set the double and float number print precision (default 2)
-  void setOrientation(int8 o)  { style->orientation= o; }   // [def:IX_TXT_RIGHT] text orientation, can be one of 4 cardinal orientations, check top of header for all defines
-  int8 getDblPrecision() { return style->dblPrecision; }
-  int8 getOrientation() { return style->orientation; }
 
   void saveStyle() { _saveStyle= *style; }          // saves current style (a fast push basically)
   void restoreStyle() { *style= _saveStyle; }       // restores current style (a fast pop basically)
@@ -173,36 +197,35 @@ public:
   
   // utils
 
-  static int32 getCharDx(uint32, void *f);       // returns the width(dx), in pixels, of a specific character
-  static int32 getCharDy(void *);                // returns the size(dy), in pixels, of the specified font
+  /*
+  static int32 getCharDx(uint32, void *f);       // returns the width(dx), in pixels, of a specific character - NO SCALING - use the ixFontStyle one to apply scale
+  static int32 getCharDy(void *);                // returns the size(dy), in pixels, of the specified font - NO SCALING - use the ixFontStyle one to apply scale
   /// if <spaceSize> is 0.0f, font default is used for the size of the space character (used for wrapping)
   /// returns the size(dx), in pixels, of the specified utf-8 text,  using provided font. and maximum characters
+  /// NO SCALING - use the ixFontStyle one to apply scale
   inline static int32 getTextLen  (cchar   *txt, int32 nrChars= 0, void *f= null, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getTextLen(txt,  8, false, nrChars, f, spaceSize, o); }
   inline static int32 getTextLen16(cchar16 *txt, int32 nrChars= 0, void *f= null, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getTextLen(txt, 16, false, nrChars, f, spaceSize, o); }
   inline static int32 getTextLen32(cchar32 *txt, int32 nrChars= 0, void *f= null, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getTextLen(txt, 32, false, nrChars, f, spaceSize, o); }
   /// returns the size(dx), in pixels, of the specified utf-8 text,  using provided font. and maximum unicodes
+  /// NO SCALING - use the ixFontStyle one to apply scale
   inline static int32 getTextLenu  (cchar   *txt, int32 nrUnicodes= 0, void *f= null, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getTextLen(txt,  8, true, nrUnicodes, f, spaceSize, o); }
   inline static int32 getTextLenu16(cchar16 *txt, int32 nrUnicodes= 0, void *f= null, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getTextLen(txt, 16, true, nrUnicodes, f, spaceSize, o); }
   inline static int32 getTextLenu32(cchar32 *txt, int32 nrUnicodes= 0, void *f= null, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getTextLen(txt, 32, true, nrUnicodes, f, spaceSize, o); }
   /// returns maximum number of bytes in the txt that can be printed and fit into maxPixels (dx)
-  inline static int32 getBytesMaxPixels  (cchar   *txt, int maxPixels, void *font, float spaceSize= 0.0f) { return _getBytesMaxPixels(txt,  8, maxPixels, font, spaceSize); }
-  inline static int32 getBytesMaxPixels16(cchar16 *txt, int maxPixels, void *font, float spaceSize= 0.0f) { return _getBytesMaxPixels(txt, 16, maxPixels, font, spaceSize); }
+  /// NO SCALING - use the ixFontStyle one to apply scale
+  inline static int32 getBytesMaxPixels  (cchar   *txt, float maxPixels, void *font, float spaceSize= 0.0f) { return _getBytesMaxPixels(txt,  8, maxPixels, font, spaceSize); }
+  inline static int32 getBytesMaxPixels16(cchar16 *txt, float maxPixels, void *font, float spaceSize= 0.0f) { return _getBytesMaxPixels(txt, 16, maxPixels, font, spaceSize); }
   /// returns maximum number of chars in the txt that can be printed and fit into maxPixels (dx)
-  inline static int32 getCharsMaxPixels  (cchar   *txt, int maxPixels, void *font, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getGlyphsMaxPixels(false, txt,  8, maxPixels, font, spaceSize, o); }
-  inline static int32 getCharsMaxPixels16(cchar16 *txt, int maxPixels, void *font, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getGlyphsMaxPixels(false, txt, 16, maxPixels, font, spaceSize, o); }
-  inline static int32 getCharsMaxPixels32(cchar32 *txt, int maxPixels, void *font, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getGlyphsMaxPixels(false, txt, 32, maxPixels, font, spaceSize, o); }
+  /// NO SCALING - use the ixFontStyle one to apply scale
+  inline static int32 getCharsMaxPixels  (cchar   *txt, float maxPixels, void *font, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getGlyphsMaxPixels(false, txt,  8, maxPixels, font, spaceSize, o); }
+  inline static int32 getCharsMaxPixels16(cchar16 *txt, float maxPixels, void *font, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getGlyphsMaxPixels(false, txt, 16, maxPixels, font, spaceSize, o); }
+  inline static int32 getCharsMaxPixels32(cchar32 *txt, float maxPixels, void *font, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getGlyphsMaxPixels(false, txt, 32, maxPixels, font, spaceSize, o); }
   /// returns maximum number of unicodes in the txt that can be printed and fit into maxPixels (dx)
-  inline static int32 getUnicodesMaxPixels  (cchar   *txt, int maxPixels, void *font, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getGlyphsMaxPixels(true, txt,  8, maxPixels, font, spaceSize, o); }
-  inline static int32 getUnicodesMaxPixels16(cchar16 *txt, int maxPixels, void *font, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getGlyphsMaxPixels(true, txt, 16, maxPixels, font, spaceSize, o); }
-  inline static int32 getUnicodesMaxPixels32(cchar32 *txt, int maxPixels, void *font, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getGlyphsMaxPixels(true, txt, 32, maxPixels, font, spaceSize, o); }
-
-
-
-  // scissor funcs - print within a boundary, everything ouside is cut
-
-  //inline void delScissor() { _shader->delScissor(); }
-  //inline void setScissor(recti *in_size) { _shader->setScissor(in_size); }
-  //inline void getScissor(recti *out_r) { _shader->getScissor(out_r); }
+  /// NO SCALING - use the ixFontStyle one to apply scale
+  inline static int32 getUnicodesMaxPixels  (cchar   *txt, float maxPixels, void *font, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getGlyphsMaxPixels(true, txt,  8, maxPixels, font, spaceSize, o); }
+  inline static int32 getUnicodesMaxPixels16(cchar16 *txt, float maxPixels, void *font, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getGlyphsMaxPixels(true, txt, 16, maxPixels, font, spaceSize, o); }
+  inline static int32 getUnicodesMaxPixels32(cchar32 *txt, float maxPixels, void *font, float spaceSize= 0.0f, int8 o= IX_TXT_RIGHT) { return _getGlyphsMaxPixels(true, txt, 32, maxPixels, font, spaceSize, o); }
+  */
 
   // constructor / destructor
 
@@ -211,14 +234,9 @@ public:
   void delData();              /// deallocs everything, unloads all fonts and textures, sets everything to default - can be useful
   void init();                  // called on ix::init() - loads shaders - performs any one-time init once the graphics is setup
 
-
-  ixPrintShader *_shader;
-  bool justDraw;
-
 private:
 
   Ix *_ix;
-  
   ixFontStyle _saveStyle;     // used for push/pop or save/restore of the font style
 
 
@@ -228,14 +246,15 @@ private:
 
   _ixFont *_getFont(cchar *name);
   //_ixFSize *_getSize(cchar *name, int size);
-  _ixFSize *_getSizep(_ixFont *font, int size);
+  static _ixFSize *_getSizep(_ixFont *font, int size);
   //_ixFPage *_getPage(cchar *name, int size, int16 page);
-  _ixFPage *_getPagep(_ixFSize *size, int16 page);  
+  static _ixFPage *_getPagep(_ixFSize *size, int16 page);  
   //_ixFPage *_getPagec(void *font, uint32 unicode);       /// returns what page a unicode character belongs to
 
   // internal loading funcs. use loadFont(), which in turn uses 1 of these
   
   void *_loadFNT(cchar *name, int size= 0, int16 page= 0);    /// creates font from a fnt file
+  void *_loadFNT10(cchar *name, int size= 0, int16 page= 0);    /// creates font from an OLDER(1.0) fnt file
   void *_loadTTF(cchar *name, int size= 0, int16 page= 0);    /// creates font from a ttf file
 
   friend class Ix;
@@ -243,7 +262,13 @@ private:
   friend class _ixM5;
   friend class _ixM5U;
   friend class _ixFPage;
+  friend class ixPrintUtils;
 };
+
+
+
+
+
 
 
 
@@ -259,10 +284,10 @@ private:
 class _ixFont: public chainData {
 
 public:
-  str8 name;
+  str8 name;          /// font name
+  str8 fileName;      /// file it was loaded from
   int16 type;         /// 1= pre rendered font; 2= ttf/ otf, NEED RENDERER
   chainList sizes;    /// chainlist with all sizes (_Sizes is data)
-
 };
 
 /// sizes are in fonts
@@ -270,8 +295,7 @@ class _ixFSize: public chainData {
 public:
   _ixFont *font;      /// points to it's parent font
   int16 size;         /// the actual size value
-  str8 fileName;      /// file it was loaded from
-  
+  // fileName moved to parent font, because... you'd load from a different file?! why have it here? <<<<<
   chainList pages;    /// chainList with all pages (_Pages is data)
 
   _ixFSize(): font(null), size(0) {}
@@ -280,10 +304,10 @@ public:
 /// chars are in pages
 class _ixFChar {
 public:
-  float texX0, texY0; /// position on texture - start points (glTexcoord)
-  float texXe, texYe; /// position on texture - end points (glTexcoord)
-
-  int16 dx, dy;       /// character width / height in pixels (hopefully, dy never exceeds font size, or im screwed)
+  int16 x0, y0, dx, dy;   /// position on texture, in pixels
+  //float texX0, texY0; /// position on texture - start points (glTexcoord)
+  //float texXe, texYe; /// position on texture - end points (glTexcoord)
+  //int16 dx, dy;       /// character width / height in pixels (hopefully, dy never exceeds font size, or im screwed)
 
   int16 start;        /// point where to start drawing the glyph (in Windows structure ABC, this would be A)
   int16 end;          /// point where next character starts (in windows structure this would be A+B+C)
@@ -298,14 +322,14 @@ public:
   ixTexture *tex;       /// texture of the page
   uint16 texDx, texDy;  /// texture size
 
+  uint8 *_texData;      /// usually used only for font works, texture data can be passed directly in tex
+
   _ixFSize *size;       /// parent size
+  ixPrint *_print;
 
   _ixFPage(ixPrint *parent); 
   ~_ixFPage() { delData(); }
-
-  void delData(); // { id= 0; if(ch) delete[] ch; ch= null; if(osi.glr) { if(tex) glDeleteTextures(1, &tex); tex= 0; texDx= texDy= 0; } size= null; _ixM5::VBOdelete(this); _ixM5U::UBOdelete(this); _M5texPointer= 0; }
-
-  ixPrint *_print;
+  void delData();
 
   #ifdef IX_USE_OPENGL
   /// method5 printing data
@@ -315,10 +339,9 @@ public:
   #endif
 
   #ifdef IX_USE_VULKAN
-  ixvkBuffer *data;
-  ixvkDescSet *set;
+  ixvkBuffer *vkData;
+  ixvkDescSet *vkSet;
   #endif
-
 };
 
 
@@ -332,6 +355,11 @@ struct _ixPagesList {
   str8 name;          /// page description
   uint8 nrParts;      /// page can be on multiple page parts, that need to be all loaded
   static int16 getPage(cchar *name); /// searches pages for specified name and returns it's id; returns -1 if not found
+
+  static int16 nrPages; /// returns the number of pages in the static list
+  inline uint32 nrCharacters() { return max- min+ 1; }
+private:
+  static int16 computeNrPages();
 };
 
 

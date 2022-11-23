@@ -33,7 +33,7 @@ ixConsole::ixConsole(): _ix(null), _maxLines(256) {
   bgColor.set(0.05f, 0.1f, 0.07f, 0.75f);
   //_sl= null;
   
-  showPercentage= 50;
+  showPercentage= 0.5f;
   //cmdPos= 
   cursorPos= 0;
   scrollY= 0;
@@ -157,7 +157,7 @@ void ixErrorPrint(const char *txt, bool exit, void (*exitFunc)(void)) {
 
 
 
-void ixConsole::_glDraw(int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
+void ixConsole::_glDraw(float in_x0, float in_y0, float in_dx, float in_dy) {
   #ifdef IX_USE_OPENGL
   if(!_ix->glIsActive())
     return;
@@ -306,27 +306,27 @@ void ixConsole::_glDraw(int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
 
 
 
-void ixConsole::_vkDraw(int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
+void ixConsole::_vkDraw(float in_x0, float in_y0, float in_dx, float in_dy) {
   #ifdef IX_USE_VULKAN
   
   /// inits
   VkCommandBuffer cb= _ix->vki.ortho.cmd[_ix->vki.fi]->buffer;
   ixFontStyle *prevFontStyle= _ix->pr.style;    /// save current style
   _ix->pr.style= &fontStyle;
-  int32 charDy= ixPrint::getCharDy(fontStyle.selFont);
+  float charDy= fontStyle.getCharDy();
   
 
   // background
   _ix->vk.CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, _ix->vki.draw.quad.sl->vk->pipeline);
   _ix->vk.CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, _ix->vki.draw.quad.sl->vk->pipelineLayout, 0, 1, &_ix->vki.glb[_ix->vki.fi]->set->set, 0, null);
-  _ix->vk.CmdSetScissor(cb, 0, 1, &_ix->vki.render.scissor);
-  
+  _ix->vki.cmdScissorDefault(cb);
+
   _ix->vki.draw.quad.cmdTexture(cb, bgTex);   // if null, it handles it
   _ix->vki.draw.quad.flagTexture(bgTex? true: false);
   if(bgTex) _ix->vki.draw.quad.push.color.set(1, 1, 1, 1);
   else      _ix->vki.draw.quad.push.color= bgColor;
-  _ix->vki.draw.quad.setPosDi(in_x0, in_y0, 0, in_dx, in_dy);
-  _ix->vki.draw.quad.setTex(0, 1, 1, 0, 0);
+  _ix->vki.draw.quad.setPosD(in_x0, in_y0, 0.0f, in_dx, in_dy);
+  _ix->vki.draw.quad.setTex(0.0f, 1.0f, 1.0f, 0.0f, 0.0f);
   _ix->vki.draw.quad.push.hollow= -1;
   _ix->vki.draw.quad.cmdPushAll(cb);
   _ix->vki.draw.quad.cmdDraw(cb);
@@ -345,17 +345,17 @@ void ixConsole::_vkDraw(int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
 
     uint8 v= *t;
     *t= 0;
-    float x0= (float)ixPrint::getTextLen(getChar8(cmd.d, visibleX0), 0, fontStyle.selFont);
+    float x0= fontStyle.getTextLen(getChar8(cmd.d, visibleX0));
     *t= v;
     t= (uint8 *)getChar8(cmd.d, end);
     v= *t;
     *t= 0;
-    float dx= (float)ixPrint::getTextLen(getChar8(cmd.d, start), 0, fontStyle.selFont);
+    float dx= fontStyle.getTextLen(getChar8(cmd.d, start));
     *t= v;
 
     /// got all data - draw
     _ix->vki.draw.quad.push.color.set(0.1f, 0.2f, 0.9f, 1.0f);
-    _ix->vki.draw.quad.setPosD(x0+ (float)in_x0, (float)(in_y0+ in_dy- charDy), 0, dx, (float)charDy);
+    _ix->vki.draw.quad.setPosD(x0+ in_x0, (in_y0+ in_dy- charDy), 0.0f, dx, charDy);
     _ix->vki.draw.quad.flagTexture(false);
 
     _ix->vki.draw.quad.cmdPushAll(cb);
@@ -364,13 +364,14 @@ void ixConsole::_vkDraw(int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
     
 
 
-  int nrLines= (in_dy/ charDy)- (3+ 1); /// 3= [commandLine] [reserved for scroll1] [reserved for scroll2]
-  int y0= in_y0+ in_dy- (charDy* 3);
+  int nrLines= (int)(in_dy/ charDy)- (3+ 1); /// 3= [commandLine] [reserved for scroll1] [reserved for scroll2]
+  float y0= in_y0+ in_dy- (charDy* 3);
 
   // buffer print
   if(nrLines> 0) {
-    for(int a= 0, l= 0; l< nrLines; a++) {
+    for(int a= 0, l= 0; l< nrLines; a++) { // minus command line??? it crashed
       uint32 id= a+ scrollY;
+      if(id>= lines.nrNodes) break;
       TxtData *lin= (TxtData *)lines.get(id);
       uint8 *p= (uint8 *)lin->txt.d;
 
@@ -380,7 +381,7 @@ void ixConsole::_vkDraw(int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
       uint16 bytes[100];
       for(int b= 0; b< 100; b++) {
         lin->nlines++;
-        bytes[b]= ixPrint::getBytesMaxPixels((cchar *)p, in_dx, fontStyle.selFont);
+        bytes[b]= fontStyle.getBytesMaxPixels((cchar *)p, in_dx);
         if(bytes[b]< Str::strlen8((char *)p)- 1)
           p+= bytes[b];
         else
@@ -392,8 +393,8 @@ void ixConsole::_vkDraw(int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
       for(int b= 0; b< lin->nlines; b++) {
         int n= l+ b;
         if(n <= nrLines)
-          _ix->pr.txt2i(in_x0, y0- (n* charDy),
-                            (cchar *)p, 0, 0xFFFFFFF, 0, bytes[b]);
+          _ix->pr.txt2f(in_x0, y0- ((float)n* charDy),
+                        (cchar *)p, 0, 0xFFFFFFF, 0, bytes[b]);
         p+= bytes[b];
       }
 
@@ -401,18 +402,18 @@ void ixConsole::_vkDraw(int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
     }
     
     if(scrollY> 0) 
-      _ix->pr.txt2i((in_dx- ixPrint::getTextLen("vvv", 0, fontStyle.selFont))/ 2+ in_x0, y0+ charDy, "vvv");
+      _ix->pr.txt2f((in_dx- fontStyle.getTextLen("vvv"))/ 2+ in_x0, y0+ charDy, "vvv");
     if(scrollY< (int16)_maxLines- 2)
-      _ix->pr.txt2i((in_dx- ixPrint::getTextLen("^^^", 0, fontStyle.selFont))/ 2+ in_x0, y0- (charDy* nrLines), "^^^");
+      _ix->pr.txt2f((in_dx- fontStyle.getTextLen("^^^"))/ 2+ in_x0, y0- (charDy* nrLines), "^^^");
     if(visibleX0) 
-      _ix->pr.txt2i(in_x0, y0+ charDy, "<<<");
+      _ix->pr.txt2f(in_x0, y0+ charDy, "<<<");
     if(strchars8((char *)cmd.d)> visibleXe)
-      _ix->pr.txt2i((in_dx- ixPrint::getTextLen(">>>", 0, fontStyle.selFont))+ in_x0, y0+ charDy, ">>>");
+      _ix->pr.txt2f((in_dx- fontStyle.getTextLen(">>>"))+ in_x0, y0+ charDy, ">>>");
   } /// buffer print
 
   
   // command line print
-  _ix->pr.txt2i(in_x0, in_y0+ in_dy- charDy, cmd.d, visibleX0, cursorPos);
+  _ix->pr.txt2f(in_x0, in_y0+ in_dy- charDy, cmd.d, visibleX0, cursorPos);
     
 
 
@@ -430,7 +431,7 @@ void ixConsole::_vkDraw(int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
 
   _ix->vki.draw.quad.cmdTexture(cb, null);
   _ix->vki.draw.quad.push.color.set(1.0f, 1.0f, 1.0f, (float)alpha);
-  _ix->vki.draw.quad.setPosDi((int32)_ix->pr.pos.x, in_y0+ in_dy- charDy, 0, 2, charDy);
+  _ix->vki.draw.quad.setPosD(_ix->pr.pos.x, in_y0+ in_dy- charDy, 0, 2, charDy);
   _ix->vki.draw.quad.flagTexture(false);
 
   _ix->vki.draw.quad.cmdPushAll(cb);
@@ -442,7 +443,7 @@ void ixConsole::_vkDraw(int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
 }
 
 
-void ixConsole::_draw(int32 in_x0, int32 in_y0, int32 in_dx, int32 in_dy) {
+void ixConsole::_draw(float in_x0, float in_y0, float in_dx, float in_dy) {
   #ifdef IX_USE_VULKAN
   if(_ix->ren->type== 1)
     _vkDraw(in_x0, in_y0, in_dx, in_dy);
@@ -472,15 +473,15 @@ void ixConsole::update() {
 
   _ix->osiMutex.lock();
   
-  int32 conDx= _ix->win->dx;
-  int32 conDy= (showPercentage* _ix->win->dy)/ 100;
-  int32 conX0= _ix->win->x0;
-  int32 conY0= _ix->win->dy- conDy+ _ix->win->y0;
+  float conDx= (float)_ix->win->dx;
+  float conDy= showPercentage* (float)_ix->win->dy;
+  float conX0= (float)_ix->win->x0;
+  float conY0= (float)_ix->win->dy- conDy+ (float)_ix->win->y0;
   
-  int32 charDy= ixPrint::getCharDy(fontStyle.selFont);
+  float charDy= fontStyle.getCharDy();
 
-  int nrLines= (conDy/ charDy)- (3+ 1); /// 3= [commandLine] [reserved for scroll1] [reserved for scroll2]
-  int y0= conY0+ conDy- (charDy* 3);
+  int nrLines= (int)(conDy/ charDy)- (3+ 1); /// 3= [commandLine] [reserved for scroll1] [reserved for scroll2]
+  float y0= conY0+ conDy- (charDy* 3);
 
 
 
@@ -721,8 +722,8 @@ void ixConsole::update() {
     if(mBoundsD(conX0, y0- (nrLines+ 1)* charDy, conDx, (nrLines+ 1)* charDy) && !waitB0up) {
 
       // was in.m.y- y0
-      int32 y= y0- in.m.y;
-      int n= y/ charDy;         // n holds wich line is pressed
+      float y= y0- in.m.y;
+      int n= (int)(y/ charDy);         // n holds wich line is pressed
 
       //n-= 2;      // -1 cmd line, -1 vvv scroll show
       if(n>= 0) {
@@ -766,30 +767,30 @@ void ixConsole::update() {
 
 
 // makes sure that character number c is visible, scrolling to the left (ONLY to the left) if neccesary
-void ixConsole::_adjustVisibleX0(uint8 c, int editSize) {
+void ixConsole::_adjustVisibleX0(uint8 c, float editSize) {
   if(!visibleXe)
-    visibleXe= ixPrint::getCharsMaxPixels(cmd, editSize, fontStyle.selFont);
+    visibleXe= fontStyle.getCharsMaxPixels(cmd, editSize);
 
   if(visibleX0> c) {
     visibleX0= c;
-    visibleXe= ixPrint::getCharsMaxPixels((cchar *)getChar8(cmd, c), editSize, fontStyle.selFont)+ c;
+    visibleXe= fontStyle.getCharsMaxPixels((cchar *)getChar8(cmd, c), editSize)+ c;
   }
 }
 
 // makes sure that character number c is visible, scrolling to the right if neccesary
-void ixConsole::_adjustVisibleXe(uint8 c, int editSize) {
+void ixConsole::_adjustVisibleXe(uint8 c, float editSize) {
   if(!visibleXe)
-    visibleXe= ixPrint::getCharsMaxPixels(cmd, editSize, fontStyle.selFont);
+    visibleXe= fontStyle.getCharsMaxPixels(cmd, editSize);
 
   if(visibleXe< c) {
     visibleXe= c;
 
     /// keep increasing x0 until character c is visible
     visibleX0= 0;
-    while(ixPrint::getCharsMaxPixels(getChar8(cmd, visibleX0), editSize, fontStyle.selFont) < (c- visibleX0))
+    while(fontStyle.getCharsMaxPixels(getChar8(cmd, visibleX0), editSize) < (c- visibleX0))
       visibleX0++;
   }
-  visibleXe= visibleX0+ ixPrint::getCharsMaxPixels((cchar *)getChar8(cmd, visibleX0), editSize, fontStyle.selFont);
+  visibleXe= visibleX0+ fontStyle.getCharsMaxPixels((cchar *)getChar8(cmd, visibleX0), editSize);
 }
 
 // internal++ - deletes selected text in command line edit

@@ -47,7 +47,7 @@
     <ClCompile Include="..\draw\vkDraw.cpp">
       <Filter>DRAW</Filter>
     </ClCompile>
-    <ClCompile Include="..\GFX\bone.cpp">
+    <ClCompile Include="..\GFX\skeleton.cpp">
       <Filter>GFX</Filter>
     </ClCompile>
     <ClCompile Include="..\GFX\camera.cpp">
@@ -134,6 +134,12 @@
     <ClCompile Include="..\util\fileMAT.cpp">
       <Filter>UTIL</Filter>
     </ClCompile>
+    <ClCompile Include="..\GFX\_glprint.cpp">
+      <Filter>GFX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GFX\_vkprint.cpp">
+      <Filter>GFX</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\ix.h" />
@@ -156,7 +162,7 @@
     <ClInclude Include="..\draw\vkDraw.h">
       <Filter>DRAW</Filter>
     </ClInclude>
-    <ClInclude Include="..\GFX\bone.h">
+    <ClInclude Include="..\GFX\skeleton.h">
       <Filter>GFX</Filter>
     </ClInclude>
     <ClInclude Include="..\GFX\camera.h">

@@ -56,7 +56,7 @@ public:
 
   chainList lines;      // will hold ixTxtLine
 
-  int32 textDx, textDy; // total size of text, width and height, in pixels
+  float textDx, textDy; // total size of text, width and height, in pixels
   int32 nrUnicodes;     // total number of unicodes of all combined lines
   ixFontStyle font;     // font.selFont should be changed with ixTxtData::setFont func, so it will update the whole text, otherwise, the style is to be freely changed
   
@@ -72,9 +72,9 @@ public:
     int32 wline;                      // Wline number (_wrapLines chainlist)
     ixTxtData::Line *pLine;           // pointer to the Line it's on
     ixTxtData::Wline *pWline;         // pointer to the Wline it's on
-    int32 x0, y0;                     // position in pixels (y0 when in horizontal, is the top of the first line, basically, not the bottom)
+    float x0, y0;                     // position in pixels (y0 when in horizontal, is the top of the first line, basically, not the bottom)
 
-    int32 drawWidth;                  // [def:1] in pixels
+    float drawWidth;                  // [def:2* unitSize] in pixels
     int32 blinkRate;                  // [def:250ms] in milliseconds
     vec4 color;                       // [def:white] cursor color (rgba, 0.0f - 1.0f range)
 
@@ -99,7 +99,7 @@ public:
     inline void increaseLine(int32 in_nrLines= 1, bool in_computePosInPixels= true);
     void decreaseUnicode(int32 in_nrUnicodes= 1);
     void increaseUnicode(int32 in_nrUnicodes= 1);
-    void advanceLineForPixels(int32 in_advanceInPixels);
+    void advanceLineForPixels(float in_advanceInPixels);
 
     // ON WINDOW RESIZE, CURSOR POS MUST BE REMEMBERED, IN UNICODE COORDS
     // AND RE-POSITIONED ON WLINES, WITH THE UNICODE COORDS
@@ -112,15 +112,15 @@ public:
     void _glDraw(Ix *in_ix, const recti in_pos, const vec3i in_scroll);
     #endif
     #ifdef IX_USE_VULKAN
-    void _vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, const vec3i in_scroll);
+    void _vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const rectf in_pos, const vec3 in_scroll);
     #endif
 
-    int32 _getPosInPixels();    // returns either x0 or y0 depending on orientation of the cursor position
-    int32 _getWlineInPixels();  // returns either x0 or y0 depending on text orientation
+    float _getPosInPixels();    // returns either x0 or y0 depending on orientation of the cursor position
+    float _getWlineInPixels();  // returns either x0 or y0 depending on text orientation
     inline void _updateX0Y0() { if(_parent->orientation& IX_TXT_HORIZONTAL ) x0= _getPosInPixels(), y0= _getWlineInPixels(); else x0= _getWlineInPixels(), y0= _getPosInPixels(); }
 
-    void _setPosInPixels(int32 in_pixels);    // sets the position to the specified pixel position, or as close as possible to that
-    void _setLineAndPosInPixels(int32 x, int32 y);  // sets cursor coords in the text, as close to the provided x and y coords in pixels
+    void _setPosInPixels(float in_pixels);    // sets the position to the specified pixel position, or as close as possible to that
+    void _setLineAndPosInPixels(float x, float y);  // sets cursor coords in the text, as close to the provided x and y coords in pixels
     ixTxtData *_parent;
     int64 _readTime;                // [internal] used for blinking
     bool _show;                     // [internal] used for blinking
@@ -140,22 +140,22 @@ public:
     ixTxtData::Line *pStartLine, *pEndLine;
     ixTxtData::Wline *pStartWline, *pEndWline;
     int32 startWline, endWline;
-    int32 startX0, endX0;
-    int32 startY0, endY0;
+    float startX0, endX0;
+    float startY0, endY0;
 
     Sel() { _parent= null; color.set(0.1f, 0.2f, 1.0f, 1.0f); delData(); }
 
-    inline void delData() { start= end= startLine= endLine= 0; pStartLine= pEndLine= null; pStartWline= pEndWline= null; startWline= endWline= startX0= endX0= startY0= endY0= 0; }
+    inline void delData() { start= end= startLine= endLine= 0; pStartLine= pEndLine= null; pStartWline= pEndWline= null; startWline= endWline= 0; startX0= endX0= startY0= endY0= 0; }
     inline int32 getStart()     { return (startLine== endLine? (MIN(start, end)): (startLine< endLine? start: end)); }
     inline int32 getEnd()       { return (startLine== endLine? (MAX(start, end)): (startLine< endLine? end: start)); }
     inline int32 getStartLine() { return MIN(startLine, endLine); }
     inline int32 getEndLine()   { return MAX(startLine, endLine); }
     inline int32 getStartWline() { return MIN(startWline, endWline); }
     inline int32 getEndWline()   { return MAX(startWline, endWline); }
-    inline int32 getStartX0()   { return (startWline== endWline? MIN(startX0, endX0): (startWline< endWline? startX0: endX0)); }
-    inline int32 getEndX0()     { return (startWline== endWline? MAX(startX0, endX0): (startWline< endWline? endX0: startX0)); }
-    inline int32 getStartY0()   { return (startWline== endWline? MIN(startY0, endY0): (startWline< endWline? startY0: endY0)); }
-    inline int32 getEndY0()     { return (startWline== endWline? MAX(startY0, endY0): (startWline< endWline? endY0: startY0)); }
+    inline float getStartX0()   { return (startWline== endWline? MIN(startX0, endX0): (startWline< endWline? startX0: endX0)); }
+    inline float getEndX0()     { return (startWline== endWline? MAX(startX0, endX0): (startWline< endWline? endX0: startX0)); }
+    inline float getStartY0()   { return (startWline== endWline? MIN(startY0, endY0): (startWline< endWline? startY0: endY0)); }
+    inline float getEndY0()     { return (startWline== endWline? MAX(startY0, endY0): (startWline< endWline? endY0: startY0)); }
     //inline int32 getPixelCoords(int32 *out_startX0, int32 *out_endX0, int32 *out_startY0, int32 *out_endY0) { }
     inline Line *getStartLinePointer() { return (startLine<= endLine? pStartLine: pEndLine); }
     inline Line *getEndLinePointer()   { return (startLine<= endLine? pEndLine: pStartLine); }
@@ -181,8 +181,8 @@ public:
 
   private:
 
-    void _glDraw(Ix *in_ix, const recti in_pos, const vec3i in_scroll);
-    void _vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const recti in_pos, const vec3i in_scroll);
+    void _glDraw(Ix *in_ix, const rectf in_pos, const vec3 in_scroll);
+    void _vkDraw(VkCommandBuffer in_cmd, Ix *in_ix, const rectf in_pos, const vec3 in_scroll);
 
     ixTxtData *_parent;
     void _startSelection();
@@ -209,7 +209,7 @@ public:
   void findTextDxDy();            // finds and updates both textDx and textDy
   //void updateAllWlinesDxDy();     // updates every wline's dx & dy
   inline void computeAndSetChildArea() { findTextDxDy(); _parent->_childArea.setD(0, 0, textDx, textDy); }
-  void findUnicodeLineForCoords(int32 in_x, int32 in_y, int32 *out_unicode, int32 *out_line);
+  void findUnicodeLineForCoords(float in_x, float in_y, int32 *out_unicode, int32 *out_line);
   inline bool checkLimits(char32 unicode);
   inline void setDebug(bool b) { _debug= b; }
 
@@ -227,11 +227,11 @@ public:
     //int32 lineNr;       // line number (Line class)
     int32 startUnicode; // starting unicode of the line
     int32 nrUnicodes;   // number of unicodes in the line
-    int32 dx;           // text width in pixels
-    int32 dy;           // text height in pixels
+    float dx;           // text width in pixels
+    float dy;           // text height in pixels
     float spaceSize;    // space size, default 0.0f, used for justified alignment, mainly
     int32 alignment;    // [def:IX_TXT_ALN_START] see IX_TXT_ALIGNMENT at header start
-    Wline() { line= null; /*lineNr=*/ startUnicode= nrUnicodes= dx= dy= 0; spaceSize= 0.0f; alignment= IX_TXT_ALN_START; }
+    Wline() { line= null; /*lineNr=*/ startUnicode= nrUnicodes= 0; dx= dy= 0; spaceSize= 0.0f; alignment= IX_TXT_ALN_START; }
 
     //inline void computeDx(int8 in_orientation, void *in_font);
     //inline void computeDy(int8 in_orientation, void *in_font);
@@ -243,12 +243,12 @@ protected:
   void _glDraw(Ix *ix, const recti pos, const vec3i scroll);    // draws the text and selection and cursor, 
   #endif
   #ifdef IX_USE_VULKAN
-  void _vkDraw(VkCommandBuffer in_cmd, Ix *ix, const recti pos, const vec3i scroll);    // draws the text and selection and cursor, 
+  void _vkDraw(VkCommandBuffer in_cmd, Ix *ix, const rectf pos, const vec3 scroll);    // draws the text and selection and cursor, 
   #endif
   
 
 
-  bool _update(bool mouseInside); // handles keyboard input, text selection, depending if _parent has flags that allow any of such operations
+  bool _update(); // handles keyboard input, text selection, depending if _parent has flags that allow any of such operations
 
 
 
@@ -262,18 +262,18 @@ protected:
     int32 wline;      
     Wline *pWline;    
     Line *pLine;      
-    int32 pos;        // x0 or y0, depending on orientation of the first line in view
+    float pos;        // x0 or y0, depending on orientation of the first line in view
 
     void resetToStart();
     void moveToCursor();
     void moveToScrollPosition();
-    void moveRelativeToCursor(int32 in_pixels);     // in_pixels can be negative or positive to the cursor position in pixels
+    void moveRelativeToCursor(float in_pixels);     // in_pixels can be negative or positive to the cursor position in pixels
     void advanceLine();
     void decreaseLine();
 
     ViewPos(ixTxtData *in_parent): _parent(in_parent) { delData(); }
 
-    inline void delData() { line= wline= pos= 0; pWline= null; pLine= null; }
+    inline void delData() { line= wline= 0; pos= 0.0f; pWline= null; pLine= null; }
   protected:
     ixTxtData *_parent;
   } _view;
@@ -283,11 +283,11 @@ protected:
   // wrap lines - actual lines in the window, not lines in the text
 
   chainList _wrapLines;     // will hold wlinData
-  int32 _wrapLen;           // if any alignment happens, it must be within this length. text direction is a thing, and it is computed, therefore it is named only 'length'
+  float _wrapLen;           // if any alignment happens, it must be within this length. text direction is a thing, and it is computed, therefore it is named only 'length'
   void _computeWrapLen();
   void _updateWrapList(Line *l= null, bool updateCur= true);
   void _delWrapForLine(Line *);   // this func CANNOT UPDATE THE cursor/_view, properly!!!
-  inline int32 _getWlineX0orY0InPixels(Wline *);  // depending on alignment and orientation, the text start position. for horizontal left to right text, that is x0, and always 0
+  inline float _getWlineX0orY0InPixels(Wline *);  // depending on alignment and orientation, the text start position. for horizontal left to right text, that is x0, and always 0
   // remaining private stuff
 
   char32 *_fixedBuffer;   // if using a fixed buffer, this will hold the array of it

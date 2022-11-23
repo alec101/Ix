@@ -18,6 +18,10 @@ using namespace ixUtil;
 bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh **out_meshes, uint32 *in_OBJmeshNr, const char **in_OBJmeshNames) {
   cchar *err= null;
   int errL;
+  
+  uint32 *p1, *p2;
+  uint32 offset1, offset2;
+  uint32 p2size;
 
   int64 startOfLine;
   bool start;
@@ -231,7 +235,7 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh **out_mesh
   
   for(uint32 a= 0; a< in_nrOutMeshes; ++a) {
     ixMesh *m= out_meshes[a];
-    m->delData();
+    
 
     OBJdata *o;
     if(in_OBJmeshNr) {
@@ -260,39 +264,55 @@ bool ixMeshSys::loadOBJ(cchar *in_file, uint32 in_nrOutMeshes, ixMesh **out_mesh
     }
 
     // populate ixMesh data
+    
+
     m->fileName= in_file;
     m->fileIndex= (in_OBJmeshNr? in_OBJmeshNr[a]: a);
     m->nrVert= o->nrInd;
-    
 
-    if(m->dataType== 0) {
-      m->flags&= ~(0x0001);     // interweaved flag off
-      m->size= ixMesh::Data0::size()* m->nrVert;
-      m->data= new uint8[m->size];
-      ixMesh::Data0 p(m);
+    if(m->data) { delete[] m->data; m->data= null; m->size= null; }
+    m->alloc_data(m->nrVert);
 
-      for(uint32 a= 0; a< o->nrInd; ++a) // f v/vt/vn v/vt/vn v/vt/vn
-        p.pos[a]=  o->pos [o->ind[a].x],
-        p.tex1[a]= o->tex1[o->ind[a].y],
-        p.nrm[a]=  o->nrm [o->ind[a].z];
 
-    } else if(m->dataType== 1) {
-      m->flags|= 0x0001;        // interweaved flag on
-      m->size= ixMesh::Data1i::size()* m->nrVert;
-      m->data= new uint8[m->size];
-      ixMesh::Data1i p(m);
+
+    for(uint c= 0; c< IXMESH_MAX_CHANNELS; c++) {
+      if(m->format.ch[c].size== 0)
+        continue;
+
+      p1= (uint32 *)m->data+ m->getChannel(&m->format, m->nrVert, c),
+      offset1= (uint32)m->getChannelStride(&m->format, c);
+
+      p2= null, offset2= 0, p2size= 0;
+
+      if(c== (uint)ixMesh::channelType::POS && o->pos) {
+        p2= (uint32 *)(&o->pos[o->ind[c].x- o->startPos]);
+        p2size= 4;              // vec4
+        offset2= p2size* 4;
+
+      } else if(c== (uint)ixMesh::channelType::TEX1 && o->tex1) {
+        p2= (uint32 *)(&o->tex1[o->ind[c].y- o->startTex1]);
+        p2size= 3;              // vec3
+        offset2= p2size* 4;
+
+      } else if(c== (uint)ixMesh::channelType::NRM && o->nrm) {
+        p2= (uint32 *)(&o->nrm[o->ind[c].z- o->startNrm]);
+        p2size= 3;              // vec3
+        offset2= p2size* 4;
+      }
+
+      // copy operation
+      for(uint v= 0; v< o->nrInd; v++) {                /// for each vertex
+        for(uint d= 0; d< m->format.ch[c].size; d++)    /// for each component
+          if(d< p2size)
+            p1[d]= p2[d];
+          else
+            p1[d]= 0;
       
+        if(offset2) p2+= offset2;
+        p1+= offset1;
+      } /// for each vertex
 
-      for(uint32 a= 0; a< o->nrInd; ++a) // f v/vt/vn v/vt/vn v/vt/vn
-        p.vert[a].pos=  o->pos [o->ind[a].x- o->startPos],
-        p.vert[a].tex1= o->tex1[o->ind[a].y- o->startTex1],
-        p.vert[a].nrm=  o->nrm [o->ind[a].z- o->startNrm];
-
-    } else {
-      m->delData();
-      error.detail(str8().f("[%s] WARNING: unknown data type in mesh #%d. skipping", in_file, a), __FUNCTION__);
-      continue;
-    } /// data type populate
+    } /// for each channel in the mesh
   } /// for each output mesh
   
   // success

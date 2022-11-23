@@ -22,8 +22,8 @@ struct ixFlags32 {
   inline void setUp(uint32 in_f) { flags|= in_f; }                  // set bit up
   inline void setDown(uint32 in_f) { flags&= ~(in_f); }             // set bit down
 
-  inline bool operator==(uint32 in_f)  { return flags==in_f; }      // exact match
-  inline bool isUp(uint32 in_f) { return (flags& in_f)> 0; }        // is bit up
+  inline bool operator==(uint32 in_f) const { return flags==in_f; }      // exact match
+  inline bool isUp(uint32 in_f) const { return (flags& in_f)> 0; }        // is bit up
   inline operator uint32 &() { return flags; }
 };
 
@@ -47,17 +47,19 @@ struct recti;
 struct rectf {
   union {
     struct { float left, right, top, bottom; };
-    struct { float l, r, t, b; };
-    struct { float x0, xe, y0, ye; };
+    struct { float l,    r,     t,   b; };
+    struct { float x0,   xe,    y0,  ye; };
     float v[4];               /// allignment needs 16 bits anyways, this will help when retrieving data from __m128
   };
   float dx, dy;
 
-  rectf():        l(0), r(0), t(0), b(0), dx(0), dy(0) {}
-  rectf(float n): l(0), r(n), t(n), b(0), dx(n), dy(n) {}    // this makes a square, origin in 0,0, or if n is 0, clears the values
-  rectf(float in_x0, float in_y0, float in_xe, float in_ye) { x0= in_x0, y0= in_y0, xe= in_xe, ye= in_ye; compDeltas(); }
-  rectf(float in_dx, float in_dy): dx(in_dx), dy(in_dy) { x0= 0, y0= 0; xe= dx, ye= dy; }
+  inline void delData() { x0= y0= xe= ye= dx= dy= 0.0f; }
 
+  rectf():        l(0.0f), r(0.0f), t(0.0f), b(0.0f), dx(0.0f), dy(0.0f) {}
+  rectf(float n): l(0.0f), r(n), t(n), b(0.0f), dx(n), dy(n) {}    // this makes a square, origin in 0,0, or if n is 0, clears the values
+  rectf(float in_x0, float in_y0, float in_dx, float in_dy) { x0= in_x0, y0= in_y0, dx= in_dx, dy= in_dy; compEndpoints(); }
+  rectf(float in_dx, float in_dy): dx(in_dx), dy(in_dy) { x0= 0.0f, y0= 0.0f; xe= dx, ye= dy; }
+  rectf(const rectf &r): x0((float)r.x0), y0((float)r.y0), dx((float)r.dx), dy((float)r.dy), xe((float)r.xe), ye((float)r.ye) {}
   inline rectf &set(float in_x0, float in_y0, float in_xe, float in_ye) { x0= in_x0, y0= in_y0, xe= in_xe, ye= in_ye; compDeltas(); return *this; }
   inline rectf &setD(float in_x, float in_y, float in_dx, float in_dy) { x0= in_x, y0= in_y, dx= in_dx, dy= in_dy; xe= x0+ dx, ye= y0+ dy; return *this; }
   inline rectf &operator=(float n) { l= r= b= t= dx= dy= n; return *this; }
@@ -66,17 +68,24 @@ struct rectf {
 
   inline bool operator==(const rectf &o) const { return ((l== o.l) && (r== o.r) && (t== o.t) && (b== o.b)); }
   inline bool operator!=(const rectf &o) const { return ((l!= o.l) || (r!= o.r) || (t!= o.t) || (b!= o.b)); }
-  
+  inline bool exists() const { return (dx> 0.0f) && (dy> 0.0f); }
+
   // funcs
 
+  #ifdef IX_USE_VULKAN
+  inline VkRect2D &toVkRect2D(VkRect2D *out_v) const { *out_v= {{ mlib::roundf(x0), mlib::roundf(y0) }, {(uint32)mlib::roundf(dx), (uint32)mlib::roundf(dy)}}; return *out_v; }
+  #endif
+
+  inline bool inside(float in_x, float in_y) const { return ((in_x>= x0) && (in_x<= xe) && (in_y>= y0) && (in_y<= ye)); }
   inline bool intersect(const rectf &o) const { return (l< o.r && r> o.l && t< o.b && b> o.t); }
-  inline bool inside(float in_x, float in_y) const { return ((in_x>= x0) && (in_x<= xe) && (in_y>= x0) && (in_y<= ye)); }
+  inline rectf &intersectRect(const rectf &r) { if(r.x0> x0) x0= r.x0; if(r.y0> y0) y0= r.y0; if(r.xe< xe) xe= r.xe; if(r.ye< ye) ye= r.ye; compDeltas(); if(!exists()) delData(); return *this; }
 
   inline void compDeltas() { dx= xe- x0, dy= ye- y0; }
+  inline void compEndpoints() { xe= x0+ dx, ye= y0+ dy; }
   inline void move(float in_x, float in_y) { compDeltas(); x0= in_x, y0= in_y; xe= x0+ dx, ye= y0+ ye; }
   inline void moveD(float in_dx, float in_dy) { x0+= in_dx, xe+= in_dx, y0+= in_dy, ye+= in_dy; }
-  inline void resize(float in_dx, float in_dy) { dx= in_dx, dy= in_dy; xe= x0+ dx, ye= y0+ dy; }
-
+  inline void resize(float in_dx, float in_dy)  { dx= in_dx, dy= in_dy;   xe= x0+ dx, ye= y0+ dy; }
+  inline void resizeD(float in_dx, float in_dy) { dx+= in_dx, dy+= in_dy; xe= x0+ dx, ye= y0+ dy; }
 };
 
 
@@ -96,12 +105,13 @@ struct recti {
     //int32 v[4];
   };
   //int32 dx, dy;
-
+  
   recti():        x0(0), y0(0), dx(0), dy(0), xe(0), ye(0) {}
   recti(int32 n): x0(n), y0(n), dx((uint32)n), dy((uint32)n), xe(n), ye(n) {}
   recti(int32 in_x0, int32 in_y0, uint32 in_dx, uint32 in_dy): x0(in_x0), y0(in_y0), dx(in_dx), dy(in_dy) { compEndpoints(); }
   recti(uint32 in_dx, uint32 in_dy): x0(0), y0(0), dx(in_dx), dy(in_dy), xe(in_dx), ye(in_dy) {}
   recti(const recti &r): x0(r.x0), y0(r.y0), dx(r.dx), dy(r.dy), xe(r.xe), ye(r.ye) {}
+  recti(const rectf &r): x0(mlib::roundf(r.x0)), y0(mlib::roundf(r.y0)), dx(mlib::roundf(r.dx)), dy(mlib::roundf(r.dy)), xe(mlib::roundf(r.xe)), ye(mlib::roundf(r.ye)) {}
 
   inline recti &set(int32 in_x0, int32 in_y0, int32 in_xe, int32 in_ye)  { x0= in_x0, y0= in_y0, xe= in_xe, ye= in_ye; compDeltas();    return *this; }
   inline recti &setD(int32 in_x, int32 in_y, uint32 in_dx, uint32 in_dy) { x0= in_x,  y0= in_y,  dx= in_dx, dy= in_dy; compEndpoints(); return *this; }
@@ -112,19 +122,7 @@ struct recti {
   inline bool operator!=(const recti &o) const { return ((x0!= o.x0) || (y0!= o.y0) || (dx!= o.dx) || (dy!= o.dy)); }
 
   #ifdef IX_USE_VULKAN
-  //inline operator const VkRect2D() const    { return   VkRect2D{{x0, y0}, {(uint32)dx, (uint32)dy}}; }
-  inline operator VkRect2D &() { return *(VkRect2D *)this; }
-  //inline operator VkRect2D&() const { return *((VkRect2D *)this); }
-  //inline operator VkRect2D*() const { return (VkRect2D *)this; }
-  /*
-  got to think on something...
-    can't change original object
-    can't use temporary objects, cuz... what if a meteor strikes the computer right when it's compiling
-    so, i dono
-    */
-
-  //inline const VkRect2D getVkRect2D() const { return   VkRect2D{{x0, y0}, {(uint32)dx, (uint32)dy}}; }
-  //inline operator const VkRect2D *() const  { VkRect2D r{{x0, y0}, {(uint32)dx, (uint32)dy}}; return &r; }
+  inline VkRect2D &toVkRect2D(VkRect2D *out_v) const { *out_v= {{ x0, y0 }, {(uint32)dx, (uint32)dy}}; return *out_v; }
   #endif
 
   inline bool intersect(const recti &r)  const { return (x0< r.xe && xe> r.x0 && ye> r.y0 && y0< r.ye); } // xe, ye ouside the rect

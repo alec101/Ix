@@ -5,7 +5,7 @@ class ixStaticText: public ixBaseWindow {
 public:
 
   ixTxtData text;
-  int32 textX, textY;             // NYI - text position inside the window
+  float textX, textY;             // NYI - text position inside the window
 
   struct Usage: public ixBaseWindow::Usage {
     // the text is readonly, of course
@@ -34,15 +34,19 @@ public:
   void setFont(const char *filename, const char *fnt, int size);
   void setFont(const void *);
 
-  int32 getMinDx();
-  int32 getMinDy();
+  float getMinDx();
+  float getMinDy();
 
   // virtual funcs that must be changed
 
-  void resize(int32 dx, int32 dy);          // resizes window, this will move all children hooked on the right and bottom side
-  void resizeDelta(int32 dx, int32 dy);     // resizes window (enlarges, shrinkens by specified amount), this will move all children hooked on the right and bottom side
-  void setPos(int32 x0, int32 y0, int32 dx, int32 dy); // sets position and size of the window
-  void _computeChildArea();     // computes the total child area - call after a child moves/resizes - updated with textDx/Dy
+  // JUST USE COMPUTE ALL+DELTA, AND PUT WHAT NEEDS TO UPDATE IN THERE
+  //void resize(float dx, float dy);          // resizes window, this will move all children hooked on the right and bottom side
+  //void resizeDelta(float dx, float dy);     // resizes window (enlarges, shrinkens by specified amount), this will move all children hooked on the right and bottom side
+  //void setPos(float x0, float y0, float dx, float dy); // sets position and size of the window
+  virtual void _computeAll();
+  virtual void _computeAllDelta(float x, float y);
+
+  void _computeChildArea();                 // computes the total child area - call after a child moves/resizes - updated with textDx/Dy
 
   // constructor / destructor
 
@@ -51,7 +55,7 @@ public:
   void delData();
 
 private:
-  bool _update(bool mouseInside, bool updateChildren= true);
+  bool _update(bool updateChildren= true);
   #ifdef IX_USE_OPENGL
   virtual void _glDraw(Ix *in_ix, ixWSsubStyleBase *in_style= null);  // the drue draw func, init stuff, pass it to this
   #endif

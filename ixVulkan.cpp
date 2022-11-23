@@ -420,13 +420,24 @@ void ixVulkan::delCluster(ixvkResCluster **out_cluster) {
 
 
 void ixVulkan::cmdScissor(VkCommandBuffer in_cmd, recti *in_s) {
+  float s= Ix::wsys().scale;
   VkRect2D r= {{ in_s->x0- ix->win->x0, in_s->y0- ix->win->y0 }, { (uint32)in_s->dx, (uint32)in_s->dy}};
   if(r.offset.x< 0) r.offset.x= 0;
   if(r.offset.y< 0) r.offset.y= 0;
   ix->vk.CmdSetScissor(in_cmd, 0, 1, &r);
 }
 
+void ixVulkan::cmdScissor(VkCommandBuffer in_cmd, rectf *in_s) {
+  float s= Ix::wsys().scale;
+  VkRect2D r= {{ mlib::roundf(in_s->x0* s)- ix->win->x0, mlib::roundf(in_s->y0* s)- ix->win->y0 }, { (uint32)mlib::roundf(in_s->dx* s), (uint32)mlib::roundf(in_s->dy* s)}};
+  if(r.offset.x< 0) r.offset.x= 0;
+  if(r.offset.y< 0) r.offset.y= 0;
+  ix->vk.CmdSetScissor(in_cmd, 0, 1, &r);
+}
 
+void ixVulkan::cmdScissorDefault(VkCommandBuffer in_cmd) {
+  ix->vk.CmdSetScissor(in_cmd, 0, 1, &render.scissor);
+}
 
 
 
@@ -722,19 +733,22 @@ bool ixVulkan::RenderPass::startRender() {
   
   // global buffer update/upload
 
-  _ix->vki.glb[fi]->data->cameraOrtho= _ix->cameraOrtho.camMat;
+  _ix->vki.glb[fi]->data->cameraUI= _ix->cameraUI.camMat;
   _ix->vki.glb[fi]->data->cameraPersp= _ix->cameraPersp.camMat;
-  _ix->vki.glb[fi]->data->vp.x= (float)_ix->win->x0;
-  _ix->vki.glb[fi]->data->vp.y= (float)_ix->win->y0;
-  _ix->vki.glb[fi]->data->vs.x= (float)_ix->win->dx;
-  _ix->vki.glb[fi]->data->vs.y= (float)_ix->win->dy;
+  //_ix->vki.glb[fi]->data->vp.x= (float)_ix->win->x0;
+  //_ix->vki.glb[fi]->data->vp.y= (float)_ix->win->y0;
+  //_ix->vki.glb[fi]->data->vs.x= (float)_ix->win->dx;
+  //_ix->vki.glb[fi]->data->vs.y= (float)_ix->win->dy;
+
+  _ix->vki.glb[fi]->data->vp.x= (float)_ix->win->x0/ Ix::wsys().scale;
+  _ix->vki.glb[fi]->data->vp.y= (float)_ix->win->y0/ Ix::wsys().scale;
+  _ix->vki.glb[fi]->data->vs.x= (float)_ix->win->dx/ Ix::wsys().scale;
+  _ix->vki.glb[fi]->data->vs.y= (float)_ix->win->dy/ Ix::wsys().scale;
+  _ix->vki.glb[fi]->data->UIscale= Ix::wsys().scale;
 
   //vec3 sunPos;
   //vec3 sunColor;
   //float ambientStr;
-
-  _ix->vki.glb[fi]->data->vs.y= (float)_ix->win->dy;
-
 
   _ix->vki.glb[fi]->upload(_ix->vki.glb[fi]->data, 0, _ix->vki.glb[fi]->dataSize);
 

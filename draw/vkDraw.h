@@ -181,10 +181,12 @@ public:
   inline void flagTexture(bool in_enable)  { if(in_enable) push.flags|= 0x0004; else push.flags&= ~(0x0004); }
   inline void flagDisabled(bool in_enable) { if(in_enable) push.flags|= 0x0008; else push.flags&= ~(0x0008); }
 
-  inline void setPos(float x0, float y0, float z, float xe, float ye) { push.x0= x0,       push.y0= y0,       push.z= z,        push.xe= xe,             push.ye= ye; }
-  inline void setPosD(float x, float y, float z, float dx, float dy)  { push.x0= x,        push.y0= y,        push.z= z,        push.xe= x+ dx,          push.ye= y+ dy; }
-  inline void setPosDi(int32 x, int32 y, int32 z, int32 dx, int32 dy) { push.x0= (float)x, push.y0= (float)y, push.z= (float)z, push.xe= (float)(x+ dx), push.ye= (float)(y+ dy); }
-  inline void setPosR(const recti &in_r) { push.x0= (float)in_r.x0, push.y0= (float)in_r.y0, push.xe= (float)in_r.xe, push.ye= (float)in_r.ye; }
+  inline void setPos(float x0, float y0, float z, float xe, float ye) { push.x0= x0,   push.y0= y0,   push.z= z,     push.xe= xe,    push.ye= ye; }
+  inline void setPosD(float x, float y, float z, float dx, float dy)  { push.x0= x,    push.y0= y,    push.z= z,     push.xe= x+ dx, push.ye= y+ dy; }
+  inline void setPosR(const rectf &r)                                 { push.x0= r.x0, push.y0= r.y0, push.z= 0.0f,  push.xe= r.xe, push.ye= r.ye; }
+  inline void setPosDi(int32 x, int32 y, int32 z, int32 dx, int32 dy) { push.x0= (float)x,       push.y0= (float)y,       push.z= (float)z, push.xe= (float)(x+ dx), push.ye= (float)(y+ dy); }
+  inline void setPosRi(const recti &in_r)                             { push.x0= (float)in_r.x0, push.y0= (float)in_r.y0, push.z= 0.0f,     push.xe= (float)in_r.xe, push.ye= (float)in_r.ye; }
+  
   inline void setTex(float x0, float y0, float xe, float ye, float depth= 0.0f) { push.tx0= x0, push.ty0= y0, push.txe= xe, push.tye= ye, push.tDepth= depth; }
 
   //inline void cmdBindPipeline(VkCommandBuffer in_cmd);
